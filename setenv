@@ -1,0 +1,7 @@
+CROSS_PATH=/home/bas/ti-sdk-am335x-evm-05.03.00.00/linux-devkit/bin
+if ! echo $PATH | grep $CROSS_PATH >/dev/null ; then
+	export PATH=$CROSS_PATH:$PATH
+fi
+export ARCH=arm
+export CROSS_COMPILE=arm-arago-linux-gnueabi-
+export TARGET_NFS_ROOT=/home/bas/ti-sdk-am335x-evm-05.03.02.00/targetNFS
