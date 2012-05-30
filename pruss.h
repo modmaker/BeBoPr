@@ -33,7 +33,9 @@ extern int pruss_queue_dwell( int axis, uint32_t cmin, int32_t delta);
 extern int pruss_queue_decel( int axis, int32_t delta);
 extern int pruss_queue_execute( void);
 extern int pruss_queue_set_pulse_length( int axis, uint16_t length);
+extern int pruss_queue_set_idle_timeout( uint8_t period);
 extern int pruss_queue_config_axis( int axis, uint32_t ssi, uint16_t sst, uint16_t ssn, int reverse);
+extern int pruss_queue_set_enable( int on);
 
 extern void pruss_dump_position( int axis);
 

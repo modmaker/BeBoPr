@@ -85,6 +85,20 @@ typedef struct {
   unsigned int	axis		:  3;
 } SetPulseStruct;
 
+// CMD_SET_IDLE_TIMEOUT
+typedef struct {
+  unsigned int	timeout		:  8;
+  unsigned int			: 16;
+  unsigned int	command		:  4;
+} SetIdleTimeoutStruct;
+
+// CMD_SET_ENABLE
+typedef struct {
+  unsigned int	on		:  1;
+  unsigned int			: 23;
+  unsigned int	command		:  4;
+} SetEnableStruct;
+
 // CMD_AXIS_CONFIG_AXIS
 typedef struct {
   unsigned int	reverse		:  1;
@@ -107,6 +121,8 @@ typedef union {
   DecelStruct		decel;
   DwellStruct		dwell;
   SetPulseStruct	set_pulse;
+  SetIdleTimeoutStruct	timeout;
+  SetEnableStruct	enable;
   ConfigAxisStruct	config;
 } PruCommandUnion;
 
@@ -1071,6 +1087,40 @@ int pruss_queue_config_axis( int axis, uint32_t ssi, uint16_t sst, uint16_t ssn,
     .config.stepSize		= ssi,
     .config.stepSizeT		= sst,
     .config.stepSizeN		= ssn,
+  };
+  if (pruss_command( &pruCmd) < 0) {
+    return -1;
+  }
+  return 0;
+}
+
+/*
+ * If the idle timeout is not set to 0, the motors will be enabled
+ * and disabled automatically. The first step pulse asserts the
+ * enable outputs, (period/10) seconds after the last tep pulse,
+ * the enables are negated again.
+ */
+int pruss_queue_set_idle_timeout( uint8_t period)
+{
+  PruCommandUnion pruCmd = {
+    .timeout.command		= CMD_SET_IDLE_TIMEOUT,
+    .timeout.timeout		= period,
+  };
+  if (pruss_command( &pruCmd) < 0) {
+    return -1;
+  }
+  return 0;
+}
+
+/*
+ * Manually enable or disable the stepperdriver enable signals.
+ * Necessary if the automatic idle timeout is disabled.
+ */
+int pruss_queue_set_enable( int on)
+{
+  PruCommandUnion pruCmd = {
+    .enable.command		= CMD_SET_ENABLE,
+    .enable.on			= !!on,
   };
   if (pruss_command( &pruCmd) < 0) {
     return -1;

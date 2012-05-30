@@ -8,7 +8,7 @@
 #define	CMD_AXIS_SET_PULSE_LENGTH 6
 #define	CMD_AXIS_CONFIG_AXIS	7
 
-#define CMD_ENABLE		12
-#define CMD_DISABLE		13
+#define CMD_SET_IDLE_TIMEOUT	11
+#define CMD_SET_ENABLE		12
 
 #define CMD_HALT_PRU		15

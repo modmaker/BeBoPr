@@ -378,5 +378,6 @@ void traject_init( void)
   pruss_axis_config( 2, step_size_y, 0);
   pruss_axis_config( 3, step_size_z, 1);
   pruss_axis_config( 4, step_size_e, 0);
+  pruss_queue_set_idle_timeout( 30);	// set a 3 seconds timeout
 }
 
