@@ -57,7 +57,7 @@ static int temp_update( update_channel_t channel, int analog_value)
 	       channel, analog_value, celsius);
     }
    if (result == 0) {
-      temp_sensors[ channel].value = celsius;
+      temp_sensors[ channel].value = analog_value;
     }
     if (result == 0 &&
 	temp_sensors[ channel].range_low <= celsius &&
