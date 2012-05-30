@@ -77,10 +77,14 @@ CC = $(CROSS_COMPILE)gcc
 OBJDUMP = $(CROSS_COMPILE)objdump
 OBJCOPY = $(CROSS_COMPILE)objcopy
 
+CFLAGS ?=
+LDFLAGS ?=
+
 #OPTIMIZE = -Os -ffunction-sections -finline-functions-called-once -mcall-prologues
 # OPTIMIZE = -O0
-CFLAGS = -g -Wall -Wstrict-prototypes $(OPTIMIZE) -DARCH=$(ARCH) $(DEFS) -std=${CSTD} -funsigned-char -funsigned-bitfields -fpack-struct -save-temps -pthread
-LDFLAGS = -Wl,--as-needed -Wl,--gc-sections
+BEBOPR_CFLAGS = -g -Wall -Wstrict-prototypes $(OPTIMIZE) -DARCH=$(ARCH) $(DEFS) -std=${CSTD} -funsigned-char -funsigned-bitfields -fpack-struct -save-temps -pthread
+LFLAGS = -Wl,--as-needed -Wl,--gc-sections
+
 LIBS = -lm -pthread -lrt
 LIBDEPS =
 
@@ -113,11 +117,11 @@ doc: Doxyfile *.c *.h
 
 %.o: %.c config.h Makefile
 	@echo "  CC        $@"
-	@$(CC) -c $(CFLAGS) -Wa,-adhlns=$(<:.c=.al) -o $@ $(subst .o,.c,$@)
+	@$(CC) -c $(BEBOPR_CFLAGS) $(CFLAGS) -Wa,-adhlns=$(<:.c=.al) -o $@ $(subst .o,.c,$@)
 
 %.elf: $(OBJ)
 	@echo "  LINK      $@"
-	@$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(LIBS)
+	@$(CC) $(BEBOPR_CFLAGS) $(CFLAGS) $(LFLAGS) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 %.lst: %.elf
 	@echo "  OBJDUMP   $@"
