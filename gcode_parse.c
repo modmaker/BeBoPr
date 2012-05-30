@@ -20,31 +20,19 @@
 
 */
 
-// TODO: this is a quick hack to convert to nanometers without affecting
-//       the current (working) code too much.
-// FIXME: this may overflow because of the large numbers!
-#define	NM_PER_M_X		((uint32_t) 1000000000)
-#define	NM_PER_M_Y		((uint32_t) 1000000000)
-#define	NM_PER_M_Z		((uint32_t) 1000000000)
-#define	NM_PER_M_E		((uint32_t) 1000000000)
 
-/*
-	mm -> inch conversion
-*/
-
-#define	NM_PER_IN_X		((uint32_t) 25400000)
-#define	NM_PER_IN_Y		((uint32_t) 25400000)
-#define	NM_PER_IN_Z		((uint32_t) 25400000)
-#define	NM_PER_IN_E		((uint32_t) 25400000)
+#define	NM_PER_MM	1.0E6
+#define	NM_PER_INCH	25.4E6
 
 /// crude crc macro
 #define crc(a, b)		(a ^ b)
 
 /// crude floating point data storage
-decfloat read_digit					__attribute__ ((__section__ (".bss")));
+decfloat read_digit;
 
 /// this is where we store all the data for the current command before we work out what to do with it
-GCODE_COMMAND next_target		__attribute__ ((__section__ (".bss")));
+GCODE_COMMAND next_target;
+
 
 /*
 	decfloat_to_int() is the weakest subject to variable overflow. For evaluation, we assume a build room of +-1000 mm and NM_PER_MM_x between 1.000 and 4096. Accordingly for metric units:
@@ -66,10 +54,6 @@ GCODE_COMMAND next_target		__attribute__ ((__section__ (".bss")));
 #define	DECFLOAT_MANT_MM_MAX 1048075
 #define	DECFLOAT_MANT_IN_MAX 32267
 
-/*
-	utility functions
-*/
-extern const uint32_t powers[];  // defined in sermsg.c
 
 /// convert a floating point input value into an integer with appropriate scaling.
 /// \param *df pointer to floating point structure that holds fp value to convert
@@ -78,28 +62,26 @@ extern const uint32_t powers[];  // defined in sermsg.c
 ///
 /// lots of work has been done in exploring this function's limitations in terms of overflow and rounding
 /// this work may not be finished
-static int32_t decfloat_to_int(decfloat *df, uint32_t multiplicand, uint8_t divide_by_1000) {
-	uint32_t	r = df->mantissa;
-	uint8_t	e = df->exponent;
-	uint32_t	rnew1, rnew2;
 
-	// e=1 means we've seen a decimal point but no digits after it, and e=2 means we've seen a decimal point with one digit so it's too high by one if not zero
-	if (e)
-		e--;
+/// Convert parsed floating point value (in mm or inch) to an integer in nm.
 
-	if (divide_by_1000) {
-		rnew1 = r * (multiplicand / 1000);
-		rnew2 = (r * (multiplicand % 1000) + (1000 / 2)) / 1000;
-		r = rnew1 + rnew2;
+static int32_t decfloat_to_int( decfloat *df, double multiplicand)
+{
+	double		r = df->mantissa;
+	uint8_t		e = df->exponent;
+
+	r *= multiplicand;
+
+	// e=1 means we've seen a decimal point but no digits after it, and e=2 means we've seen
+	// a decimal point with one digit so it's too high by one if not zero
+
+	if (e--) {
+		while (e--) {
+			r /= 10.0;
+		}
 	}
-	else {
-		r *= multiplicand;
-	}
 
-	if (e)
-		r = (r + powers[e] / 2) / powers[e];
-
-	return df->sign ? -(int32_t)r : (int32_t)r;
+	return (int32_t) ((df->sign) ? -r : r);
 }
 
 /// Character Received - add it to our command
@@ -134,61 +116,63 @@ void gcode_parse_char(uint8_t c) {
 					break;
 				case 'X':
 					if (next_target.option_inches)
-						next_target.target.X = decfloat_to_int(&read_digit, NM_PER_IN_X, 0);
+						next_target.target.X = decfloat_to_int( &read_digit, NM_PER_INCH);
 					else
-						next_target.target.X = decfloat_to_int(&read_digit, NM_PER_M_X, 1);
+						next_target.target.X = decfloat_to_int( &read_digit, NM_PER_MM);
 					if (DEBUG_ECHO && (debug_flags & DEBUG_ECHO))
 						serwrite_int32(next_target.target.X);
 					break;
 				case 'Y':
 					if (next_target.option_inches)
-						next_target.target.Y = decfloat_to_int(&read_digit, NM_PER_IN_Y, 0);
+						next_target.target.Y = decfloat_to_int( &read_digit, NM_PER_INCH);
 					else
-						next_target.target.Y = decfloat_to_int(&read_digit, NM_PER_M_Y, 1);
+						next_target.target.Y = decfloat_to_int( &read_digit, NM_PER_MM);
 					if (DEBUG_ECHO && (debug_flags & DEBUG_ECHO))
 						serwrite_int32(next_target.target.Y);
 					break;
 				case 'Z':
 					if (next_target.option_inches)
-						next_target.target.Z = decfloat_to_int(&read_digit, NM_PER_IN_Z, 0);
+						next_target.target.Z = decfloat_to_int( &read_digit, NM_PER_INCH);
 					else
-						next_target.target.Z = decfloat_to_int(&read_digit, NM_PER_M_Z, 1);
+						next_target.target.Z = decfloat_to_int( &read_digit, NM_PER_MM);
 					if (DEBUG_ECHO && (debug_flags & DEBUG_ECHO))
 						serwrite_int32(next_target.target.Z);
 					break;
 				case 'E':
 					if (next_target.option_inches)
-						next_target.target.E = decfloat_to_int(&read_digit, NM_PER_IN_E, 0);
+						next_target.target.E = decfloat_to_int( &read_digit, NM_PER_INCH);
 					else
-						next_target.target.E = decfloat_to_int(&read_digit, NM_PER_M_E, 1);
+						next_target.target.E = decfloat_to_int( &read_digit, NM_PER_MM);
 					if (DEBUG_ECHO && (debug_flags & DEBUG_ECHO))
 						serwrite_uint32(next_target.target.E);
 					break;
 				case 'F':
-					// just use raw integer, we need move distance and n_steps to convert it to a useful value, so wait until we have those to convert it
+					// just use raw integer, we need move distance and n_steps to convert it
+					// to a useful value, so wait until we have those to convert it
 					if (next_target.option_inches)
-						next_target.target.F = decfloat_to_int(&read_digit, 25400, 1);
+						next_target.target.F = decfloat_to_int(&read_digit, 25.4);
 					else
-						next_target.target.F = decfloat_to_int(&read_digit, 1, 0);
+						next_target.target.F = decfloat_to_int(&read_digit, 1.0);
 					if (DEBUG_ECHO && (debug_flags & DEBUG_ECHO))
 						serwrite_uint32(next_target.target.F);
 					break;
 				case 'S':
 					// if this is temperature, multiply by 4 to convert to quarter-degree units
-					// cosmetically this should be done in the temperature section,
-					// but it takes less code, less memory and loses no precision if we do it here instead TODO: cleanup!!!
+					// cosmetically this should be done in the temperature section, but it takes
+					// less code, less memory and loses no precision if we do it here instead TODO: cleanup!!!
 					if ((next_target.M == 104) || (next_target.M == 109) || (next_target.M == 140))
-						next_target.S = decfloat_to_int(&read_digit, 4, 0);
-					// if this is heater PID stuff, multiply by PID_SCALE because we divide by PID_SCALE later on
+						next_target.S = decfloat_to_int( &read_digit, 4.0);
+					// if this is heater PID stuff, multiply by PID_SCALE because we divide by
+					// PID_SCALE later on
 					else if ((next_target.M >= 130) && (next_target.M <= 132))
-						next_target.S = decfloat_to_int(&read_digit, PID_SCALE, 0);
+						next_target.S = decfloat_to_int( &read_digit, PID_SCALE);
 					else
-						next_target.S = decfloat_to_int(&read_digit, 1, 0);
+						next_target.S = decfloat_to_int( &read_digit, 1.0);
 					if (DEBUG_ECHO && (debug_flags & DEBUG_ECHO))
 						serwrite_uint16(next_target.S);
 					break;
 				case 'P':
-					next_target.P = decfloat_to_int(&read_digit, 1, 0);
+					next_target.P = decfloat_to_int(&read_digit, 1.0);
 					if (DEBUG_ECHO && (debug_flags & DEBUG_ECHO))
 						serwrite_uint16(next_target.P);
 					break;
@@ -198,12 +182,12 @@ void gcode_parse_char(uint8_t c) {
 						serwrite_uint8(next_target.T);
 					break;
 				case 'N':
-					next_target.N = decfloat_to_int(&read_digit, 1, 0);
+					next_target.N = decfloat_to_int(&read_digit, 1.0);
 					if (DEBUG_ECHO && (debug_flags & DEBUG_ECHO))
 						serwrite_uint32(next_target.N);
 					break;
 				case '*':
-					next_target.checksum_read = decfloat_to_int(&read_digit, 1, 0);
+					next_target.checksum_read = decfloat_to_int(&read_digit, 1.0);
 					if (DEBUG_ECHO && (debug_flags & DEBUG_ECHO))
 						serwrite_uint8(next_target.checksum_read);
 					break;
@@ -306,11 +290,7 @@ void gcode_parse_char(uint8_t c) {
 							read_digit.mantissa < DECFLOAT_MANT_IN_MAX)))
 					{
 						// this is simply mantissa = (mantissa * 10) + atoi(c) in different clothes
-#if ARCH == arm
 						read_digit.mantissa = (10 * read_digit.mantissa) + (c - '0');
-#else
-						read_digit.mantissa = (read_digit.mantissa << 3) + (read_digit.mantissa << 1) + (c - '0');
-#endif
 						if (read_digit.exponent)
 							read_digit.exponent++;
 					}
