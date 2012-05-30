@@ -79,7 +79,7 @@ OBJCOPY = $(CROSS_COMPILE)objcopy
 
 #OPTIMIZE = -Os -ffunction-sections -finline-functions-called-once -mcall-prologues
 # OPTIMIZE = -O0
-CFLAGS = -g -Wall -Wstrict-prototypes $(OPTIMIZE) $(DEFS) -std=${CSTD} -funsigned-char -funsigned-bitfields -fpack-struct -save-temps -pthread
+CFLAGS = -g -Wall -Wstrict-prototypes $(OPTIMIZE) -DARCH=$(ARCH) $(DEFS) -std=${CSTD} -funsigned-char -funsigned-bitfields -fpack-struct -save-temps -pthread
 LDFLAGS = -Wl,--as-needed -Wl,--gc-sections
 LIBS = -lm -pthread -lrt
 LIBDEPS =
