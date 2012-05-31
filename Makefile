@@ -136,7 +136,7 @@ depend:
 		$(CC) -MM -mmcu=$(MCU_TARGET) $(CDEFS) $(CINCS) $(SOURCES) $(ASRC) >> $(MAKEFILE) ; \
 	fi
 
-install:
+install:	all
 	@echo "  INSTALLING '$(PROGRAM)' TO '$(TARGET_NFS_ROOT)'"
 	@if [ -n "$(TARGET_NFS_ROOT)" ] ; then \
 		sudo cp $(PROGRAM).elf $(TARGET_NFS_ROOT)/home/root/ ; \
@@ -147,7 +147,8 @@ install:
 .PHONY:	all build elf hex eep lss sym program coff extcoff clean depend applet_files install
 
 # DO NOT DELETE THIS LINE -- make depend depends on it.
-analog.o: analog.c analog.h beaglebone.h mendel.h debug.h
+analog.o: analog.c analog.h beaglebone.h mendel.h debug.h config.h \
+ config_macros.h prusa_mech.h wades_extruder.h
 beaglebone-stubs.o: beaglebone-stubs.c beaglebone.h beaglebone-stubs.h
 bebopr_r2.o: bebopr_r2.c analog.h temp.h beaglebone.h thermistor.h \
  bebopr.h heater.h pwm.h
@@ -175,8 +176,8 @@ gcode_process.o: gcode_process.c gcode_process.h gcode_parse.h dda.h \
  pwm.h sersendf.h pinio.h debug.h clock.h home.h traject.h pruss.h \
  algo2cmds.h
 gpio.o: gpio.c gpio.h
-heater.o: heater.c heater.h temp.h analog.h pwm.h debug.h beaglebone.h \
- mendel.h
+heater.o: heater.c heater.h temp.h analog.h pwm.h debug.h config.h \
+ config_macros.h prusa_mech.h wades_extruder.h beaglebone.h mendel.h
 home.o: home.c pruss.h algo2cmds.h limit_switches.h home.h dda_queue.h \
  dda.h config.h config_macros.h prusa_mech.h wades_extruder.h timer.h \
  pinio.h sersendf.h memory_barrier.h debug.h gcode_process.h \
@@ -190,11 +191,13 @@ pwm.o: pwm.c pwm.h
 serial.o: serial.c serial.h beaglebone-stubs.h mendel.h
 sermsg.o: sermsg.c sermsg.h serial.h beaglebone-stubs.h
 sersendf.o: sersendf.c sersendf.h serial.h beaglebone-stubs.h sermsg.h
-temp.o: temp.c temp.h analog.h beaglebone.h debug.h
+temp.o: temp.c temp.h analog.h beaglebone.h debug.h config.h \
+ config_macros.h prusa_mech.h wades_extruder.h
 thermistor.o: thermistor.c beaglebone.h thermistor.h
 timer.o: timer.c timer.h platform.h beaglebone.h config.h config_macros.h \
  prusa_mech.h wades_extruder.h dda_queue.h dda.h memory_barrier.h
-traject.o: traject.c traject.h pruss.h algo2cmds.h debug.h
+traject.o: traject.c traject.h pruss.h algo2cmds.h debug.h config.h \
+ config_macros.h prusa_mech.h wades_extruder.h
 mendel.o: mendel.c config.h config_macros.h prusa_mech.h wades_extruder.h \
  serial.h beaglebone-stubs.h dda_queue.h dda.h timer.h gcode_parse.h \
  temp.h analog.h sermsg.h debug.h sersendf.h heater.h pwm.h pinio.h \
