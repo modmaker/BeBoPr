@@ -56,7 +56,7 @@ static int temp_update( update_channel_t channel, int analog_value)
       fprintf( stderr, "temp_update called for channel %d with value %d => celsius %1.1lf\n",
 	       channel, analog_value, celsius);
     }
-   if (result == 0) {
+    if (result == 0) {
       temp_sensors[ channel].value = celsius;
     }
     if (result == 0 &&
@@ -95,12 +95,12 @@ int temp_init( void)
   if (temp_config_data != NULL) {
     analog_init();
     for (int i = 0 ; i < temp_config_items ; ++i) {
-      analog_channel_e		channel		= temp_config_data[ i].channel;
+      unsigned int		analog_channel	= temp_config_data[ i].channel;
       temp_sensor_e		sensor		= temp_config_data[ i].sensor;
       temp_conversion_f*	conversion	= temp_config_data[ i].conversion;
       temp_sensors[ sensor].out_of_range 	= temp_config_data[ i].in_range_time;
       temp_sensors[ sensor].conversion 		= conversion;
-      analog_set_update_callback( channel, temp_update, (update_channel_t)sensor);
+      analog_set_update_callback( analog_channel, temp_update, (update_channel_t)sensor);
     }
     return 0;
   }
@@ -122,17 +122,10 @@ int temp_set_setpoint( temp_sensor_e channel, double setpoint, double delta_low,
 
 int temp_get_celsius( temp_sensor_e channel, double* celsius)
 {
-  uint16_t analog_value;
   int result = -1;
-  // translate adc value to degrees celsius
-  if (channel >= 0 && channel <= e_temp_num_sensors && celsius != NULL) {
-    analog_value = temp_sensors[ channel].value;
-    temp_conversion_f* conversion = temp_sensors[ channel].conversion;
-    if (conversion != NULL) {
-      //      result = temp_analog_to_celsius( analog_value, celsius);
-      result = conversion( analog_value, celsius);
-
-    }
+  if (channel >= 0 && channel < e_temp_num_sensors && celsius != NULL) {
+    *celsius = temp_sensors[ channel].value;
+    result = 0;
   }
   return result;
 }
