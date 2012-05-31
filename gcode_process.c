@@ -7,6 +7,7 @@
 #include	<string.h>
 #include	<stdio.h>
 #include	<math.h>
+#include	<unistd.h>
 
 #include	"gcode_parse.h"
 #include	"dda_queue.h"
@@ -24,6 +25,7 @@
 #include	"traject.h"
 #include	"pruss.h"
 #include	"heater.h"
+#include	"beaglebone-stubs.h"
 
 /// the current tool
 uint8_t tool;
@@ -262,12 +264,7 @@ void process_gcode_command() {
 				// wait for all moves to complete
 				dda_queue_wait();
 				// delay
-				for (;next_target.P > 0;next_target.P--) {
-					ifclock(clock_flag_10ms) {
-						clock_10ms();
-					}
-					delay_ms(1);
-				}
+				usleep( 1000* next_target.P);
 				break;
 
 				//	G20 - inches as units
