@@ -84,7 +84,6 @@ void arm_init( void)
   } else {
     printf( "Clock resolution = %ld.%09ld s.\n", clock_resolution.tv_sec, clock_resolution.tv_nsec);
   }
-  gcode_process_init();
 }
 
 /// Startup code, run when we come out of reset
@@ -111,6 +110,9 @@ void init(void) {
 	// set up timers
 //	timer_init();
 //	fprintf( stderr, "<timer-init done>");
+
+  // This initializes the trajectory code and PRUSS
+  mendel_sub_init( "gcode_process", gcode_process_init);
 
 	// set up dda
 	dda_init();
