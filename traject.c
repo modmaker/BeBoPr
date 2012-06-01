@@ -428,6 +428,13 @@ void traject_init( void)
   pruss_axis_config( 2, step_size_y, traject_reverse_axis( y_axis));
   pruss_axis_config( 3, step_size_z, traject_reverse_axis( z_axis));
   pruss_axis_config( 4, step_size_e, traject_reverse_axis( e_axis));
+
+  /* Set the duration of the active part of the step pulse */
+  pruss_queue_set_pulse_length( 1, 8 * 200);
+  pruss_queue_set_pulse_length( 2, 8 * 200);
+  pruss_queue_set_pulse_length( 3, 8 * 200);
+  pruss_queue_set_pulse_length( 4, 8 * 200);
+
   pruss_queue_set_idle_timeout( 30);	// set a 3 seconds timeout
 }
 
