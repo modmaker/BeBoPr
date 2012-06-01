@@ -566,17 +566,17 @@ void process_gcode_command() {
 				if (next_target.seen_P) {
 					channel_tag temp_source;
 					switch (next_target.P) {
-					case 0:  temp_source = heater_extruder; break;
-					case 1:  temp_source = heater_bed; break;
+					case 0:  temp_source = heater_lookup_by_name( "heater_extruder"); break;
+					case 1:  temp_source = heater_lookup_by_name( "heater_bed"); break;
 					default: temp_source = NULL;
 					}
 					if (heater_get_celsius( temp_source, &celsius) == 0) {
 						printf( "\nT:%1.1lf", celsius);
 					}
 				} else {
-					heater_get_celsius( heater_extruder, &celsius);
+					heater_get_celsius( heater_lookup_by_name( "heater_extruder"), &celsius);
 					printf( "\nT:%1.1lf", celsius);
-					heater_get_celsius( heater_bed, &celsius);
+					heater_get_celsius( heater_lookup_by_name( "heater_bed"), &celsius);
 					printf( " B:%1.1lf", celsius);
 				}
 				break;
