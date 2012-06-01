@@ -750,7 +750,6 @@ int pruss_init( void)
   for (int i = 1 ; i <= 4 ; ++i) {
     pruss_queue_set_origin( i);
   }
-  printf( "Pruss initialized successfully\n");
   return 0;
 }
 

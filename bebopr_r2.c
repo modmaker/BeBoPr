@@ -121,7 +121,6 @@ static const heater_config_record heater_config_data[] = {
 int bebopr_pre_init( void)
 {
   int result = -1;
-  fprintf( stderr, "<bebopr_pre_init>");
 
   result = analog_config( analog_config_data, NR_ITEMS( analog_config_data));
   if (result < 0) {

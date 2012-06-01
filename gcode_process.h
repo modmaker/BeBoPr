@@ -12,6 +12,6 @@ extern uint8_t next_tool;
 extern void process_gcode_command( void);
 extern void gcode_trace_move( void);
 extern void gcode_set_pos( char c, uint32_t pos);
-extern void gcode_process_init( void);
+extern int gcode_process_init( void);
 
 #endif	/* _GCODE_PROCESS_H */

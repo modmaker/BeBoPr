@@ -14,6 +14,7 @@
 #include "analog.h"
 #include "beaglebone.h"
 #include "debug.h"
+#include "mendel.h"
 
 /*
  * Temperature sensor interface for BeBoPr rev0.
@@ -115,7 +116,7 @@ int temp_config( temp_config_record* config_data, int nr_config_items)
 int temp_init( void)
 {
   if (temp_config_data != NULL) {
-    analog_init();
+    mendel_sub_init( "analog", analog_init);
     for (int ix = 0 ; ix < temp_config_items ; ++ix) {
       temp_config_record* ps 	= &temp_config_data[ ix];
       struct temp_channel* pd	= &temp_channels[ ix];

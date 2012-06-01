@@ -7,6 +7,7 @@
 #include "pruss.h"
 #include "debug.h"
 #include "beaglebone.h"
+#include "mendel.h"
 
 /*
  *  Settings that are changed during initialization.
@@ -398,7 +399,7 @@ static void pruss_axis_config( int axis, double step_size, int reverse)
   pruss_queue_config_axis( axis, ssi, sst, ssn, reverse);
 }
 
-void traject_init( void)
+int traject_init( void)
 {
   /*
    *  Configure 'constants' from configuration
@@ -421,7 +422,7 @@ void traject_init( void)
   /*
    *  Configure PRUSS and propagate stepper configuration
    */
-  pruss_init();
+  mendel_sub_init( "pruss", pruss_init);
 
   // Set per axis step size and reversal bit
   pruss_axis_config( 1, step_size_x, traject_reverse_axis( x_axis));
@@ -436,5 +437,6 @@ void traject_init( void)
   pruss_queue_set_pulse_length( 4, 8 * 200);
 
   pruss_queue_set_idle_timeout( 30);	// set a 3 seconds timeout
+  return 0;
 }
 

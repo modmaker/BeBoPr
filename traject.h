@@ -23,6 +23,6 @@ extern double traject_get_max_accel( axis_e axis);
 extern double traject_get_step_size( axis_e axis);
 extern int traject_reverse_axis( axis_e axis);
 
-extern void traject_init( void);
+extern int traject_init( void);
 
 #endif
