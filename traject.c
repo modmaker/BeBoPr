@@ -97,7 +97,8 @@ void traject_delta_on_all_axes( traject5D* traject)
   }
   // We're only moving in 3D space, e-axis isn't part of this!
   double distance = sqrt( dx * dx + dy * dy + dz * dz);
-  if (distance < 5.0E-9) {
+  // Allow for the e-axis to be controlled separately!
+  if (distance < 5.0E-9 && de == 0.0) {
     if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
       printf( "*** Null move, distance = %1.9lf\n", distance);
     }
