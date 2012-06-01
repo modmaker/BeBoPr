@@ -961,9 +961,9 @@ void process_gcode_command() {
 	} // else if (next_target.seen_M)
 } // process_gcode_command()
 
-int gcode_process_init( void)
+void gcode_process_init( void)
 {
-  mendel_sub_init( "traject", traject_init);
+  traject_init();
 
   heater_extruder = heater_lookup_by_name( "heater_extruder");
   heater_bed      = heater_lookup_by_name( "heater_bed");
@@ -975,8 +975,4 @@ int gcode_process_init( void)
 	    tag_name( heater_extruder), tag_name( heater_bed),
 	    tag_name( temp_extruder), tag_name( temp_bed));
   }
-  if (heater_extruder == NULL || heater_bed == NULL || temp_extruder == NULL || temp_bed == NULL) {
-    return -1;
-  }
-  return 0;
 }
