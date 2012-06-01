@@ -52,7 +52,7 @@ static int temp_update( update_channel_t channel, int analog_value)
       celsius = (double) analog_value;
       result = 0;
     }
-    if (debug_flags & DEBUG_TEMPERATURE) {
+    if (debug_flags & DEBUG_TEMP) {
       fprintf( stderr, "temp_update called for channel %d with value %d => celsius %1.1lf\n",
 	       channel, analog_value, celsius);
     }
