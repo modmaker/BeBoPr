@@ -533,14 +533,14 @@ void process_gcode_command() {
 				channel_tag heater;
 				if (next_target.seen_P) {
 					switch (next_target.P) {
-					case 0:  heater = "heater_extruder"; break;
-					case 1:  heater = "heater_bed"; break;
+					case 0:  heater = heater_extruder; break;
+					case 1:  heater = heater_bed; break;
 					default: heater = NULL;
 					}
 				} else {
-					heater = "heater_extruder";
+					heater = heater_extruder;
 				}
-				heater_set_setpoint( heater_lookup_by_name( heater), next_target.S);
+				heater_set_setpoint( heater, next_target.S);
 				if (next_target.S) {
 					// if setpoint is not null, turn power on
 					power_on();
@@ -566,17 +566,17 @@ void process_gcode_command() {
 				if (next_target.seen_P) {
 					channel_tag temp_source;
 					switch (next_target.P) {
-					case 0:  temp_source = heater_lookup_by_name( "heater_extruder"); break;
-					case 1:  temp_source = heater_lookup_by_name( "heater_bed"); break;
+					case 0:  temp_source = heater_extruder; break;
+					case 1:  temp_source = heater_bed; break;
 					default: temp_source = NULL;
 					}
 					if (heater_get_celsius( temp_source, &celsius) == 0) {
 						printf( "\nT:%1.1lf", celsius);
 					}
 				} else {
-					heater_get_celsius( heater_lookup_by_name( "heater_extruder"), &celsius);
+					heater_get_celsius( heater_extruder, &celsius);
 					printf( "\nT:%1.1lf", celsius);
-					heater_get_celsius( heater_lookup_by_name( "heater_bed"), &celsius);
+					heater_get_celsius( heater_bed, &celsius);
 					printf( " B:%1.1lf", celsius);
 				}
 				break;
@@ -963,8 +963,15 @@ void process_gcode_command() {
 void gcode_process_init( void)
 {
   traject_init();
+
   heater_extruder = heater_lookup_by_name( "heater_extruder");
   heater_bed      = heater_lookup_by_name( "heater_bed");
   temp_extruder   = temp_lookup_by_name( "temp_extruder");
   temp_bed        = temp_lookup_by_name( "temp_bed");
+  if (debug_flags & DEBUG_GCODE_PROCESS) {
+    printf( "tag_name( heater_extruder) = '%s',  tag_name( heater_bed) = '%s',\n"
+	    "tag_name( temp_extruder) = '%s',  tag_name( temp_bed) = '%s'\n",
+	    tag_name( heater_extruder), tag_name( heater_bed),
+	    tag_name( temp_extruder), tag_name( temp_bed));
+  }
 }
