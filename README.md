@@ -3,9 +3,9 @@ BeBoPr
 
 3D printer controller software for BeagleBone with BeBoPr Cape [wiki](BeBoPr/wiki/Home-of-the-BeBoPr)
 
-Currently this is a very preliminary version, that allows some interactive
-experiments with the stepper driver. For this one needs the binary 'stepper.bin'
-that's not in this repository and only comes with the BeBoPr Cape.
+This is still a preliminary version, large parts still being in flux. But it allows for interactive
+experiments with the stepper driver and temperature control. For this one needs the binary 'stepper.bin'
+that's not in this repository, but comes with the BeBoPr Cape.
 
 Compilation:
 ------------
