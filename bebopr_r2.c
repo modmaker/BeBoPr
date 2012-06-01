@@ -71,6 +71,24 @@ static const temp_config_record temp_config_data[] = {
   },
 };
 
+static const pwm_config_record pwm_config_data[] = {
+  {
+    .tag		= pwm_extruder,
+    .device_path	= PWM_PATH_PREFIX "ehrpwm.2:0",	// BEBOPR_R2_J3 - PWM1
+    .frequency		= 10,
+  },
+  {
+    .tag		= pwm_fan,
+    .device_path	= PWM_PATH_PREFIX "ehrpwm.2:1",	// BEBOPR_R2_J2 - PWM0
+    .frequency		= 0,         // frequency is determined by ehrpwm.2:0 !
+  },
+  {
+    .tag		= pwm_bed,
+    .device_path	= PWM_PATH_PREFIX "ehrpwm.1:0",	// BEBOPR_R2_J4 - PWM2
+    .frequency		= 1000,
+  },
+};
+
 static const heater_config_record heater_config_data[] = {
   {
     .tag		= heater_extruder,
@@ -80,9 +98,9 @@ static const heater_config_record heater_config_data[] = {
     {
 	    .K = 0.0,
 	    .P = 15.0,
-	    .I = 0.0,
+	    .I = 10.0,
 	    .D = 0.0,
-	    .I_limit = 12.0,
+	    .I_limit = 0.7,
     },
   },
   {
@@ -113,6 +131,11 @@ int bebopr_pre_init( void)
   result = temp_config( temp_config_data, NR_ITEMS( temp_config_data));
   if (result < 0) {
     fprintf( stderr, "temp_config failed!\n");
+    goto done;
+  }
+  result = pwm_config( pwm_config_data, NR_ITEMS( pwm_config_data));
+  if (result < 0) {
+    fprintf( stderr, "pwm_config failed!\n");
     goto done;
   }
   result = heater_config( heater_config_data, NR_ITEMS( heater_config_data));
