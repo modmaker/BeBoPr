@@ -24,12 +24,12 @@
 			ctrl+d \endcode
 */
 
-#include	<stdio.h>
-#include	<stdlib.h>
-#include	<unistd.h>
-#include	<time.h>
-#include	<sched.h>
-#include 	<pthread.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <time.h>
+#include <sched.h>
+#include <pthread.h>
 
 #include	"config.h"
 
@@ -46,16 +46,13 @@
 #include	"pinio.h"
 #include	"platform.h"
 #include	"clock.h"
-#include	"bebopr.h"
-#include	"mendel.h"
-#include	"gcode_process.h"
-#include	"limit_switches.h"
+#include "bebopr.h"
+#include "mendel.h"
+#include "gcode_process.h"
+#include "limit_switches.h"
 
-/// initialise all I/O - set pins as input or output, turn off unused subsystems, etc
-void io_init(void) {
-}
 
-void arm_init( void)
+static int arm_init( void)
 {
   if (geteuid() != 0) {
     // Only root can set scheduling parameters, not running as root
@@ -84,32 +81,26 @@ void arm_init( void)
   } else {
     printf( "Clock resolution = %ld.%09ld s.\n", clock_resolution.tv_sec, clock_resolution.tv_nsec);
   }
+  return 0;
 }
 
 /// Startup code, run when we come out of reset
 void init(void) {
 
-  bebopr_pre_init();
+  // configure
+  mendel_sub_init( "bebopr", bebopr_pre_init);
 
-  arm_init();
-  fprintf( stderr, "<arm-init done>");
+  // set up arm & linux specific stuff
+  mendel_sub_init( "arm", arm_init);
 
-	// set up watchdog
-	wd_init();
-	fprintf( stderr, "<wd-init done>");
-	// set up limit switches
-	mendel_sub_init( "limsw", limsw_init);
+  // set up limit switches
+  mendel_sub_init( "limsw", limsw_init);
 
-	// set up serial communication
-	mendel_sub_init( "serial", serial_init);
+  // set up serial communication
+  mendel_sub_init( "serial", serial_init);
 
-	// set up inputs and outputs
-	io_init();
-	fprintf( stderr, "<io-init done>");
-
-	// set up timers
-//	timer_init();
-//	fprintf( stderr, "<timer-init done>");
+  // This initializes the complete analog subsystem!
+  mendel_sub_init( "heater", heater_init);
 
   // This initializes the trajectory code and PRUSS
   mendel_sub_init( "gcode_process", gcode_process_init);
@@ -117,16 +108,6 @@ void init(void) {
 	// set up dda
 	dda_init();
 	fprintf( stderr, "<dda-init done>");
-
-	// enable interrupts
-	sei();
-	fprintf( stderr, "<sei done>");
-
-	// reset watchdog
-	wd_reset();
-	fprintf( stderr, "<wd_reset done>");
-
-	mendel_sub_init( "heater", heater_init);
 
 	// say hi to host
 	serial_writestr_P(PSTR("start\nok\n"));
@@ -139,8 +120,7 @@ int mendel_thread_create( const char* name, pthread_t* restrict thread, const pt
   int result = pthread_create( thread, attr, worker_thread, arg);
   if (result == 0) {
     fprintf( stderr, "done ===\n");
-    usleep( 1000);
-    //    sched_yield();
+    usleep( 1000); //    sched_yield();
   } else {
     fprintf( stderr, "failed with error=%d ===\n", result);
   }
@@ -149,11 +129,12 @@ int mendel_thread_create( const char* name, pthread_t* restrict thread, const pt
 
 int mendel_sub_init( const char* name, int (*subsys)( void))
 {
+  fprintf( stderr, "Starting %s_init() ...\n", name);
   int result = subsys();
   if (result != 0) {
-    fprintf( stderr, "%s_init() failed with code %d\n", name, result);
+    fprintf( stderr, "... %s_init() failed with code %d\n", name, result);
   } else {
-    fprintf( stderr, "%s_init() was successfull\n", name);
+    fprintf( stderr, "... %s_init() was successfull\n", name);
   }
   return result;
 }
@@ -164,9 +145,8 @@ int mendel_sub_init( const char* name, int (*subsys)( void))
 /// just run init(), then run an endless loop where we pass characters from the serial RX buffer to gcode_parse_char() and check the clocks
 int main (void)
 {
-  fprintf( stderr, "<pre-init>");
-	init();
-  fprintf( stderr, "<post-init>");
+  init();
+  fprintf( stderr, "Starting main loop...\n");
 
 	// main loop
 	for (;;) {
@@ -177,8 +157,7 @@ int main (void)
 			uint8_t c = serial_popchar();
 			gcode_parse_char( c);
 		}
-		usleep( 1000);
-		sched_yield();
+		usleep( 1000);	// sched_yield();
 	}
 }
 // -*- indent-tabs-mode: nil; tab-width: 4; c-basic-offset: 4; -*-
