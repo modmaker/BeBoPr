@@ -6,51 +6,30 @@
 #include "traject.h"
 #include "pruss.h"
 #include "debug.h"
+#include "beaglebone.h"
 
+/*
+ *  Settings that are changed during initialization.
+ *  Silly defaults to prevent division-by-zero or similar
+ *  while not initialized (TODO: remove)
+ */
+static double step_size_x;	/* [m] */
+static double step_size_y;
+static double step_size_z;
+static double step_size_e;
 
-/* convert [mm/min] into [m/s] */
-#define	FEED2SI( f) ((f) / 60000.0)
-#define RECIPR( x) (1.0 / (x))
-#define SI2MS( x) (1000.0 * (x))
-#define SI2MM( x) (1000.0 * (x))
+static double recipr_a_max_x;	/* [s^2/m] */
+static double recipr_a_max_y;
+static double recipr_a_max_z;
+static double recipr_a_max_e;
 
-static const double fclk = 200000000.0;
-static double vx_max;
+static double vx_max;		/* [m/s] */
 static double vy_max;
 static double vz_max;
 static double ve_max;
 
-static const double recipr_a_max_x = RECIPR( 14.9);	/* [s^2/m] */
-static const double recipr_a_max_y = RECIPR( 2.5);
-static const double recipr_a_max_z = RECIPR( 2.4);
-static const double recipr_a_max_e = RECIPR( 2.4);
-static const double step_size_x = 6250.0E-9;		/* [m] */
-static const double step_size_y = 6250.0E-9;
-static const double step_size_z =  390.125E-9;
-static const double step_size_e = 1000.0E-9;
+static const double fclk = 200000000.0;
 static const double c_acc = 191201673.632;	// = 0.676 * fclk * sqrt( 2.0);
-
-uint32_t traject_get_max_feed( axis_e axis)
-{
-  switch (axis) {
-  case x_axis:	return 68571;
-  case y_axis:	return 68571;
-  case z_axis:	return   900;
-  case e_axis:	return  1000;	// TBD
-  default:	return 0;
-  }
-}
-
-double traject_get_step_size( axis_e axis)
-{
-  switch (axis) {
-  case x_axis:	return step_size_x;
-  case y_axis:	return step_size_y;
-  case z_axis:	return step_size_z;
-  case e_axis:	return step_size_e;
-  default:	return 0.0;
-  }
-}
 
 void traject_move_one_axis( double delta, uint32_t feed)
 {
@@ -408,9 +387,9 @@ void traject_delta_on_all_axes( traject5D* traject)
 
 static void pruss_axis_config( int axis, double step_size, int reverse)
 {
-  uint32_t ssi = (int)(step_size * 1.0E9);
-  uint16_t ssn = 1024;
-  uint16_t sst = (int) ssn * (step_size * 1.0E9 - ssi);
+  uint32_t ssi = (int) SI2NM( step_size);
+  uint16_t ssn = 1000;
+  uint16_t sst = (int) ssn * (SI2NM( step_size) - ssi);
 
   if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
     printf( "Set axis nr %d step size (%1.6lf) to %u + %u / %u [nm] and %s direction\n",
@@ -421,18 +400,34 @@ static void pruss_axis_config( int axis, double step_size, int reverse)
 
 void traject_init( void)
 {
+  /*
+   *  Configure 'constants' from configuration
+   */
   vx_max = FEED2SI( traject_get_max_feed( x_axis));
   vy_max = FEED2SI( traject_get_max_feed( y_axis));
   vz_max = FEED2SI( traject_get_max_feed( z_axis));
   ve_max = FEED2SI( traject_get_max_feed( e_axis));
 
+  recipr_a_max_x = RECIPR( traject_get_max_accel( x_axis));
+  recipr_a_max_y = RECIPR( traject_get_max_accel( y_axis));
+  recipr_a_max_z = RECIPR( traject_get_max_accel( z_axis));
+  recipr_a_max_e = RECIPR( traject_get_max_accel( e_axis));
+
+  step_size_x = traject_get_step_size( x_axis);
+  step_size_y = traject_get_step_size( y_axis);
+  step_size_z = traject_get_step_size( z_axis);
+  step_size_e = traject_get_step_size( e_axis);
+
+  /*
+   *  Configure PRUSS and propagate stepper configuration
+   */
   pruss_init();
 
   // Set per axis step size and reversal bit
-  pruss_axis_config( 1, step_size_x, 1);
-  pruss_axis_config( 2, step_size_y, 0);
-  pruss_axis_config( 3, step_size_z, 1);
-  pruss_axis_config( 4, step_size_e, 0);
+  pruss_axis_config( 1, step_size_x, traject_reverse_axis( x_axis));
+  pruss_axis_config( 2, step_size_y, traject_reverse_axis( y_axis));
+  pruss_axis_config( 3, step_size_z, traject_reverse_axis( z_axis));
+  pruss_axis_config( 4, step_size_e, traject_reverse_axis( e_axis));
   pruss_queue_set_idle_timeout( 30);	// set a 3 seconds timeout
 }
 

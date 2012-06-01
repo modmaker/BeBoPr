@@ -1,5 +1,6 @@
 
 #include <stdio.h>
+#include <stdint.h>
 
 #include "analog.h"
 #include "temp.h"
@@ -8,6 +9,7 @@
 #include "bebopr.h"
 #include "heater.h"
 #include "pwm.h"
+#include "traject.h"
 
 /*
  * Here one defines where the kernel puts the analog inputs,
@@ -143,3 +145,57 @@ int limsw_z_max_is_active_low( void) { return 1; }
 int limsw_z_min_is_active_low( void) { return 0; }
 
 int use_pololu_drivers( void) { return 0; }
+
+/*
+ *  Specify maximum allowed feed for each axis in [mm/min]
+ */
+uint32_t traject_get_max_feed( axis_e axis)
+{
+  switch (axis) {
+  case x_axis:	return 68571;
+  case y_axis:	return 68571;
+  case z_axis:	return   900;
+  case e_axis:	return  1000;
+  default:	return 0;
+  }
+}
+
+/*
+ *  Specify step size for each axis in [m]
+ */
+double traject_get_step_size( axis_e axis)
+{
+  switch (axis) {
+  case x_axis:	return 6250.0E-9;
+  case y_axis:	return 6250.0E-9;
+  case z_axis:	return 390.125E-9;
+  case e_axis:	return 2100.0E-9;
+  default:	return 0.0;
+  }
+}
+
+/*
+ *  Specify maximum acceleration for each axis in [m/s^2]
+ */
+double traject_get_max_accel( axis_e axis)
+{
+  switch (axis) {
+  case x_axis:	return 2.5;
+  case y_axis:	return 2.5;
+  case z_axis:	return 2.5;
+  case e_axis:	return 2.5;
+  default:	return 0.0;
+  }
+}
+
+/*
+ *  Specifiy the axes that need a reversed stepper direction signal
+ */
+int traject_reverse_axis( axis_e axis)
+{
+  switch (axis) {
+  case x_axis:
+  case z_axis:	return 1;
+  default:	return 0;
+  }
+}

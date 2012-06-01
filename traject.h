@@ -19,6 +19,9 @@ extern void traject_delta_on_one_axis( double delta, uint32_t feed);
 extern void traject_delta_on_all_axes( traject5D* delta);
 
 extern uint32_t traject_get_max_feed( axis_e axis);
+extern double traject_get_max_accel( axis_e axis);
+extern double traject_get_step_size( axis_e axis);
+extern int traject_reverse_axis( axis_e axis);
 
 extern void traject_init( void);
 
