@@ -1,7 +1,7 @@
 BeBoPr
 ======
 
-3D printer controller software for BeagleBone with BeBoPr Cape.
+3D printer controller software for BeagleBone with BeBoPr Cape [wiki](wiki/Home-of-the-BeBoPr)
 
 Currently this is a very preliminary version, that allows some interactive
 experiments with the stepper driver. For this one needs the binary 'stepper.bin'
