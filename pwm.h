@@ -1,14 +1,9 @@
 #ifndef _PWM_H
 #define _PWM_H
 
-typedef enum {
-  e_pwm_output_1,
-  e_pwm_output_2,
-  e_pwm_output_3,
-  e_pwm_num_outputs
-} pwm_output_e;
+#include "beaglebone.h"
 
 extern int pwm_init( void);
-extern int pwm_set_output( double percentage);
+extern int pwm_set_output( channel_tag ch, unsigned int percentage);
 
 #endif

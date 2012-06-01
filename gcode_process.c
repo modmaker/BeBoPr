@@ -40,6 +40,11 @@ uint8_t next_tool;
 static TARGET gcode_current_pos;
 static TARGET gcode_home_pos;
 
+static channel_tag heater_extruder = NULL;
+static channel_tag heater_bed = NULL;
+static channel_tag temp_extruder = NULL;
+static channel_tag temp_bed = NULL;
+
 
 void gcode_trace_move( void)
 {
@@ -525,16 +530,17 @@ void process_gcode_command() {
 				//?
 				//? Set the temperature of the current extruder to 190<sup>o</sup>C and return control to the host immediately (''i.e.'' before that temperature has been reached by the extruder).  See also M109.
 				//? Teacup supports an optional P parameter as a sensor index to address (eg M104 P1 S100 will set the bed temperature rather than the extruder temperature).
-				int channel = -1;
+				channel_tag heater;
 				if (next_target.seen_P) {
 					switch (next_target.P) {
-					case 0: channel = e_heater_extruder; break;
-					case 1: channel = e_heater_bed; break;
+					case 0:  heater = "heater_extruder"; break;
+					case 1:  heater = "heater_bed"; break;
+					default: heater = NULL;
 					}
 				} else {
-					channel = e_heater_extruder;
+					heater = "heater_extruder";
 				}
-				heater_set_setpoint( channel, next_target.S);
+				heater_set_setpoint( heater_lookup_by_name( heater), next_target.S);
 				if (next_target.S) {
 					// if setpoint is not null, turn power on
 					power_on();
@@ -552,24 +558,25 @@ void process_gcode_command() {
 				//? <tt>ok T:201 B:117</tt>
 				//?
 				//? Teacup supports an optional P parameter as a sensor index to address.
-				int channel = -1;
 				double celsius;
 				#ifdef ENFORCE_ORDER
 					// wait for all moves to complete
 					dda_queue_wait();
 				#endif
 				if (next_target.seen_P) {
+					channel_tag temp_source;
 					switch (next_target.P) {
-					case 0:  channel = e_heater_extruder; break;
-					case 1:  channel = e_heater_bed; break;
+					case 0:  temp_source = heater_extruder; break;
+					case 1:  temp_source = heater_bed; break;
+					default: temp_source = NULL;
 					}
-					if (temp_get_celsius( channel, &celsius) == 0) {
+					if (heater_get_celsius( temp_source, &celsius) == 0) {
 						printf( "\nT:%1.1lf", celsius);
 					}
 				} else {
-					temp_get_celsius( e_heater_extruder, &celsius);
+					heater_get_celsius( heater_extruder, &celsius);
 					printf( "\nT:%1.1lf", celsius);
-					temp_get_celsius( e_heater_bed, &celsius);
+					heater_get_celsius( heater_bed, &celsius);
 					printf( " B:%1.1lf", celsius);
 				}
 				break;
@@ -619,13 +626,13 @@ void process_gcode_command() {
 				//?
 				//? Teacup supports an optional P parameter as a sensor index to address.
 				if (next_target.seen_S) {
-					heater_set_setpoint( e_heater_extruder, next_target.S);
+					heater_set_setpoint( heater_extruder, next_target.S);
 					power_on();
 				}
 				if (next_target.S) {
-					heater_enable( e_heater_extruder, 1);
+					heater_enable( heater_extruder, 1);
 				} else {
-					heater_enable( e_heater_extruder, 0);
+					heater_enable( heater_extruder, 0);
 				}
 				dda_queue_enqueue( NULL);
 				break;
@@ -657,6 +664,7 @@ void process_gcode_command() {
 				//? This command is only available in DEBUG builds of Teacup.
 
 				debug_flags = next_target.S;
+				printf( "New debug_flags setting: 0x%04x\n", debug_flags);
 				break;
 			#endif
 			// M113- extruder PWM
@@ -720,29 +728,30 @@ void process_gcode_command() {
 				//? P1: set for bed
 				//? Snnn.nn: factor to set
 				if (next_target.seen_S) {
-					pid_struct pid;
-					int channel = -1;
+					pid_settings pid;
+					channel_tag channel;
 					if (next_target.seen_P) {
 						switch (next_target.P) {
-						case 0: channel = e_heater_extruder; break;
-						case 1: channel = e_heater_bed; break;
+						case 0:  channel = heater_extruder; break;
+						case 1:  channel = heater_bed; break;
+						default: channel = NULL;
 						}
 					} else {
-						channel = e_heater_extruder;
+						channel = heater_extruder;
 					}
 					heater_get_pid_values( channel, &pid);
 					switch (next_target.M) {
 					case 130:	// M130- heater P factor
-						pid.p = next_target.S;
+						pid.P = next_target.S;
 						break;
 					case 131:	// M131- heater I factor
-						pid.i = next_target.S;
+						pid.I = next_target.S;
 						break;
 					case 132:	// M132- heater D factor
-						pid.d = next_target.S;
+						pid.D = next_target.S;
 						break;
 					case 133:	// M133- heater I limit
-						pid.i_limit = next_target.S;
+						pid.I_limit = next_target.S;
 						break;
 					}
 					heater_set_pid_values( channel, &pid);
@@ -759,7 +768,13 @@ void process_gcode_command() {
 				//? ==== M135: set heater output ====
 				//? Undocumented.
 				if (next_target.seen_S) {
-					heater_set_raw_pwm( next_target.P, next_target.S);
+					channel_tag heater;
+					switch (next_target.P) {
+					case 0:  heater = heater_extruder; break;
+					case 1:  heater = heater_bed; break;
+					default: heater = NULL;
+					}
+					heater_set_raw_pwm( heater, next_target.S);
 					power_on();
 				}
 				break;
@@ -769,19 +784,20 @@ void process_gcode_command() {
 				//? ==== M136: PRINT PID settings to host ====
 				//? Undocumented.
 				//? This comand is only available in DEBUG builds.
-				pid_struct pid;
-				int channel = -1;
+				pid_settings pid;
+				channel_tag heater;
 				if (next_target.seen_P) {
 					switch (next_target.P) {
-					case 0: channel = e_heater_extruder; break;
-					case 1: channel = e_heater_bed; break;
+					case 0:  heater = heater_extruder; break;
+					case 1:  heater = heater_bed; break;
+					default: heater = NULL;
 					}
 				} else {
-					channel = e_heater_extruder;
+					heater = heater_extruder;
 				}
-				heater_get_pid_values( channel, &pid);
+				heater_get_pid_values( heater, &pid);
 				fprintf( stdout, "P:%1.3f I:%1.3f D:%1.3f Ilim:%1.3f",
-					   pid.p, pid.i, pid.d, pid.i_limit);
+					   pid.P, pid.I, pid.D, pid.I_limit);
 				break;
 			}
 			#endif
@@ -789,7 +805,7 @@ void process_gcode_command() {
 			case 140: //Set heated bed temperature
 				//? ==== M140: Set heated bed temperature ====
 				//? Undocumented.
-				heater_set_setpoint( e_heater_bed, next_target.S);
+				heater_set_setpoint( heater_bed, next_target.S);
 				if (next_target.S) {
 					power_on();
 				}
@@ -947,4 +963,8 @@ void process_gcode_command() {
 void gcode_process_init( void)
 {
   traject_init();
+  heater_extruder = heater_lookup_by_name( "heater_extruder");
+  heater_bed      = heater_lookup_by_name( "heater_bed");
+  temp_extruder   = temp_lookup_by_name( "temp_extruder");
+  temp_bed        = temp_lookup_by_name( "temp_bed");
 }

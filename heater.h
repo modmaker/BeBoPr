@@ -1,67 +1,45 @@
 #ifndef	_HEATER_H
 #define	_HEATER_H
 
-#if 0
-
-#include "config.h"
-#include	<stdint.h>
-#include "temp.h"
-
-#define	enable_heater()		heater_set(0, 64)
-#define	disable_heater()	heater_set(0, 0)
-
-#undef DEFINE_HEATER
-#define DEFINE_HEATER(name, pin) HEATER_ ## name,
-typedef enum
-{
-	#include "config.h"
-	NUM_HEATERS,
-	HEATER_noheater
-} heater_t;
-#undef DEFINE_HEATER
-
-#define NUM_HEATERS	2
-#define HEATER_EXTRUDER	1
-#define HEATER_BED	0
-
-#endif
 
 #include "temp.h"
 #include "pwm.h"
+#include "beaglebone.h"
+
 
 typedef struct {
-  double	k;
-  double	p;
-  double	i;
-  double	d;
-  double	i_limit;
-} pid_struct;
+  double	K;
+  double	P;
+  double	I;
+  double	D;
+  double	I_limit;
+} pid_settings;
 
-typedef enum {
-  e_heater_extruder,
-  e_heater_bed,
-  e_heater_num_outputs
-} heater_e;
-
-typedef struct {
-  heater_e		heater;
-  temp_sensor_e		sensor;
-  pwm_output_e		pwm_output;
-} heater_config_struct;
+typedef const struct {
+  channel_tag		tag;
+  channel_tag		analog_input;
+  channel_tag		analog_output;
+  pid_settings		pid;
+  double		setpoint;
+} heater_config_record;
 
 
-extern int heater_config( const heater_config_struct* config_data, int nr_config_items);
+extern channel_tag heater_lookup_by_name( const char* name);
+
+extern int heater_config( heater_config_record* config_data, int nr_config_items);
 extern int heater_init( void);
 extern int heater_save_settings( void);
 extern int heater_load_settings( void);
 
-extern int heater_set_pid_values( int heater, const pid_struct* pid_settings);
-extern int heater_get_pid_values( int heater, pid_struct* pid_settings);
-extern int heater_set_setpoint( int heater, double setpoint);
-extern int heater_get_setpoint( int heater, double* setpoint);
+extern int heater_set_pid_values( channel_tag heater, const pid_settings* pid_settings);
+extern int heater_get_pid_values( channel_tag heater, pid_settings* pid_settings);
+extern int heater_set_setpoint( channel_tag heater, double setpoint);
+extern int heater_get_setpoint( channel_tag heater, double* setpoint);
+extern int heater_enable( channel_tag heater, int state);
+extern int heater_set_raw_pwm( channel_tag heater, double percentage);
+extern int heater_get_celsius( channel_tag heater_channel, double* pcelsius);
 
-extern int heater_enable( heater_e heater, int state);
-extern int heater_set_raw_pwm( int heater, double percentage);
+extern channel_tag heater_lookup_by_name( const char* name);
 
 #if 0
 void heater_set(heater_t index, uint8_t value);

@@ -1,59 +1,177 @@
-#include	<stdlib.h>
-#include	<stdlib.h>
-#include	<stdint.h>
-#include	<fcntl.h>
-#include	<stdio.h>
-#include	<unistd.h>
-#include	<pthread.h>
+#include <stdlib.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <fcntl.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <pthread.h>
+#include <string.h>
+#include <time.h>
 
-#include	"heater.h"
-#include	"debug.h"
-#include	"temp.h"
-#include	"beaglebone.h"
-#include	"mendel.h"
+#include "heater.h"
+#include "debug.h"
+#include "temp.h"
+#include "beaglebone.h"
+#include "mendel.h"
 
 
-typedef struct {
-  temp_sensor_e		sensor;
-  pwm_output_e		pwm_output;
+struct heater {
+  channel_tag		id;
+  channel_tag		input;
+  channel_tag		output;
   double		setpoint;
-  pid_struct		pid_settings;
+  pid_settings		pid_settings;
   double		(*get_temperature)( void);
-} heater_struct;
+  double		pid_integral;
+  double		celsius_history[ 8];
+  unsigned int          history_ix;
+  int			log_fd;
+};
 
-static heater_struct heaters[ e_heater_num_outputs];
+static struct heater* heaters = NULL;
+static unsigned int num_heater_channels = 0;
+
+static int heater_index_lookup( channel_tag heater_channel)
+{
+  for (int ix = 0 ; ix < num_heater_channels ; ++ix) {
+    if (heaters[ ix].id == heater_channel) {
+      return ix;
+    }
+  }
+  if (debug_flags & DEBUG_HEATER) {
+    fprintf( stderr, "heater_index_lookup failed for '%s'\n", tag_name( heater_channel));
+  }
+  return -1;
+}
+
+static double clip( double min, double val, double max)
+{
+  if (val < min) {
+    return min;
+  } else if (val > max) {
+    return max;
+  }
+  return val;
+}
 
 // Use control_lock for access to control loop settings
 static pthread_rwlock_t	control_lock;
+
+static int log_file_open( const char* fname)
+{
+  char s[ 200];
+  snprintf( s, sizeof( s), "./pid-%s.log", fname);
+  if (debug_flags & DEBUG_HEATER) {
+    printf( "log_file_open - using file '%s'\n", s);
+  }
+  int fd = open( s, O_WRONLY|O_CREAT|O_APPEND);
+  if (fd < 0) {
+    perror( "Failed to open logile for writing");
+  }
+  if (debug_flags & DEBUG_HEATER) {
+    printf( "log_file_open - start logging to file '%s'\n", s);
+  }
+  snprintf( s, sizeof( s), "----------------------------------\n"
+                           "     time      celsius duty-cycle\n"
+                           "----------------------------------\n");
+  write( fd, s, strlen( s));
+  return fd;
+}
+
+static void log_entry( int fd, double celsius, int duty_cycle)
+{
+  struct timespec ts;
+  char s[ 100];
+  clock_gettime( CLOCK_MONOTONIC, &ts);
+  snprintf( s, sizeof( s), "%7u.%03u,  %3.2lf,  %3d\n", (int)ts.tv_sec, (int)ts.tv_nsec / 1000000, celsius, duty_cycle);
+  write( fd, s, strlen( s));
+
+}
+/*
+ * This is the worker thread that controls the heaters
+ * depending on the setpoint and temperature measured.
+ */
+void* heater_thread( void* arg)
+{
+  fprintf( stderr, "heater_thread: started\n");
+  while (1) {
+    usleep( 1000000);
+    for (int ix = 0 ; ix < num_heater_channels ; ++ix) {
+      struct heater* p = &heaters[ ix];
+      channel_tag input_channel  = p->input;
+      channel_tag output_channel = p->output;
+      double celsius;
+
+      int result = temp_get_celsius( input_channel, &celsius);
+      if (result < 0) {
+        fprintf( stderr, "heater_thread - failed to read temperature from '%s'\n", tag_name( input_channel));
+      } else {
+        if (debug_flags & DEBUG_HEATER) {
+          printf( "heater_thread - temperature from '%s' is %2.1lf\n", tag_name( input_channel), celsius);
+	}
+	// A setpoint of 0.0 means: disable heater
+	if (p->setpoint == 0.0) {
+          pwm_set_output( output_channel, 0);
+	  continue;
+	}
+	double t_error = p->setpoint - celsius;
+        if (debug_flags & DEBUG_HEATER) {
+          printf( "heater_thread - setpoint=%1.2lf, error=%1.2lf.\n",
+		  p->setpoint, t_error);
+	}
+	p->celsius_history[ p->history_ix] = celsius;
+	if (++(p->history_ix) >= NR_ITEMS( p->celsius_history)) {
+          p->history_ix = 0;
+	}
+
+	// proportional part
+	double heater_p = t_error;
+	// integral part (prevent integrator wind-up)
+	p->pid_integral = clip( -p->pid_settings.I_limit,
+			p->pid_integral + t_error, p->pid_settings.I_limit);
+	// derivative (note: D follows temp rather than error so there's
+	// no large derivative when the target changes)
+	double heater_d = p->celsius_history[ p->history_ix];
+	if (heater_d != 0.0) {
+          heater_d -= celsius;
+	}
+	// combine factors
+        double out = (heater_p * p->pid_settings.P) +
+		(p->pid_integral * p->pid_settings.I) + (heater_d * p->pid_settings.D);
+        if (debug_flags & DEBUG_HEATER) {
+          printf( "heater_thread - p=%1.6lf, i=%1.6lf, d=%1.6lf, out=%1.3lf.\n",
+		  heater_p, p->pid_integral, heater_d, out);
+	}
+	int duty_cycle = (int) clip( 0.0, out, 100.0);
+        if (debug_flags & DEBUG_HEATER) {
+          printf( "heater_thread - set output '%s' to %d %%.\n",
+		  tag_name( output_channel), duty_cycle);
+	}
+	log_entry( p->log_fd, celsius, duty_cycle);
+        pwm_set_output( output_channel, duty_cycle);
+      }
+    }
+  }
+}
+
+static pthread_t worker;
 
 /*
  * Configuration settings are stored seperately (bebopr_rx.c) and
  * a configuration call is used to communicate these with this
  * code.
  */
-static const heater_config_struct* heater_config_data = NULL;
+static heater_config_record* heater_config_data = NULL;
 static int heater_config_items = 0;
 
-int heater_config( const heater_config_struct* config_data, int nr_config_items)
+int heater_config( heater_config_record* config_data, int nr_config_items)
 {
   heater_config_data  = config_data;
   heater_config_items = nr_config_items;
+  heaters = calloc( nr_config_items, sizeof( struct heater));
+  num_heater_channels = 0;
   return 0;
 }
-
-/*
- * This is the worker thread that reads the analog inputs and
- * calls the callbacks to export the read values.
- */
-void* heater_thread( void* arg)
-{
-  while (1) {
-    usleep( 1000);
-    sched_yield();
-  }
-}
-
-static pthread_t worker;
 
 /*
  * set defaults, init pwm hardware, set heater state to off.
@@ -63,36 +181,51 @@ static pthread_t worker;
 int heater_init( void)
 {
   if (heater_config_data != NULL) {
-    // No need to locks as there's no thread running yet!
-    for (int i = 0 ; i < heater_config_items ; ++i) {
-      heater_e		heater		= heater_config_data[ i].heater;
-      temp_sensor_e	sensor		= heater_config_data[ i].sensor;
-      pwm_output_e	pwm_output	= heater_config_data[ i].pwm_output;
-      heaters[ heater].sensor		= sensor;
-      heaters[ heater].pwm_output	= pwm_output;
-      //      analog_set_update_callback( channel, temp_update, (update_channel_t)sensor);
-      heaters[ heater].setpoint = 0.0;
-      heaters[ heater].pid_settings.k = 0.0;
-      heaters[ heater].pid_settings.p = 0.0;
-      heaters[ heater].pid_settings.i = 0.0;
-      heaters[ heater].pid_settings.d = 0.0;
-      heaters[ heater].get_temperature = NULL;
-    }
-    // Initialize temperature and pwm subsystems
+    // First initialize input and output subsystems
     mendel_sub_init( "temp", temp_init);
     mendel_sub_init( "pwm", pwm_init);
+    // No need to lock as there's no thread running yet!
+    for (int ch = 0 ; ch < heater_config_items ; ++ch) {
+      struct heater*	    pd  = &heaters[ ch];
+      heater_config_record* ps  = &heater_config_data[ ch];
+      pd->id			= ps->tag;
+      pd->input			= ps->analog_input;
+      pd->output		= ps->analog_output;
+      pd->pid_settings.P	= ps->pid.P;
+      pd->pid_settings.I	= ps->pid.I;
+      pd->pid_settings.D	= ps->pid.D;
+      pd->pid_settings.K	= 0.0;
+      pd->pid_settings.I_limit	= ps->pid.I_limit;
+      pd->setpoint		= 0.0;
+      pd->history_ix		= 0;
+      pd->pid_integral		= 0.0;
+      pd->log_fd		= -1;
+      ++num_heater_channels;
+    }
     // Start worker thread
     return mendel_thread_create( "heater", &worker, NULL, &heater_thread, NULL);
   }
   fprintf( stderr, "temp_init: no configuration data!\n");
-  extern void mendel_log_init( const char* name, int result);
   return -1;
 }
 
 /*
+ * get current temperature for a heater
+ */
+int heater_get_celsius( channel_tag heater, double* pcelsius)
+{
+  if (pcelsius != NULL) {
+    int ix = heater_index_lookup( heater);
+    if (ix >= 0) {
+      return temp_get_celsius( heaters[ ix].input, pcelsius);
+    }
+  }
+  return -1;
+}
+/*
  * turn heater channel on or off
  */
-int heater_enable( heater_e heater, int state)
+int heater_enable( channel_tag heater, int state)
 {
   return -1;
 }
@@ -100,7 +233,7 @@ int heater_enable( heater_e heater, int state)
 /*
  * set heater pwm output for given channel to value
  */
-int heater_set_raw_pwm( int heater, double percentage)
+int heater_set_raw_pwm( channel_tag heater, double percentage)
 {
   return -1;
 }
@@ -108,12 +241,26 @@ int heater_set_raw_pwm( int heater, double percentage)
 /*
  * set setpoint for a heater
  */
-int heater_set_setpoint( int heater, double setpoint)
+int heater_set_setpoint( channel_tag heater, double setpoint)
 {
-  if (heater >= 0 && heater < NR_ITEMS( heaters)) {
+  int ix = heater_index_lookup( heater);
+  if (ix >= 0) {
+    struct heater* p = &heaters[ ix];
     pthread_rwlock_wrlock( &control_lock);
-    heaters[ heater].setpoint = setpoint;
+    p->setpoint = setpoint;
     pthread_rwlock_unlock( &control_lock);
+    if (setpoint == 0.0) {
+      // stop logging & close file if open
+      if (p->log_fd >= 0) {
+        close( p->log_fd);
+        if (debug_flags & DEBUG_HEATER) {
+          printf( "heater_set_setpoint - logfile closed.\n");
+        }
+      }
+      p->log_fd = -1;
+    } else {
+      p->log_fd = log_file_open( tag_name( p->id));
+    }
     return 0;
   }
   return -1;
@@ -122,13 +269,16 @@ int heater_set_setpoint( int heater, double setpoint)
 /*
  * get setpoint for a heater
  */
-int heater_get_setpoint( int heater, double* setpoint)
+int heater_get_setpoint( channel_tag heater, double* setpoint)
 {
-  if (setpoint != NULL && heater >= 0 && heater < NR_ITEMS( heaters)) {
-    pthread_rwlock_rdlock( &control_lock);
-    *setpoint = heaters[ heater].setpoint;
-    pthread_rwlock_unlock( &control_lock);
-    return 0;
+  if (setpoint != NULL) {
+    int ix = heater_index_lookup( heater);
+    if (ix >= 0) {
+      pthread_rwlock_rdlock( &control_lock);
+      *setpoint = heaters[ ix].setpoint;
+      pthread_rwlock_unlock( &control_lock);
+      return 0;
+    }
   }
   return -1;
 }
@@ -136,11 +286,12 @@ int heater_get_setpoint( int heater, double* setpoint)
 /*
  * set PID values for a heater
  */
-int heater_set_pid_values( int heater, const pid_struct* pid_settings)
+int heater_set_pid_values( channel_tag heater, const pid_settings* pid_settings)
 {
-  if (heater >= 0 && heater < NR_ITEMS( heaters)) {
+  int ix = heater_index_lookup( heater);
+  if (ix >= 0) {
     pthread_rwlock_wrlock( &control_lock);
-    heaters[ heater].pid_settings = *pid_settings;
+    heaters[ ix].pid_settings = *pid_settings;
     pthread_rwlock_unlock( &control_lock);
     return 0;
   }
@@ -150,13 +301,16 @@ int heater_set_pid_values( int heater, const pid_struct* pid_settings)
 /*
  * get PID values for a heater
  */
-int heater_get_pid_values( int heater, pid_struct* pid_settings)
+int heater_get_pid_values( channel_tag heater, pid_settings* pid_settings)
 {
-  if (heater >= 0 && heater < NR_ITEMS( heaters)) {
-    pthread_rwlock_rdlock( &control_lock);
-    *pid_settings = heaters[ heater].pid_settings;
-    pthread_rwlock_unlock( &control_lock);
-    return 0;
+  if (pid_settings != NULL) {
+    int ix = heater_index_lookup( heater);
+    if (ix >= 0) {
+      pthread_rwlock_rdlock( &control_lock);
+      *pid_settings = heaters[ ix].pid_settings;
+      pthread_rwlock_unlock( &control_lock);
+      return 0;
+    }
   }
   return -1;
 }
@@ -214,419 +368,14 @@ int heater_load_settings( void)
   return 0;
 }
 
-
-
-#if 0
-
-/**
-	\var heaters_pid
-	\brief this struct holds the heater PID factors
-
-	PID is a fascinating way to control any closed loop control, combining the error (P), cumulative error (I) and rate at which we're approacing the setpoint (D) in such a way that when correctly tuned, the system will achieve target temperature quickly and with little to no overshoot
-
-	At every sample, we calculate \f$OUT = k_P (S - T) + k_I \int (S - T) + k_D \frac{dT}{dt}\f$ where S is setpoint and T is temperature.
-
-	The three factors kP, kI, kD are chosen to give the desired behaviour given the dynamics of the system.
-
-	See http://www.eetimes.com/design/embedded/4211211/PID-without-a-PhD for the full story
-*/
-struct {
-int32_t						p_factor; ///< scaled P factor
-	int32_t						i_factor; ///< scaled I factor
-	int32_t						d_factor; ///< scaled D factor
-	int16_t						i_limit;  ///< scaled I limit, such that \f$-i_{limit} < i_{factor} < i_{limit}\f$
-} heaters_pid[NUM_HEATERS];
-
-/// \brief this struct holds the runtime heater data- PID integrator history, temperature history, sanity checker
-struct {
-	int16_t						heater_i; ///< integrator, \f$-i_{limit} < \sum{\Delta t} < i_{limit}\f$
-
-	uint16_t					temp_history[TH_COUNT]; ///< store last TH_COUNT readings in a ring, so we can smooth out our differentiator
-	uint8_t						temp_history_pointer;   ///< pointer to last entry in ring
-
-	#ifdef	HEATER_SANITY_CHECK
-		uint16_t					sanity_counter;				///< how long things haven't seemed sane
-		uint16_t					sane_temperature;			///< a temperature we consider sane given the heater settings
-	#endif
-
-	uint8_t						heater_output;					///< this is the PID value we eventually send to the heater
-} heaters_runtime[NUM_HEATERS];
-
-/// default scaled P factor, equivalent to 8.0
-#define		DEFAULT_P				8192
-/// default scaled I factor, equivalent to 0.5
-#define		DEFAULT_I				512
-/// default scaled D factor, equivalent to 24
-#define		DEFAULT_D				24576
-/// default scaled I limit
-#define		DEFAULT_I_LIMIT	384
-
-/// this lives in the eeprom so we can save our PID settings for each heater
-typedef struct {
-	int32_t		EE_p_factor;
-	int32_t		EE_i_factor;
-	int32_t		EE_d_factor;
-	int16_t		EE_i_limit;
-	uint16_t	crc; ///< crc so we can use defaults if eeprom data is invalid
-} EE_factor;
-
-#if ARCH == arm
-// TODO: implementation
-EE_factor EE_factors[NUM_HEATERS];
-#else
-EE_factor EEMEM EE_factors[NUM_HEATERS];
-#endif
-
-/// \brief initialise heater subsystem
-/// Set directions, initialise PWM timers, read PID factors from eeprom, etc
-void heater_init() {
-	heater_t i;
-	// setup pins
-	for (i = 0; i < NUM_HEATERS; i++) {
-		if (heaters[i].heater_pwm) {
-			*heaters[i].heater_pwm = 0;
-			// this is somewhat ugly too, but switch() won't accept pointers for reasons unknown
-#if ARCH == arm
-			// TODO: implementation
-#else
-			switch((uint16_t) heaters[i].heater_pwm) {
-				case (uint16_t) &OCR0A:
-					TCCR0A |= MASK(COM0A1);
-					break;
-				case (uint16_t) &OCR0B:
-					TCCR0A |= MASK(COM0B1);
-					break;
-				case (uint16_t) &OCR2A:
-					TCCR2A |= MASK(COM2A1);
-					break;
-				case (uint16_t) &OCR2B:
-					TCCR2A |= MASK(COM2B1);
-					break;
-				#ifdef TCCR3A
-				case (uint16_t) &OCR3AL:
-					TCCR3A |= MASK(COM3A1);
-					break;
-				case (uint16_t) &OCR3BL:
-					TCCR3A |= MASK(COM3B1);
-					break;
-				case (uint16_t) &OCR3CL:
-					TCCR3A |= MASK(COM3C1);
-					break;
-				#endif
-				#ifdef	TCCR4A
-				case (uint16_t) &OCR4AL:
-					TCCR4A |= MASK(COM4A1);
-					break;
-				case (uint16_t) &OCR4BL:
-					TCCR4A |= MASK(COM4B1);
-					break;
-				case (uint16_t) &OCR4CL:
-					TCCR4A |= MASK(COM4C1);
-					break;
-				#endif
-				#ifdef	TCCR5A
-				case (uint16_t) &OCR5AL:
-					TCCR5A |= MASK(COM5A1);
-					break;
-				case (uint16_t) &OCR5BL:
-					TCCR5A |= MASK(COM5B1);
-					break;
-				case (uint16_t) &OCR5CL:
-					TCCR5A |= MASK(COM5C1);
-					break;
-				#endif
-			}
-#endif
-		}
-
-		#ifdef	HEATER_SANITY_CHECK
-			// 0 is a "sane" temperature when we're trying to cool down
-			heaters_runtime[i].sane_temperature = 0;
-		#endif
-
-		#ifndef BANG_BANG
-			// read factors from eeprom
-			heaters_pid[i].p_factor = eeprom_read_dword((uint32_t *) &EE_factors[i].EE_p_factor);
-			heaters_pid[i].i_factor = eeprom_read_dword((uint32_t *) &EE_factors[i].EE_i_factor);
-			heaters_pid[i].d_factor = eeprom_read_dword((uint32_t *) &EE_factors[i].EE_d_factor);
-			heaters_pid[i].i_limit = eeprom_read_word((uint16_t *) &EE_factors[i].EE_i_limit);
-
-// 			if ((heaters_pid[i].p_factor == 0) && (heaters_pid[i].i_factor == 0) && (heaters_pid[i].d_factor == 0) && (heaters_pid[i].i_limit == 0)) {
-			if (crc_block(&heaters_pid[i].p_factor, 14) != eeprom_read_word((uint16_t *) &EE_factors[i].crc)) {
-				heaters_pid[i].p_factor = DEFAULT_P;
-				heaters_pid[i].i_factor = DEFAULT_I;
-				heaters_pid[i].d_factor = DEFAULT_D;
-				heaters_pid[i].i_limit = DEFAULT_I_LIMIT;
-			}
-		#endif /* BANG_BANG */
-	}
+channel_tag heater_lookup_by_name( const char* name)
+{
+  for (int ix = 0 ; ix < num_heater_channels ; ++ix) {
+    channel_tag tag = heaters[ ix].id;
+    if (strcmp( tag_name( tag), name) == 0) {
+      return tag;
+    }
+  }
+  return NULL;
 }
 
-/// \brief Write PID factors to eeprom
-void heater_save_settings() {
-	#ifndef BANG_BANG
-		heater_t i;
-		for (i = 0; i < NUM_HEATERS; i++) {
-			eeprom_write_dword((uint32_t *) &EE_factors[i].EE_p_factor, heaters_pid[i].p_factor);
-			eeprom_write_dword((uint32_t *) &EE_factors[i].EE_i_factor, heaters_pid[i].i_factor);
-			eeprom_write_dword((uint32_t *) &EE_factors[i].EE_d_factor, heaters_pid[i].d_factor);
-			eeprom_write_word((uint16_t *) &EE_factors[i].EE_i_limit, heaters_pid[i].i_limit);
-			eeprom_write_word((uint16_t *) &EE_factors[i].crc, crc_block(&heaters_pid[i].p_factor, 14));
-		}
-	#endif /* BANG_BANG */
-}
-
-/** \brief run heater PID algorithm
-	\param h which heater we're running the loop for
-	\param t which temp sensor this heater is attached to
-	\param current_temp the temperature that the associated temp sensor is reporting
-	\param target_temp the temperature we're trying to achieve
-*/
-void heater_tick(heater_t h, temp_sensor_t t, uint16_t current_temp, uint16_t target_temp) {
-	uint8_t		pid_output;
-
-	#ifndef	BANG_BANG
-		int16_t		heater_p;
-		int16_t		heater_d;
-		int16_t		t_error = target_temp - current_temp;
-	#endif	/* BANG_BANG */
-
-	if (h >= NUM_HEATERS || t >= NUM_TEMP_SENSORS)
-		return;
-
-	if (target_temp == 0) {
-		heater_set(h, 0);
-		return;
-	}
-
-	#ifndef	BANG_BANG
-		heaters_runtime[h].temp_history[heaters_runtime[h].temp_history_pointer++] = current_temp;
-		heaters_runtime[h].temp_history_pointer &= (TH_COUNT - 1);
-
-		// PID stuff
-		// proportional
-		heater_p = t_error;
-
-		// integral
-		heaters_runtime[h].heater_i += t_error;
-		// prevent integrator wind-up
-		if (heaters_runtime[h].heater_i > heaters_pid[h].i_limit)
-			heaters_runtime[h].heater_i = heaters_pid[h].i_limit;
-		else if (heaters_runtime[h].heater_i < -heaters_pid[h].i_limit)
-			heaters_runtime[h].heater_i = -heaters_pid[h].i_limit;
-
-		// derivative
-		// note: D follows temp rather than error so there's no large derivative when the target changes
-		heater_d = heaters_runtime[h].temp_history[heaters_runtime[h].temp_history_pointer] - current_temp;
-
-		// combine factors
-		int32_t pid_output_intermed = (
-			(
-				(((int32_t) heater_p) * heaters_pid[h].p_factor) +
-				(((int32_t) heaters_runtime[h].heater_i) * heaters_pid[h].i_factor) +
-				(((int32_t) heater_d) * heaters_pid[h].d_factor)
-			) / PID_SCALE
-		);
-
-		// rebase and limit factors
-		if (pid_output_intermed > 255)
-			pid_output = 255;
-		else if (pid_output_intermed < 0)
-			pid_output = 0;
-		else
-			pid_output = pid_output_intermed & 0xFF;
-
-		#ifdef	DEBUG
-		if (DEBUG_PID && (debug_flags & DEBUG_PID))
-#if ARCH == arm
-			sersendf_P(PSTR("T{E:%d, P:%d * %d = %ld / I:%d * %d = %ld / D:%d * %d = %ld # O: %d = %u}\n"),
-#else
-			sersendf_P(PSTR("T{E:%d, P:%d * %ld = %ld / I:%d * %ld = %ld / D:%d * %ld = %ld # O: %ld = %u}\n"),
-#endif
-				   t_error, heater_p, heaters_pid[h].p_factor,
-				   (int32_t) heater_p * heaters_pid[h].p_factor / PID_SCALE,
-				   heaters_runtime[h].heater_i, heaters_pid[h].i_factor,
-				   (int32_t) heaters_runtime[h].heater_i * heaters_pid[h].i_factor / PID_SCALE,
-				   heater_d, heaters_pid[h].d_factor,
-				   (int32_t) heater_d * heaters_pid[h].d_factor / PID_SCALE, pid_output_intermed,
-				   pid_output);
-		#endif
-	#else
-		if (current_temp >= target_temp)
-			pid_output = BANG_BANG_OFF;
-		else
-			pid_output = BANG_BANG_ON;
-	#endif
-
-	#ifdef	HEATER_SANITY_CHECK
-	// check heater sanity
-	// implementation is a moving window with some slow-down to compensate for thermal mass
-	if (target_temp > (current_temp + (TEMP_HYSTERESIS*4))) {
-		// heating
-		if (current_temp > heaters_runtime[h].sane_temperature)
-			// hotter than sane- good since we're heating unless too hot
-			heaters_runtime[h].sane_temperature = current_temp;
-		else {
-			if (heaters_runtime[h].sanity_counter < 40)
-				heaters_runtime[h].sanity_counter++;
-			else {
-				heaters_runtime[h].sanity_counter = 0;
-				// ratchet up expected temp
-				heaters_runtime[h].sane_temperature++;
-			}
-		}
-		// limit to target, so if we overshoot by too much for too long an error is flagged
-		if (heaters_runtime[h].sane_temperature > target_temp)
-			heaters_runtime[h].sane_temperature = target_temp;
-	}
-	else if (target_temp < (current_temp - (TEMP_HYSTERESIS*4))) {
-		// cooling
-		if (current_temp < heaters_runtime[h].sane_temperature)
-			// cooler than sane- good since we're cooling
-			heaters_runtime[h].sane_temperature = current_temp;
-		else {
-			if (heaters_runtime[h].sanity_counter < 125)
-				heaters_runtime[h].sanity_counter++;
-			else {
-				heaters_runtime[h].sanity_counter = 0;
-				// ratchet down expected temp
-				heaters_runtime[h].sane_temperature--;
-			}
-		}
-		// if we're at or below 60 celsius, don't freak out if we can't drop any more.
-		if (current_temp <= 240)
-			heaters_runtime[h].sane_temperature = current_temp;
-		// limit to target, so if we don't cool down for too long an error is flagged
-		else if (heaters_runtime[h].sane_temperature < target_temp)
-			heaters_runtime[h].sane_temperature = target_temp;
-	}
-	// we're within HYSTERESIS of our target
-	else {
-		heaters_runtime[h].sane_temperature = current_temp;
-		heaters_runtime[h].sanity_counter = 0;
-	}
-
-	// compare where we're at to where we should be
-	if (labs((int16_t)(current_temp - heaters_runtime[h].sane_temperature)) > (TEMP_HYSTERESIS*4)) {
-		// no change, or change in wrong direction for a long time- heater is broken!
-		pid_output = 0;
-		sersendf_P(PSTR("!! heater %d or temp sensor %d broken- temp is %d.%dC, target is %d.%dC, didn't reach %d.%dC in %d0 milliseconds\n"), h, t, current_temp >> 2, (current_temp & 3) * 25, target_temp >> 2, (target_temp & 3) * 25, heaters_runtime[h].sane_temperature >> 2, (heaters_runtime[h].sane_temperature & 3) * 25, heaters_runtime[h].sanity_counter);
-	}
-	#endif /* HEATER_SANITY_CHECK */
-
-	heater_set(h, pid_output);
-}
-
-/** \brief manually set PWM output
-	\param index the heater we're setting the output for
-	\param value the PWM value to write
-
-	anything done by this function is overwritten by heater_tick above if the heater has an associated temp sensor
-*/
-void heater_set(heater_t index, uint8_t value) {
-	if (index >= NUM_HEATERS)
-		return;
-
-	heaters_runtime[index].heater_output = value;
-
-	if (heaters[index].heater_pwm) {
-		*(heaters[index].heater_pwm) = value;
-		#ifdef	DEBUG
-#if ARCH == arm
-		// TODO: implementation
-#else
-		if (DEBUG_PID && (debug_flags & DEBUG_PID))
-			sersendf_P(PSTR("PWM{%u = %u}\n"), index, OCR0A);
-#endif
-		#endif
-	}
-	else {
-		if (value >= 8)
-			*(heaters[index].heater_port) |= MASK(heaters[index].heater_pin);
-		else
-			*(heaters[index].heater_port) &= ~MASK(heaters[index].heater_pin);
-	}
-}
-
-/** \brief turn off all heaters
-
-	for emergency stop
-*/
-uint8_t heaters_all_off() {
-	uint8_t i;
-	for (i = 0; i < NUM_HEATERS; i++) {
-		if (heaters_runtime[i].heater_output > 0)
-			return 0;
-	}
-
-	return 255;
-}
-
-/** \brief set heater P factor
-	\param index heater to change factor for
-	\param p scaled P factor
-*/
-void pid_set_p(heater_t index, int32_t p) {
-	#ifndef	BANG_BANG
-		if (index >= NUM_HEATERS)
-			return;
-
-		heaters_pid[index].p_factor = p;
-	#endif /* BANG_BANG */
-}
-
-/** \brief set heater I factor
-	\param index heater to change I factor for
-	\param i scaled I factor
-*/
-void pid_set_i(heater_t index, int32_t i) {
-	#ifndef	BANG_BANG
-		if (index >= NUM_HEATERS)
-			return;
-
-		heaters_pid[index].i_factor = i;
-	#endif /* BANG_BANG */
-}
-
-/** \brief set heater D factor
-	\param index heater to change D factor for
-	\param d scaled D factor
-*/
-void pid_set_d(heater_t index, int32_t d) {
-	#ifndef	BANG_BANG
-		if (index >= NUM_HEATERS)
-			return;
-
-		heaters_pid[index].d_factor = d;
-	#endif /* BANG_BANG */
-}
-
-/** \brief set heater I limit
-	\param index heater to set I limit for
-	\param i_limit scaled I limit
-*/
-void pid_set_i_limit(heater_t index, int32_t i_limit) {
-	#ifndef	BANG_BANG
-		if (index >= NUM_HEATERS)
-			return;
-
-		heaters_pid[index].i_limit = i_limit;
-	#endif /* BANG_BANG */
-}
-
-#ifndef	EXTRUDER
-/** \brief send heater debug info to host
-	\param i index of heater to send info for
-*/
-void heater_print(uint16_t i) {
-#if ARCH == arm
-	sersendf_P(PSTR("P:%d I:%d D:%d Ilim:%u crc:%u "),
-#else
-	sersendf_P(PSTR("P:%ld I:%ld D:%ld Ilim:%u crc:%u "),
-#endif
-		   heaters_pid[i].p_factor, heaters_pid[i].i_factor, heaters_pid[i].d_factor,
-		   heaters_pid[i].i_limit, crc_block(&heaters_pid[i].p_factor, 14));
-}
-#endif
-
-#endif

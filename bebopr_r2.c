@@ -16,49 +16,87 @@
 //#define AIN_PATH_PREFIX "/sys/devices/platform/tsc/"		/* kernel 3.2.0 */
 #define AIN_PATH_PREFIX "/sys/devices/platform/omap/tsc/"	/* kernel 3.2.16 */
 
-static const analog_config_struct analog_config_data[] = {
-  {  // e_analog_1
+#define PWM_PATH_PREFIX "/sys/class/pwm/"
+
+/*
+ * Note, for the easy of implementation, the string addresses are used.
+ * This means one cannot use identical strings, but must use pointers
+ * to the one and only string!
+ */
+//#define GENERATE_TAG( name) static const char name[] = #name
+#define GENERATE_TAG( name) static const char name[] = #name
+GENERATE_TAG( bed_thermistor);
+GENERATE_TAG( extruder_thermistor);
+GENERATE_TAG( spare_ain);
+GENERATE_TAG( temp_extruder);
+GENERATE_TAG( temp_bed);
+GENERATE_TAG( heater_extruder);
+GENERATE_TAG( heater_bed);
+GENERATE_TAG( pwm_extruder);
+GENERATE_TAG( pwm_bed);
+GENERATE_TAG( pwm_fan);
+
+static const analog_config_record analog_config_data[] = {
+  {
+    .tag                = bed_thermistor,
     .device_path	= AIN_PATH_PREFIX "ain2",	// BEBOPR_R2_J6 - THRM0 (hardware ain1)
     .filter_length	= 0,
   },
-  {  // e_analog_2
+  {
+    .tag                = spare_ain,
     .device_path	= AIN_PATH_PREFIX "ain4",	// BEBOPR_R2_J7 - THRM1 (hardware ain3)
     .filter_length	= 10,
   },
-  {  // e_analog_3
+  {
+    .tag                = extruder_thermistor,
     .device_path	= AIN_PATH_PREFIX "ain6",	// BEBOPR_R2_J8 - THRM2 (hardware ain5)
-    .filter_length	= 10,
+    .filter_length	= 50,
   },
 };
 
-static const temp_config_struct temp_config_data[] = {
+static const temp_config_record temp_config_data[] = {
   {
-    .sensor		= e_temp_extruder,
-    .channel		= 2,	// index of THRM2 entry in analog_config_data
+    .tag                = temp_extruder,
+    .source		= extruder_thermistor,
     .in_range_time	= 5000,
     .conversion		= bone_epcos_b5760g104f,
   },
   {
-    .sensor		= e_temp_bed,
-    .channel		= 0,	// index of THRM0 entry in analog_config_data
+    .tag                = temp_bed,
+    .source		= bed_thermistor,
     .in_range_time	= 5000,
     .conversion		= bone_thermistor_100k,
   },
 };
 
-static const heater_config_struct heater_config_data[] = {
+static const heater_config_record heater_config_data[] = {
   {
-    .heater		= e_heater_extruder,
-    .sensor		= e_temp_extruder,
-    .pwm_output		= e_pwm_output_2
+    .tag		= heater_extruder,
+    .analog_input	= temp_extruder,
+    .analog_output	= pwm_extruder,
+    .pid =
+    {
+	    .K = 0.0,
+	    .P = 15.0,
+	    .I = 0.0,
+	    .D = 0.0,
+	    .I_limit = 12.0,
+    },
   },
   {
-    .heater		= e_heater_bed,
-    .sensor		= e_temp_bed,
-    .pwm_output		= e_pwm_output_1
+    .tag		= heater_bed,
+    .analog_input	= temp_bed,
+    .analog_output	= pwm_bed,
+    .pid =
+    {
+	    .K = 0.0,
+	    .P = 1.0,
+	    .I = 0.0,
+	    .D = 0.0,
+	    .I_limit = 0.0,
+    },
   },
 };
-
 
 int bebopr_pre_init( void)
 {
