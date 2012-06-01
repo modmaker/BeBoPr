@@ -259,7 +259,9 @@ int heater_set_setpoint( channel_tag heater, double setpoint)
       }
       p->log_fd = -1;
     } else {
-      p->log_fd = log_file_open( tag_name( p->id));
+      if (p->log_fd == -1) {
+        p->log_fd = log_file_open( tag_name( p->id));
+      }
     }
     return 0;
   }
