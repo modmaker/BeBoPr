@@ -10,6 +10,7 @@
 #include <string.h> 
 #include <errno.h>
 #include <math.h>
+#include <sched.h>
 
 #include "pruss.h"
 #include "algo2cmds.h"
@@ -21,6 +22,7 @@
 
 #define MAX_UIO_MAPS	5	// TODO: should be taken from the right UIO .h file!
 
+#define PRUSS_FIFO_LENGTH 8
 // Generic struct for access to 'command' field for all commands.
 typedef struct {
   unsigned int			: 24;
@@ -859,7 +861,7 @@ int pruss_dump_state( void)
     printf( "%20s    %14x    %14x    %14x    %14x\n", "Base Address", base[ 0], base[ 1], base[ 2], base[ 3]);
 
     DUMP_LINE( "cycleTimer",       32,  0, "%14u");
-    DUMP_LINE( "stepPulseTime",    32,  4, "%14u");
+    DUMP_LINE( "stepActiveTime",   32,  4, "%14u");
     DUMP_LINE( "minStepCycleTime", 32,  8, "%14u");
     DUMP_LINE( "stepCycleTime",    32, 12, "%14u");
     DUMP_LINE( "stateInfo",         8, 16, "%14x");
@@ -897,12 +899,12 @@ int pruss_is_halted( void)
   return ((pruss_rd32( PRUSS_CTL_OFFSET + 0) & (1 <<15)) == 0);
 }
 
-int pruss_get_nr_of_free_buffers( void)
+static inline int pruss_get_nr_of_free_buffers( void)
 {
   int ix_in  = pruss_rd8( IX_IN);
   int ix_out = pruss_rd8( IX_OUT);
 
-  return (8 + ix_out - ix_in - 1) % 8;
+  return (PRUSS_FIFO_LENGTH + ix_out - ix_in - 1) % PRUSS_FIFO_LENGTH;
 }
 
 int pruss_queue_full( void)
@@ -910,13 +912,21 @@ int pruss_queue_full( void)
   return (pruss_get_nr_of_free_buffers() == 0);
 }
 
+int pruss_queue_empty( void)
+{
+  // Note that one buffer cannot be used because of the two indexes scheme!
+  return (pruss_get_nr_of_free_buffers() == PRUSS_FIFO_LENGTH - 1);
+}
+
 int pruss_wait_for_queue_space( void)
 {
   while (pruss_queue_full()) {
     if (pruss_is_halted()) {
+      printf( "ERROR: found pruss halted while waiting for queue space\n");
+      pruss_dump_state();
       return -1;
     }
-    // TODO: sleep until PRUSS interrupt ?
+    sched_yield();    // TODO: sleep until PRUSS interrupt ?
   }
   return 0;
 }

@@ -1,39 +1,32 @@
-#include	"gcode_process.h"
-
 /** \file
 	\brief Work out what to do with received G-Code commands
 */
 
-#include	<string.h>
-#include	<stdio.h>
-#include	<math.h>
-#include	<unistd.h>
+#include <string.h>
+#include <stdio.h>
+#include <math.h>
+#include <unistd.h>
+#include <stdint.h>
 
-#include	"gcode_parse.h"
-#include	"dda_queue.h"
-#include	"serial.h"
-#include	"sermsg.h"
-#include	"temp.h"
-#include	"heater.h"
-#include	"timer.h"
-#include	"sersendf.h"
-#include	"pinio.h"
-#include	"debug.h"
-#include	"clock.h"
-#include	"config.h"
-#include	"home.h"
-#include	"traject.h"
-#include	"pruss.h"
-#include	"heater.h"
-#include	"beaglebone-stubs.h"
-#include	"mendel.h"
+#include "bebopr.h"
+#include "gcode_process.h"
+#include "gcode_parse.h"
+#include "config.h"
+#include "serial.h"
+#include "pinio.h"
+#include "debug.h"
+#include "temp.h"
+#include "heater.h"
+#include "home.h"
+#include "traject.h"
+#include "pruss.h"
+#include "heater.h"
+#include "mendel.h"
 
 /// the current tool
-uint8_t tool;
-
+static uint8_t tool;
 /// the tool to be changed when we get an M6
-uint8_t next_tool;
-
+static uint8_t next_tool;
 
 // 20111017 modmaker - use nanometers instead of steps for position
 /// variable that holds the idea of 'current position' for the gcode interpreter.
@@ -41,99 +34,62 @@ uint8_t next_tool;
 static TARGET gcode_current_pos;
 static TARGET gcode_home_pos;
 
+/*
+ * Local copy of channel tags to prevent a lookup with each access.
+ */
 static channel_tag heater_extruder = NULL;
 static channel_tag heater_bed = NULL;
 static channel_tag temp_extruder = NULL;
 static channel_tag temp_bed = NULL;
 
-
-void gcode_trace_move( void)
-{
-  if (DEBUG_POSITION && (debug_flags & DEBUG_POSITION)) {
-    // current position
-    sersendf_P(PSTR("Pos: %d,%d,%d,%d,%u\n"),
-	       gcode_home_pos.X, gcode_home_pos.Y, gcode_home_pos.Z,
-	       gcode_home_pos.E, gcode_home_pos.F);
-    // target position
-    {
-      unsigned mb_tail = dda_queue_get_mb_tail();
-      sersendf_P(PSTR("Dst: %d,%d,%d,%d,%u\n"),
-		 movebuffer[mb_tail].endpoint.X, movebuffer[mb_tail].endpoint.Y,
-		 movebuffer[mb_tail].endpoint.Z, movebuffer[mb_tail].endpoint.E,
-		 movebuffer[mb_tail].endpoint.F);
-    }
-    // Queue
-    dda_queue_print();
-    // newline
-    serial_writechar('\n');
-  }
-}
-
-void gcode_set_pos( char axis, uint32_t pos)
+/*
+ *  public interface to set positions from homing code.
+ */
+void gcode_set_axis_pos( axis_e axis, uint32_t pos)
 {
   switch (axis) {
-  case 'X':
-    gcode_current_pos.X = pos;
-    gcode_home_pos.X = pos;
-    break;
-  case 'Y':
-    gcode_current_pos.Y = pos;
-    gcode_home_pos.Y = pos;
-    break;
-  case 'Z':
-    gcode_current_pos.Z = pos;
-    gcode_home_pos.Z = pos;
-    break;
-  case 'E':
-    gcode_current_pos.E = pos;
-    gcode_home_pos.E = pos;
-    break;
-  default:
-    break;
+  case x_axis: gcode_current_pos.X = gcode_home_pos.X = pos; break;
+  case y_axis: gcode_current_pos.Y = gcode_home_pos.Y = pos; break;
+  case z_axis: gcode_current_pos.Z = gcode_home_pos.Z = pos; break;
+  case e_axis: gcode_current_pos.E = gcode_home_pos.E = pos; break;
+  default: break;
   }
 }
 
 /*
 	private functions
-
-	this is where we construct a move without a gcode command, useful for gcodes which require multiple moves eg; homing
 */
 
 static void enqueue_pos( TARGET* target)
 {
   if (target != NULL) {
     if (DEBUG_GCODE_PROCESS && (debug_flags & DEBUG_GCODE_PROCESS)) {
-      fprintf( stderr,  "\ntraject_move_all_axes( target(%d,%d,%d,%d,%u) ]\n",
+      printf( "enqueue_pos( TARGET={%d, %d, %d, %d, %u})\n",
 	       target->X, target->Y, target->Z, target->E, target->F);
     }
-    traject5D traj;
-
-    /* integer positions are in nm ! */
-    traj.dx = (double)1.0E-9 * (target->X - gcode_current_pos.X);
-    traj.dy = (double)1.0E-9 * (target->Y - gcode_current_pos.Y);
-    traj.dz = (double)1.0E-9 * (target->Z - gcode_current_pos.Z);
-    traj.de = (double)1.0E-9 * (target->E - gcode_current_pos.E);
-    traj.feed = target->F;
-
+    /* integer positions are in nm ! */ 
+    traject5D traj = {
+      .dx = (double)1.0E-9 * (target->X - gcode_current_pos.X),
+      .dy = (double)1.0E-9 * (target->Y - gcode_current_pos.Y),
+      .dz = (double)1.0E-9 * (target->Z - gcode_current_pos.Z),
+      .de = (double)1.0E-9 * (target->E - gcode_current_pos.E),
+      .feed = target->F,
+    };
+    /* make the move */
     traject_delta_on_all_axes( &traj);
-    // update our sense of position
+    /* update our sense of position */
+#ifndef	E_ABSOLUTE
+    /*
+     * For a 3D printer, an E-axis coordinate is often a relative setting,
+     * independant of the absolute or relative mode. (This way it doesn't
+     * overflow because it is mostly moving in one direction.)
+     * This requires special handling here.
+     */
+    target->E = gcode_home_pos.E;
+#endif
     memcpy( &gcode_current_pos, target, sizeof( TARGET));
   }
 }
-
-
-
-#if E_STARTSTOP_STEPS > 0
-/// move E by a certain amount at a certain speed
-static void SpecialMoveE(int32_t e, uint32_t f) {
-	TARGET t = gcode_current_pos;
-	// TODO: make sure calculation does not overflow!
-	// TODO: find a better solution/place for this code.
-	t.E += (e * 1000000) / STEPS_PER_MM_E;
-	t.F = f;
-	dda_queue_enqueue( &t);
-}
-#endif /* E_STARTSTOP_STEPS > 0 */
 
 
 /************************************************************************//**
@@ -154,9 +110,7 @@ void process_gcode_command() {
 		next_target.target.X += gcode_current_pos.X;
 		next_target.target.Y += gcode_current_pos.Y;
 		next_target.target.Z += gcode_current_pos.Z;
-		#ifdef	E_ABSOLUTE
-			next_target.target.E += gcode_current_pos.E;
-		#endif
+		next_target.target.E += gcode_current_pos.E;
 	}
 	// E ALWAYS relative, otherwise we overflow our registers after only a few layers
 	// 	next_target.target.E += startpoint.E;
@@ -165,43 +119,48 @@ void process_gcode_command() {
 	// moved to dda.c, end of dda_create() and dda_queue.c, next_move()
 
 	// implement axis limits
-	#ifdef	X_MIN
-	if (next_target.target.X < MM_TO_POS( X_MIN)) {
-	  printf( "Limiting target.X (%d) to X_MIN (%d)\n", next_target.target.X, MM_TO_POS( X_MIN));
-	  next_target.target.X = MM_TO_POS( X_MIN);
-	}	
-	#endif
-	#ifdef	X_MAX
-	if (next_target.target.X > MM_TO_POS( X_MAX)) {
-	  printf( "Limiting target.X (%d) to X_MAX (%d)\n", next_target.target.X, MM_TO_POS( X_MAX));
-	  next_target.target.X = MM_TO_POS( X_MAX);
+	if (config_axis_has_min_limit_switch( x_axis)) {
+		if (next_target.target.X < MM2POS( X_MIN)) {
+			printf( "WARNING: Limiting target.X (%d) to X_MIN (%d)\n",
+				next_target.target.X, MM2POS( X_MIN));
+			next_target.target.X = MM2POS( X_MIN);
+		}	
 	}
-	#endif
-	#ifdef	Y_MIN
-	if (next_target.target.Y < MM_TO_POS( Y_MIN)) {
-	  printf( "Limiting target.Y (%d) to Y_MIN (%d)\n", next_target.target.Y, MM_TO_POS( Y_MIN));
-	  next_target.target.Y = MM_TO_POS( X_MIN);
+	if (config_axis_has_max_limit_switch( x_axis)) {
+		if (next_target.target.X > MM2POS( X_MAX)) {
+			printf( "WARNING: Limiting target.X (%d) to X_MAX (%d)\n",
+				next_target.target.X, MM2POS( X_MAX));
+			next_target.target.X = MM2POS( X_MAX);
+		}
 	}
-	#endif
-	#ifdef	Y_MAX
-	if (next_target.target.Y > MM_TO_POS( Y_MAX)) {
-	  printf( "Limiting target.Y (%d) to Y_MAX (%d)\n", next_target.target.Y, MM_TO_POS( Y_MAX));
-	  next_target.target.Y = MM_TO_POS( Y_MAX);
+	if (config_axis_has_min_limit_switch( y_axis)) {
+		if (next_target.target.Y < MM2POS( Y_MIN)) {
+			printf( "WARNING: Limiting target.Y (%d) to Y_MIN (%d)\n",
+				next_target.target.Y, MM2POS( Y_MIN));
+			next_target.target.Y = MM2POS( X_MIN);
+		}
 	}
-	#endif
-	#ifdef	Z_MIN
-	if (next_target.target.Z < MM_TO_POS( Z_MIN)) {
-	  printf( "Limiting target.Z (%d) to Z_MIN (%d)\n", next_target.target.Z, MM_TO_POS( Z_MIN));
-	  next_target.target.Z = MM_TO_POS( Z_MIN);
+	if (config_axis_has_max_limit_switch( y_axis)) {
+		if (next_target.target.Y > MM2POS( Y_MAX)) {
+			printf( "WARNING: Limiting target.Y (%d) to Y_MAX (%d)\n",
+				next_target.target.Y, MM2POS( Y_MAX));
+			next_target.target.Y = MM2POS( Y_MAX);
+		}
 	}
-	#endif
-	#ifdef	Z_MAX
-	if (next_target.target.Z > MM_TO_POS( Z_MAX)) {
-	  printf( "Limiting target.Z (%d) to Z_MAX (%d)\n", next_target.target.Z, MM_TO_POS( Z_MAX));
-	  next_target.target.Z = MM_TO_POS( Z_MAX);
+	if (config_axis_has_min_limit_switch( z_axis)) {
+		if (next_target.target.Z < MM2POS( Z_MIN)) {
+			printf( "WARNING: Limiting target.Z (%d) to Z_MIN (%d)\n",
+				next_target.target.Z, MM2POS( Z_MIN));
+			next_target.target.Z = MM2POS( Z_MIN);
+		}
 	}
-	#endif
-
+	if (config_axis_has_max_limit_switch( z_axis)) {
+		if (next_target.target.Z > MM2POS( Z_MAX)) {
+			printf( "WARNING: Limiting target.Z (%d) to Z_MAX (%d)\n",
+				next_target.target.Z, MM2POS( Z_MAX));
+			next_target.target.Z = MM2POS( Z_MAX);
+		}
+	}
 	// The GCode documentation was taken from http://reprap.org/wiki/Gcode .
 
 	if (next_target.seen_T) {
@@ -267,9 +226,7 @@ void process_gcode_command() {
 				//? In this case sit still doing nothing for 200 milliseconds.  During delays the state of the machine (for example the temperatures of its extruders) will still be preserved and controlled.
 				//?
 
-				// wait for all moves to complete
-				dda_queue_wait();
-				// delay
+				traject_wait_for_completion();
 				usleep( 1000* next_target.P);
 				break;
 
@@ -365,8 +322,7 @@ void process_gcode_command() {
 				//?
 				//? Allows programming of absolute zero point, by reseting the current position to the values specified.  This would set the machine's X coordinate to 10, and the extrude coordinate to 90. No physical motion will occur.
 
-				// wait for queue to empty
-				dda_queue_wait();
+				traject_wait_for_completion();
 
 				if (next_target.seen_X) {
 					gcode_current_pos.X = gcode_home_pos.X = next_target.target.X;
@@ -381,16 +337,15 @@ void process_gcode_command() {
 					axisSelected = 1;
 				}
 				if (next_target.seen_E) {
-					#ifdef	E_ABSOLUTE
-						gcode_current_pos.E = gcode_home_pos.E = next_target.target.E;
-					#endif
+					gcode_current_pos.E = gcode_home_pos.E = next_target.target.E;
 					axisSelected = 1;
 				}
 
 				if (axisSelected == 0) {
 					gcode_current_pos.X = gcode_home_pos.X = next_target.target.X =
 					gcode_current_pos.Y = gcode_home_pos.Y = next_target.target.Y =
-					gcode_current_pos.Z = gcode_home_pos.Z = next_target.target.Z = 0;
+					gcode_current_pos.Z = gcode_home_pos.Z = next_target.target.Z =
+					gcode_current_pos.E = gcode_home_pos.E = next_target.target.E = 0;
 				}
 				break;
 
@@ -400,11 +355,11 @@ void process_gcode_command() {
 				//?
 				//? Find the minimum limit of the specified axes by searching for the limit switch.
 				if (next_target.seen_X)
-					home_x_negative( next_target.target.F);
+					home_axis_to_min_limit_switch( x_axis, next_target.target.F);
 				if (next_target.seen_Y)
-					home_y_negative( next_target.target.F);
+					home_axis_to_min_limit_switch( y_axis, next_target.target.F);
 				if (next_target.seen_Z)
-					home_z_negative( next_target.target.F);
+					home_axis_to_min_limit_switch( z_axis, next_target.target.F);
 				break;
 			// G162 - Home positive
 			case 162:
@@ -412,24 +367,25 @@ void process_gcode_command() {
 				//?
 				//? Find the maximum limit of the specified axes by searching for the limit switch.
 				if (next_target.seen_X)
-					home_x_positive( next_target.target.F);
+					home_axis_to_max_limit_switch( x_axis, next_target.target.F);
 				if (next_target.seen_Y)
-					home_y_positive( next_target.target.F);
+					home_axis_to_max_limit_switch( y_axis, next_target.target.F);
 				if (next_target.seen_Z)
-					home_z_positive( next_target.target.F);
+					home_axis_to_max_limit_switch( z_axis, next_target.target.F);
 				break;
 
 				// unknown gcode: spit an error
 			default:
-				sersendf_P(PSTR("E: Bad G-code %d"), next_target.G);
+				printf("E: Bad G-code %d", next_target.G);
 				// newline is sent from gcode_parse after we return
 				pruss_dump_state();
 				return;
 		}
-		#ifdef	DEBUG
-			if (DEBUG_POSITION && (debug_flags & DEBUG_POSITION))
-				dda_queue_print();
-		#endif
+#ifdef	DEBUG
+		if (DEBUG_POSITION && (debug_flags & DEBUG_POSITION)) {
+			traject_status_print();
+		}
+#endif
 	}
 	else if (next_target.seen_M) {
 		switch (next_target.M) {
@@ -440,7 +396,7 @@ void process_gcode_command() {
 				//? ==== M2: program end ====
 				//?
 				//? Undocumented.
-				dda_queue_wait();
+				traject_wait_for_completion();
 				// no break- we fall through to M112 below
 			// M112- immediate stop
 			case 112:
@@ -451,16 +407,16 @@ void process_gcode_command() {
 				//? Any moves in progress are immediately terminated, then RepRap shuts down.  All motors and heaters are turned off.
 				//? It can be started again by pressing the reset button on the master microcontroller.  See also M0.
 
-				timer_stop();
-				dda_queue_flush();
+				traject_abort();
+
 				x_disable();
 				y_disable();
 				z_disable();
 				e_disable();
 				power_off();
-				cli();
-				for (;;)
-					wd_reset();
+				for (;;) {
+					sched_yield();
+				}
 				break;
 
 			// M6- tool change
@@ -483,12 +439,6 @@ void process_gcode_command() {
 				//? ==== M101: extruder on ====
 				//?
 				//? Undocumented.
-#if 0
-			  // FIXME:
-				if (temp_achieved() == 0) {
-					dda_queue_enqueue( NULL);
-				}
-#endif
 				#ifdef DC_EXTRUDER
 					heater_set(DC_EXTRUDER, DC_EXTRUDER_PWM);
 				#elif E_STARTSTOP_STEPS > 0
@@ -560,10 +510,10 @@ void process_gcode_command() {
 				//?
 				//? Teacup supports an optional P parameter as a sensor index to address.
 				double celsius;
-				#ifdef ENFORCE_ORDER
+#				ifdef ENFORCE_ORDER
 					// wait for all moves to complete
-					dda_queue_wait();
-				#endif
+					traject_wait_for_completion();
+#				endif
 				if (next_target.seen_P) {
 					channel_tag temp_source;
 					switch (next_target.P) {
@@ -591,13 +541,13 @@ void process_gcode_command() {
 				//?
 				//? Turn on the cooling fan (if any).
 
-				#ifdef ENFORCE_ORDER
+#				ifdef ENFORCE_ORDER
 					// wait for all moves to complete
-					dda_queue_wait();
-				#endif
-				#ifdef HEATER_FAN
+					traject_wait_for_completion();
+#				endif
+#				ifdef HEATER_FAN
 					heater_set(HEATER_FAN, 255);
-				#endif
+#				endif
 				break;
 			// M107- fan off
 			case 9:
@@ -608,10 +558,10 @@ void process_gcode_command() {
 				//?
 				//? Turn off the cooling fan (if any).
 
-				#ifdef ENFORCE_ORDER
+#				ifdef ENFORCE_ORDER
 					// wait for all moves to complete
-					dda_queue_wait();
-				#endif
+					traject_wait_for_completion();
+#				endif
 				#ifdef HEATER_FAN
 					heater_set(HEATER_FAN, 0);
 				#endif
@@ -635,7 +585,6 @@ void process_gcode_command() {
 				} else {
 					heater_enable( heater_extruder, 0);
 				}
-				dda_queue_enqueue( NULL);
 				break;
 
 			// M110- set line number
@@ -680,12 +629,12 @@ void process_gcode_command() {
 				//? For example, the machine returns a string such as:
 				//?
 				//? <tt>ok C: X:0.00 Y:0.00 Z:0.00 E:0.00</tt>
-				#ifdef ENFORCE_ORDER
+#				ifdef ENFORCE_ORDER
 					// wait for all moves to complete
-					dda_queue_wait();
-				#endif
+					traject_wait_for_completion();
+#				endif
 				pruss_dump_position( 0);
-				sersendf_P( PSTR( "X:%d,Y:%d,Z:%d,E:%d,F:%d"),
+				printf(  "X:%d,Y:%d,Z:%d,E:%d,F:%d",
 					gcode_current_pos.X, gcode_current_pos.Y, gcode_current_pos.Z, gcode_current_pos.E, gcode_current_pos.F);
 				// newline is sent from gcode_parse after we return
 
@@ -713,7 +662,10 @@ void process_gcode_command() {
 				//?
 				//? Wait for ''all'' temperatures and other slowly-changing variables to arrive at their set values.  See also M109.
 
-				dda_queue_enqueue( NULL);
+#				ifdef ENFORCE_ORDER
+					// wait for all moves to complete
+					traject_wait_for_completion();
+#				endif
 				break;
 
 			case 130:
@@ -797,8 +749,8 @@ void process_gcode_command() {
 					heater = heater_extruder;
 				}
 				heater_get_pid_values( heater, &pid);
-				fprintf( stdout, "P:%1.3f I:%1.3f D:%1.3f Ilim:%1.3f",
-					   pid.P, pid.I, pid.D, pid.I_limit);
+				printf( "P:%1.3f I:%1.3f D:%1.3f Ilim:%1.3f",
+					pid.P, pid.I, pid.D, pid.I_limit);
 				break;
 			}
 			#endif
@@ -821,16 +773,15 @@ void process_gcode_command() {
 				y_enable();
 				z_enable();
 				e_enable();
-				steptimeout = 0;
 				break;
 			// M191- power off
 			case 191:
 				//? ==== M191: Power Off ====
 				//? Undocumented.
-				#ifdef ENFORCE_ORDER
+#				ifdef ENFORCE_ORDER
 					// wait for all moves to complete
-					dda_queue_wait();
-				#endif
+					traject_wait_for_completion();
+#				endif
 				x_disable();
 				y_disable();
 				z_disable();
@@ -846,25 +797,25 @@ void process_gcode_command() {
 			  // TODO: implement
 #else
                                 #if defined(X_MIN_PIN)
-				    sersendf_P(PSTR("x_min:%d "), x_min());
+				    printf("x_min:%d ", x_min());
                                 #endif
                                 #if defined(X_MAX_PIN)
-				    sersendf_P(PSTR("x_max:%d "), x_max());
+				    printf("x_max:%d ", x_max());
                                 #endif
                                 #if defined(Y_MIN_PIN)
-				    sersendf_P(PSTR("y_min:%d "), y_min());
+				    printf("y_min:%d ", y_min());
                                 #endif
                                 #if defined(Y_MAX_PIN)
-				    sersendf_P(PSTR("y_max:%d "), y_max());
+				    printf("y_max:%d ", y_max());
                                 #endif
                                 #if defined(Z_MIN_PIN)
-				    sersendf_P(PSTR("z_min:%d "), z_min());
+				    printf("z_min:%d ", z_min());
                                 #endif
                                 #if defined(Z_MAX_PIN)
-				    sersendf_P(PSTR("z_max:%d "), z_max());
+				    printf("z_max:%d ", z_max());
                                 #endif
                                 #if !(defined(X_MIN_PIN) || defined(X_MAX_PIN) || defined(Y_MIN_PIN) || defined(Y_MAX_PIN) || defined(Z_MIN_PIN) || defined(Z_MAX_PIN))
-				    sersendf_P(PSTR("no endstops defined"));
+				    printf("no endstops defined"));
                                 #endif
 #endif
 				break;
@@ -876,7 +827,7 @@ void process_gcode_command() {
 				//? Disable echo.
 				//? This command is only available in DEBUG builds.
 				debug_flags &= ~DEBUG_ECHO;
-				serial_writestr_P(PSTR("Echo off"));
+				serial_writestr_P("Echo off");
 				// newline is sent from gcode_parse after we return
 				break;
 				// M241- echo on
@@ -885,7 +836,7 @@ void process_gcode_command() {
 				//? Enable echo.
 				//? This command is only available in DEBUG builds.
 				debug_flags |= DEBUG_ECHO;
-				serial_writestr_P(PSTR("Echo on"));
+				serial_writestr_P("Echo on");
 				// newline is sent from gcode_parse after we return
 				break;
 
@@ -894,12 +845,9 @@ void process_gcode_command() {
 				//? ==== M250: return current position, end position, queue ====
 				//? Undocumented
 				//? This command is only available in DEBUG builds.
-#if ARCH == arm
+#if 0
 				unsigned mb_tail = dda_queue_get_mb_tail();
-				sersendf_P( PSTR( "um{X:%d,Y:%d,Z:%d,E:%d,F:%u},steps{X:%d,Y:%d,Z:%d,E:%d,F:%u,c:%u}\t"),
-#else
-				sersendf_P( PSTR( "um{X:%lq,Y:%lq,Z:%lq,E:%lq,F:%lu},steps{X:%ld,Y:%ld,Z:%ld,E:%ld,F:%lu,c:%lu}\t"),
-#endif
+				printf(  "um{X:%d,Y:%d,Z:%d,E:%d,F:%u},steps{X:%d,Y:%d,Z:%d,E:%d,F:%u,c:%u}\t",
 					gcode_current_pos.X,
 					gcode_current_pos.Y,
 					gcode_current_pos.Z,
@@ -916,8 +864,8 @@ void process_gcode_command() {
 						movebuffer[ mb_tail].c
 					#endif
 					);
-
 				dda_queue_print();
+#endif
 				break;
 			}
 
@@ -947,7 +895,7 @@ void process_gcode_command() {
 #if ARCH == arm
 				  // TODO: implementation
 #else
-				sersendf_P(PSTR("%x:%x->%x"), next_target.S, *(volatile uint8_t *)(next_target.S), next_target.P);
+				printf("%x:%x->%x", next_target.S, *(volatile uint8_t *)(next_target.S), next_target.P);
 				(*(volatile uint8_t *)(next_target.S)) = next_target.P;
 #endif
 				// newline is sent from gcode_parse after we return
@@ -955,7 +903,7 @@ void process_gcode_command() {
 			#endif /* DEBUG */
 				// unknown mcode: spit an error
 			default:
-				sersendf_P(PSTR("E: Bad M-code %d"), next_target.M);
+				printf("E: Bad M-code %d", next_target.M);
 				// newline is sent from gcode_parse after we return
 		} // switch (next_target.M)
 	} // else if (next_target.seen_M)

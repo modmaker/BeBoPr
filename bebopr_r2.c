@@ -148,44 +148,69 @@ int bebopr_pre_init( void)
 
 // Limit switches present in the system.
 // only return 0 or 1
-int limsw_x_has_max( void) { return 0; }
-int limsw_x_has_min( void) { return 1; }
-int limsw_y_has_max( void) { return 0; }
-int limsw_y_has_min( void) { return 1; }
-int limsw_z_has_max( void) { return 1; }
-int limsw_z_has_min( void) { return 1; }
+int config_axis_has_min_limit_switch( axis_e axis)
+{
+  switch (axis) {
+  case x_axis:	return 1;
+  case y_axis:	return 1;
+  case z_axis:	return 1;
+  default:      return 0;
+  }
+}
 
-// Limit switch polarity, only return 0 or 1
-// input has inverter! led on = 1, led off = 0
-// If the LED turns off activating the switch,
-// the switch is active low and vice versa.
-int limsw_x_max_is_active_low( void) { return 0; }
-int limsw_x_min_is_active_low( void) { return 1; }
-int limsw_y_max_is_active_low( void) { return 0; }
-int limsw_y_min_is_active_low( void) { return 1; }
-int limsw_z_max_is_active_low( void) { return 1; }
-int limsw_z_min_is_active_low( void) { return 0; }
+int config_axis_has_max_limit_switch( axis_e axis)
+{
+  switch (axis) {
+  case x_axis:	return 0;
+  case y_axis:	return 0;
+  case z_axis:	return 1;
+  default:      return 0;
+  }
+}
+
+// Limit switch polarity, return either 0 or 1. Note that the inputs are being
+// inverted: led on = reads a 1, led off = reads a 0. If the LED turns off when
+// activating a switch, that switch should be set to active low and vice versa.
+int config_min_limit_switch_is_active_low( axis_e axis)
+{
+  switch (axis) {
+  case x_axis:	return 1;
+  case y_axis:	return 1;
+  case z_axis:	return 0;
+  default:      return 0;
+  }
+}
+
+int config_max_limit_switch_is_active_low( axis_e axis)
+{
+  switch (axis) {
+  case x_axis:	return 0;
+  case y_axis:	return 0;
+  case z_axis:	return 1;
+  default:      return 0;
+  }
+}
 
 int use_pololu_drivers( void) { return 0; }
 
 /*
  *  Specify maximum allowed feed for each axis in [mm/min]
  */
-uint32_t traject_get_max_feed( axis_e axis)
+double config_get_max_feed( axis_e axis)
 {
   switch (axis) {
-  case x_axis:	return 68571;
-  case y_axis:	return 68571;
-  case z_axis:	return   900;
-  case e_axis:	return  1000;
-  default:	return 0;
+  case x_axis:	return 68571.0;
+  case y_axis:	return 68571.0;
+  case z_axis:	return   900.0;
+  case e_axis:	return  1000.0;
+  default:	return 0.0;
   }
 }
 
 /*
  *  Specify step size for each axis in [m]
  */
-double traject_get_step_size( axis_e axis)
+double config_get_step_size( axis_e axis)
 {
   switch (axis) {
   case x_axis:	return 6250.0E-9;
@@ -199,7 +224,7 @@ double traject_get_step_size( axis_e axis)
 /*
  *  Specify maximum acceleration for each axis in [m/s^2]
  */
-double traject_get_max_accel( axis_e axis)
+double config_get_max_accel( axis_e axis)
 {
   switch (axis) {
   case x_axis:	return 2.5;
@@ -213,11 +238,37 @@ double traject_get_max_accel( axis_e axis)
 /*
  *  Specifiy the axes that need a reversed stepper direction signal
  */
-int traject_reverse_axis( axis_e axis)
+int config_reverse_axis( axis_e axis)
 {
   switch (axis) {
   case x_axis:
   case z_axis:	return 1;
   default:	return 0;
+  }
+}
+
+/*
+ *  Specify maximum axis position
+ */
+double config_axis_get_max_pos( axis_e axis)
+{
+  switch (axis) {
+  case x_axis:	return X_MAX;
+  case y_axis:	return Y_MAX;
+  case z_axis:	return Z_MAX;
+  default:	return 0.0;
+  }
+}
+
+/*
+ *  Specify minimum axis position
+ */
+double config_axis_get_min_pos( axis_e axis)
+{
+  switch (axis) {
+  case x_axis:	return X_MIN;
+  case y_axis:	return Y_MIN;
+  case z_axis:	return Z_MIN;
+  default:	return 0.0;
   }
 }

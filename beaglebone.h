@@ -10,11 +10,16 @@
 /* convert into reciprocal */
 #define RECIPR( x) (1.0 / (x))
 /* convert SI unit [s] into [ms] */
-#define SI2MS( x) (1000.0 * (x))
+#define SI2MS( x) (1.0E3 * (x))
 /* convert SI unit [m] into [mm] */
-#define SI2MM( x) (1000.0 * (x))
+#define SI2MM( x) (1.0E3 * (x))
+/* convert SI unit [m] into [um] */
+#define SI2UM( x) (1.0E6 * (x))
 /* convert SI unit [m] into [nm] */
 #define SI2NM( x) (1.0E9 * (x))
+
+#define MM2POS( x) (int32_t)(1.0E6 * x)
+#define POS2MM( x) (double)(1.0E-6 * x)
 
 typedef const char* channel_tag;
 static inline const char* tag_name( channel_tag tag) { return (char*)tag; }

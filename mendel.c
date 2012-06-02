@@ -2,28 +2,6 @@
 	\brief Main file - this is where it all starts, and ends
 */
 
-/** \mainpage Teacup Reprap Firmware
-	\section intro_sec Introduction
-		Teacup Reprap Firmware (originally named FiveD on Arduino) is a firmware package for numerous reprap electronics sets.
-
-		Please see README for a full introduction and long-winded waffle about this project
-	\section install_sec	Installation
-		\subsection step1 Step 1: Download
-			\code git clone git://github.com/triffid/Teacup_Firmware \endcode
-		\subsection step2 Step 2: configure
-			\code cp config.[yourboardhere].h config.h \endcode
-			Edit config.h to suit your machone
-			Edit Makefile to select the correct chip and programming settings
-		\subsection step3 Step 3: Compile
-			\code make \endcode
-			\code make program \endcode
-		\subsection step4 Step 4: Test!
-			\code ./func.sh mendel_reset
-			./func.sh mendel_talk
-			M115
-			ctrl+d \endcode
-*/
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -31,25 +9,15 @@
 #include <sched.h>
 #include <pthread.h>
 
-#include	"config.h"
-
-#include	"serial.h"
-#include	"dda_queue.h"
-#include	"dda.h"
-#include	"gcode_parse.h"
-#include	"temp.h"
-#include	"sermsg.h"
-#include	"debug.h"
-#include	"sersendf.h"
-#include	"heater.h"
-#include	"analog.h"
-#include	"pinio.h"
-#include	"platform.h"
-#include	"clock.h"
+#include "config.h"
+#include "serial.h"
+#include "heater.h"
 #include "bebopr.h"
 #include "mendel.h"
 #include "gcode_process.h"
+#include "gcode_parse.h"
 #include "limit_switches.h"
+#include "pruss.h"
 
 
 static int arm_init( void)
@@ -106,11 +74,9 @@ void init(void) {
   mendel_sub_init( "gcode_process", gcode_process_init);
 
 	// set up dda
-	dda_init();
-	fprintf( stderr, "<dda-init done>");
 
-	// say hi to host
-	serial_writestr_P(PSTR("start\nok\n"));
+  // say hi to host
+  serial_writestr_P( "start\nok\n");
 }
 
 int mendel_thread_create( const char* name, pthread_t* restrict thread, const pthread_attr_t* restrict attr,
@@ -139,26 +105,34 @@ int mendel_sub_init( const char* name, int (*subsys)( void))
   return result;
 }
 
-
 /// this is where it all starts, and ends
 ///
-/// just run init(), then run an endless loop where we pass characters from the serial RX buffer to gcode_parse_char() and check the clocks
+/// just run init() that starts all threads, then run an endless loop where we pass characters from the serial RX buffer to gcode_parse_char()
+// FIXME: This can now also be programmed as a (blocking) thread?
+// FIXME: Implement proper program termination and un-init functions.
 int main (void)
 {
+  int block = 0;
   init();
   fprintf( stderr, "Starting main loop...\n");
 
-	// main loop
-	for (;;) {
-		if (dda_queue_full()) {
-			fprintf( stderr, "<queue_full>");
-			// if queue is full, no point in reading chars- host will just have to wait
-		} else if (serial_rxchars() > 0) {
-			uint8_t c = serial_popchar();
-			gcode_parse_char( c);
-		}
-		usleep( 1000);	// sched_yield();
-	}
+  for (;;) {
+    if (pruss_queue_full()) {
+      if (block) {
+        usleep( 1000);
+      } else {
+        fprintf( stderr, "<queue_full>");
+        block = 1;
+      }
+    } else {
+      block = 0;
+      if (serial_rxchars() > 0) {
+        gcode_parse_char( serial_popchar());
+      } else {
+	sched_yield();
+      }
+    }
+  }
 }
 // -*- indent-tabs-mode: nil; tab-width: 4; c-basic-offset: 4; -*-
 // ex:ts=4:sw=4:sts=4:et

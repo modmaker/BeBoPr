@@ -3,7 +3,14 @@
 
 #include	<stdint.h>
 
-#include	"dda.h"
+// target is simply a point in space/time
+typedef struct {
+	int32_t						X;
+	int32_t						Y;
+	int32_t						Z;
+	int32_t						E;
+	uint32_t					F;
+} TARGET;
 
 // wether to insist on N line numbers
 // if not defined, N's are completely ignored

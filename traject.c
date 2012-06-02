@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <math.h>
 
+#include "bebopr.h"
 #include "traject.h"
 #include "pruss.h"
 #include "debug.h"
@@ -32,12 +33,8 @@ static double ve_max;
 static const double fclk = 200000000.0;
 static const double c_acc = 191201673.632;	// = 0.676 * fclk * sqrt( 2.0);
 
-void traject_move_one_axis( double delta, uint32_t feed)
-{
-}
-
 /*
- * All dimensions are in SI units !
+ * All dimensions are in SI units and relative
  */
 void traject_delta_on_all_axes( traject5D* traject)
 {
@@ -45,7 +42,7 @@ void traject_delta_on_all_axes( traject5D* traject)
     return;
   }
   if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
-    printf( "\ntraject_delta_on_all_axes( traject(%lf,%lf,%lf,%lf,%u) [m])\n",
+    printf( "\ntraject_delta_on_all_axes( traject( %lf, %lf, %lf, %lf, F=%u) [m])\n",
 	    traject->dx, traject->dy, traject->dz, traject->de, traject->feed);
     printf( "Acceleration constant c_acc = %1.6f\n", c_acc);
   }
@@ -77,12 +74,15 @@ void traject_delta_on_all_axes( traject5D* traject)
   }
   // We're only moving in 3D space, e-axis isn't part of this!
   double distance = sqrt( dx * dx + dy * dy + dz * dz);
-  // Allow for the e-axis to be controlled separately!
-  if (distance < 5.0E-9 && de == 0.0) {
-    if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
-      printf( "*** Null move, distance = %1.9lf\n", distance);
+  if (distance < 2.0E-9) {
+    if (de == 0.0) {
+      if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
+        printf( "*** Null move, distance = %1.9lf\n", distance);
+      }
+      return;	// TODO: will this suffice ?
     }
-    return;	// TODO: will this suffice ?
+    // If E is only moving axis, set distance from E
+    distance = de;
   }
   /*
    *  Vector length and requested feed are known now.
@@ -399,36 +399,65 @@ static void pruss_axis_config( int axis, double step_size, int reverse)
   pruss_queue_config_axis( axis, ssi, sst, ssn, reverse);
 }
 
+int traject_wait_for_completion( void)
+{
+  while (pruss_queue_empty() == 0) {
+    sched_yield();
+  }
+  return 0;
+}
+
+int traject_abort( void)
+{
+  // FIXME: implementation
+  return 1;
+}
+
+int traject_status_print( void)
+{
+  printf( "traject_status_print - TODO:implementation\n");
+  return 0;
+}
+
 int traject_init( void)
 {
   /*
    *  Configure 'constants' from configuration
    */
-  vx_max = FEED2SI( traject_get_max_feed( x_axis));
-  vy_max = FEED2SI( traject_get_max_feed( y_axis));
-  vz_max = FEED2SI( traject_get_max_feed( z_axis));
-  ve_max = FEED2SI( traject_get_max_feed( e_axis));
+  vx_max = FEED2SI( config_get_max_feed( x_axis));
+  vy_max = FEED2SI( config_get_max_feed( y_axis));
+  vz_max = FEED2SI( config_get_max_feed( z_axis));
+  ve_max = FEED2SI( config_get_max_feed( e_axis));
 
-  recipr_a_max_x = RECIPR( traject_get_max_accel( x_axis));
-  recipr_a_max_y = RECIPR( traject_get_max_accel( y_axis));
-  recipr_a_max_z = RECIPR( traject_get_max_accel( z_axis));
-  recipr_a_max_e = RECIPR( traject_get_max_accel( e_axis));
+  recipr_a_max_x = RECIPR( config_get_max_accel( x_axis));
+  recipr_a_max_y = RECIPR( config_get_max_accel( y_axis));
+  recipr_a_max_z = RECIPR( config_get_max_accel( z_axis));
+  recipr_a_max_e = RECIPR( config_get_max_accel( e_axis));
 
-  step_size_x = traject_get_step_size( x_axis);
-  step_size_y = traject_get_step_size( y_axis);
-  step_size_z = traject_get_step_size( z_axis);
-  step_size_e = traject_get_step_size( e_axis);
+  step_size_x = config_get_step_size( x_axis);
+  step_size_y = config_get_step_size( y_axis);
+  step_size_z = config_get_step_size( z_axis);
+  step_size_e = config_get_step_size( e_axis);
 
+  if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
+	  printf( "  step: X = %9.3lf, Y = %9.3lf, Z = %9.3lf, E = %9.3lf [um]\n",
+		  SI2UM( step_size_x), SI2UM( step_size_y), SI2UM( step_size_z), SI2UM( step_size_e)); 
+	  printf( "  amax: X = %9.3lf, Y = %9.3lf, Z = %9.3lf, E = %9.3lf [mm/s^2]\n",
+		  SI2MM( RECIPR( recipr_a_max_x)), SI2MM( RECIPR( recipr_a_max_y)),
+		  SI2MM( RECIPR( recipr_a_max_z)), SI2MM( RECIPR( recipr_a_max_e)));
+	  printf( "  vmax: X = %9.3lf, Y = %9.3lf, Z = %9.3lf, E = %9.3lf [mm/s]\n",
+		  SI2MM( vx_max), SI2MM( vx_max), SI2MM( vx_max), SI2MM( vx_max)); 
+  }
   /*
    *  Configure PRUSS and propagate stepper configuration
    */
   mendel_sub_init( "pruss", pruss_init);
 
   // Set per axis step size and reversal bit
-  pruss_axis_config( 1, step_size_x, traject_reverse_axis( x_axis));
-  pruss_axis_config( 2, step_size_y, traject_reverse_axis( y_axis));
-  pruss_axis_config( 3, step_size_z, traject_reverse_axis( z_axis));
-  pruss_axis_config( 4, step_size_e, traject_reverse_axis( e_axis));
+  pruss_axis_config( 1, step_size_x, config_reverse_axis( x_axis));
+  pruss_axis_config( 2, step_size_y, config_reverse_axis( y_axis));
+  pruss_axis_config( 3, step_size_z, config_reverse_axis( z_axis));
+  pruss_axis_config( 4, step_size_e, config_reverse_axis( e_axis));
 
   /* Set the duration of the active part of the step pulse */
   pruss_queue_set_pulse_length( 1, 8 * 200);

@@ -3,9 +3,7 @@
 
 #include <stdint.h>
 
-typedef enum {
-  x_axis, y_axis, z_axis, e_axis
-} axis_e;
+#include "bebopr.h"
 
 typedef struct {
   double		dx;
@@ -15,13 +13,11 @@ typedef struct {
   uint32_t		feed;
 } traject5D;
 
-extern void traject_delta_on_one_axis( double delta, uint32_t feed);
 extern void traject_delta_on_all_axes( traject5D* delta);
 
-extern uint32_t traject_get_max_feed( axis_e axis);
-extern double traject_get_max_accel( axis_e axis);
-extern double traject_get_step_size( axis_e axis);
-extern int traject_reverse_axis( axis_e axis);
+extern int traject_wait_for_completion( void);
+extern int traject_abort( void);
+extern int traject_status_print( void);
 
 extern int traject_init( void);
 

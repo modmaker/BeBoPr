@@ -1,18 +1,16 @@
-#include	"gcode_parse.h"
-
 /** \file
 	\brief Parse received G-Codes
 */
 
-#include	<string.h>
 
-#include	"serial.h"
-#include	"sermsg.h"
-#include	"debug.h"
-#include	"heater.h"
-#include	"sersendf.h"
+#include <stdio.h>
+#include <string.h>
 
-#include	"gcode_process.h"
+#include "gcode_parse.h"
+#include "serial.h"
+#include "sermsg.h"
+#include "debug.h"
+#include "gcode_process.h"
 
 /*
 	Convert input values (mm/inch) into nanometers for all positions.
@@ -22,7 +20,9 @@
 
 
 #define	NM_PER_MM	1.0E6
+#define	MM_PER_MM	1.0E0
 #define	NM_PER_INCH	25.4E6
+#define	MM_PER_INCH	25.4E0
 
 /// crude crc macro
 #define crc(a, b)		(a ^ b)
@@ -150,22 +150,15 @@ void gcode_parse_char(uint8_t c) {
 					// just use raw integer, we need move distance and n_steps to convert it
 					// to a useful value, so wait until we have those to convert it
 					if (next_target.option_inches)
-						next_target.target.F = decfloat_to_int(&read_digit, 25.4);
+						next_target.target.F = decfloat_to_int(&read_digit, MM_PER_INCH);
 					else
-						next_target.target.F = decfloat_to_int(&read_digit, 1.0);
+						next_target.target.F = decfloat_to_int(&read_digit, MM_PER_MM);
 					if (DEBUG_ECHO && (debug_flags & DEBUG_ECHO))
 						serwrite_uint32(next_target.target.F);
 					break;
 				case 'S':
-					// if this is temperature, scale 1:1
-					if ((next_target.M == 104) || (next_target.M == 109) || (next_target.M == 140))
-						next_target.S = decfloat_to_int( &read_digit, 1.0);
-					// if this is heater PID stuff, multiply by PID_SCALE because we divide by
-					// PID_SCALE later on FIXME:!
-					else if ((next_target.M >= 130) && (next_target.M <= 132))
-						next_target.S = decfloat_to_int( &read_digit, PID_SCALE);
-					else
-						next_target.S = decfloat_to_int( &read_digit, 1.0);
+					// if this is temperature, PID setting or anything else, scale 1:1
+					next_target.S = decfloat_to_int( &read_digit, 1.0);
 					if (DEBUG_ECHO && (debug_flags & DEBUG_ECHO))
 						serwrite_uint16(next_target.S);
 					break;
@@ -329,7 +322,7 @@ void gcode_parse_char(uint8_t c) {
 				#endif
 				) {
 				// process
-				serial_writestr_P(PSTR("ok "));
+				serial_writestr_P( "ok ");
 				process_gcode_command();
 				serial_writechar('\n');
 
@@ -338,20 +331,12 @@ void gcode_parse_char(uint8_t c) {
 					next_target.N_expected = next_target.N + 1;
 			}
 			else {
-#if ARCH == arm
-				sersendf_P(PSTR("rs N%d Expected checksum %d\n"), next_target.N_expected, next_target.checksum_calculated);
-#else
-				sersendf_P(PSTR("rs N%ld Expected checksum %d\n"), next_target.N_expected, next_target.checksum_calculated);
-#endif
+				printf( "rs N%d Expected checksum %d\n", next_target.N_expected, next_target.checksum_calculated);
 // 				request_resend();
 			}
 		}
 		else {
-#if ARCH == arm
-			sersendf_P(PSTR("rs N%d Expected line number %d\n"), next_target.N_expected, next_target.N_expected);
-#else
-			sersendf_P(PSTR("rs N%ld Expected line number %ld\n"), next_target.N_expected, next_target.N_expected);
-#endif
+			printf( "rs N%d Expected line number %d\n", next_target.N_expected, next_target.N_expected);
 // 			request_resend();
 		}
 
@@ -393,7 +378,7 @@ void gcode_parse_char(uint8_t c) {
 \***************************************************************************/
 
 void request_resend(void) {
-	serial_writestr_P(PSTR("rs "));
-	serwrite_uint8(next_target.N);
-	serial_writechar('\n');
+	serial_writestr_P( "rs ");
+	serwrite_uint8( next_target.N);
+	serial_writechar( '\n');
 }

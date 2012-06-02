@@ -31,35 +31,26 @@ static int y_max_state;
 static int z_min_state;
 static int z_max_state;
 
-
-int limsw_x_max( void)
+int limsw_max( axis_e axis)
 {
-  return (x_max_state != limsw_x_max_is_active_low());
+  int active_state = !config_max_limit_switch_is_active_low( axis);
+  switch (axis) {
+  case x_axis:	return (x_max_state == active_state);
+  case y_axis:	return (y_max_state == active_state);
+  case z_axis:	return (z_max_state == active_state);
+  default:	return 0;
+  }
 }
 
-int limsw_x_min( void)
+int limsw_min( axis_e axis)
 {
-  return (x_min_state != limsw_x_min_is_active_low());
-}
-
-int limsw_y_max( void)
-{
-  return (y_max_state != limsw_y_max_is_active_low());
-}
-
-int limsw_y_min( void)
-{
-  return (y_min_state != limsw_y_min_is_active_low());
-}
-
-int limsw_z_max( void)
-{
-  return (z_max_state != limsw_z_max_is_active_low());
-}
-
-int limsw_z_min( void)
-{
-  return (z_min_state != limsw_z_min_is_active_low());
+  int active_state = !config_max_limit_switch_is_active_low( axis);
+  switch (axis) {
+  case x_axis:	return (x_min_state == active_state);
+  case y_axis:	return (y_min_state == active_state);
+  case z_axis:	return (z_min_state == active_state);
+  default:	return 0;
+  }
 }
 
 typedef struct {

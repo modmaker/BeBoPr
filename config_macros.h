@@ -73,7 +73,6 @@
 #define MIN_CLOCKS_PER_STEP( axis)		(uint32_t)(F_CPU / MAX_STEP_FREQ_ ## axis)
 #define	STEPS_TO_UM( axis, steps)		(uint32_t)(1000L * (steps)) / ((uint32_t) STEPS_PER_MM_ ## axis)
 #endif
-#define MM_TO_POS( mm)					(int32_t)(1000000.0 * mm)
 
 // good old HP35 had no PI, so I'll never forget these numbers :-)
 #define PI               			((float) 355 / 113)

@@ -2,53 +2,35 @@
 	\brief Axis homing routines
 */
 
-// 20120401 modmaker - First release.
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <stdio.h>
+#include <math.h>
+#include <unistd.h>
+#include <pthread.h>
 
-#include	<sys/types.h>
-#include	<sys/stat.h>
-#include	<fcntl.h>
-#include	<stdio.h>
-#include	<stdlib.h>
-#include	<math.h>
-#include	<unistd.h>
-#include	<string.h>
-#include	<poll.h>
-#include	<pthread.h>
+#include "beaglebone.h"
+#include "home.h"
+#include "limit_switches.h"
+#include "pruss.h"
+#include "gcode_process.h"
+#include "traject.h"
+#include "bebopr.h"
 
-#include	"pruss.h"
-#include	"limit_switches.h"
-#include	"home.h"
-#include	"dda_queue.h"
-#include	"pinio.h"
-#ifdef DEBUG
-#include	"sersendf.h"
-#endif
-#include	"memory_barrier.h"
-#include	"debug.h"
-#include	"gcode_process.h"
-#include	"traject.h"
-#include	"bebopr.h"
+static const double fclk = TIMER_CLOCK;
 
-
-// Sanity checks for config.h settings:
-#if !defined( X_DIR_PIN) || !defined( Y_DIR_PIN) || !defined( Z_DIR_PIN)
-#error "Need direction signals for homing operation"
-#endif
-
-
-static const double fclk = 200000000.0;
-
+/*
+ * Determine the state of the limit switch that's in the direction we're moving to.
+ */
 static int limsw_axis( axis_e axis, int reverse)
 {
   switch (axis) {
-  case x_axis:	return (reverse) ? limsw_x_min() : limsw_x_max();
-  case y_axis:	return (reverse) ? limsw_y_min() : limsw_y_max();
-  case z_axis:	return (reverse) ? limsw_z_min() : limsw_z_max();
+  case x_axis:	return (reverse) ? limsw_min( x_axis) : limsw_max( x_axis);
+  case y_axis:	return (reverse) ? limsw_min( y_axis) : limsw_max( y_axis);
+  case z_axis:	return (reverse) ? limsw_min( z_axis) : limsw_max( z_axis);
   default:	return -1;
   }
 }
-
-extern double traject_get_step_size( axis_e axis);
 
 // Execute the actual homing operation. The hardware selected with the 'axis'
 // variable must exist or we'll fail miserably, so filter before calling here!
@@ -60,7 +42,7 @@ static void run_home_one_axis( axis_e axis, int reverse, uint32_t feed)
   // FIXME: remove code duplication from gcode_process.c !!!
   double step_size;
   int pruss_axis = 0;
-  step_size = traject_get_step_size( axis);
+  step_size = config_get_step_size( axis);
   switch (axis) {
   case x_axis:
     pruss_axis = 1;
@@ -72,7 +54,7 @@ static void run_home_one_axis( axis_e axis, int reverse, uint32_t feed)
     pruss_axis = 3;
     break;
   default:
-    fprintf( stderr, "BUG: trying to home illegal axis (%d)!\n", axis);
+    printf( "BUG: trying to home illegal axis (%d)!\n", axis);
     pruss_axis = 0;
   }
   double ds = step_size;	/* delta per interation */
@@ -176,110 +158,39 @@ static void run_home_one_axis( axis_e axis, int reverse, uint32_t feed)
 // keep all preprocessor configuration stuff at or below this level.
 static void home_one_axis( axis_e axis, int reverse, uint32_t feed)
 {
-#if 0
-  //FIXME: needed ???
-	// get ready for the action
-	power_on();
-	dda_queue_wait();
-#endif
-	// move to a limit switch or sensor
-	run_home_one_axis( axis, reverse, feed);
-
+  traject_wait_for_completion();
+  // move to a limit switch or sensor
+  run_home_one_axis( axis, reverse, feed);
 }
 
-/// find X MIN endstop
-void home_x_negative( uint32_t feed) {
-  if (limsw_x_has_min()) {
-    uint32_t max_feed = traject_get_max_feed( x_axis);
+/// find MIN endstop for an axis
+void home_axis_to_min_limit_switch( axis_e axis, double feed) {
+  if (config_axis_has_min_limit_switch( axis)) {
+    double max_feed = config_get_max_feed( axis);
     if (feed > max_feed) {
       feed = max_feed;
-      fprintf( stderr, "Limiting feed on x axis to %d\n", feed);
     }
-    home_one_axis( x_axis, 1, feed);
+    home_one_axis( axis, 1 /* reverse */, feed);
     // reference 'home' position to current position
-    gcode_set_pos( 'X', MM_TO_POS( X_MIN));
+    gcode_set_axis_pos( axis, config_axis_get_min_pos( axis));
   } else {
     // reference current position as 'home'
-    gcode_set_pos( 'X', 0);
+    gcode_set_axis_pos( axis, 0);
   }
 }
 
-/// find X_MAX endstop
-void home_x_positive( uint32_t feed) {
-  if (limsw_x_has_max()) {
-    uint32_t max_feed = traject_get_max_feed( x_axis);
+/// find MAX endstop for an axis
+void home_axis_to_max_limit_switch( axis_e axis, double feed) {
+  if (config_axis_has_max_limit_switch( z_axis)) {
+    double max_feed = config_get_max_feed( z_axis);
     if (feed > max_feed) {
       feed = max_feed;
     }
-    home_one_axis( x_axis, 0, feed);
+    home_one_axis( z_axis, 0 /* forward */, feed);
     // reference 'home' position to current position
-    gcode_set_pos( 'X', MM_TO_POS( X_MAX));
+    gcode_set_axis_pos( axis, config_axis_get_max_pos( axis));
   } else {
     // reference current position as 'home'
-    gcode_set_pos( 'X', 0);
-  }
-}
-
-/// find Y MIN endstop
-void home_y_negative( uint32_t feed) {
-  if (limsw_y_has_min()) {
-    uint32_t max_feed = traject_get_max_feed( y_axis);
-    if (feed > max_feed) {
-      feed = max_feed;
-    }
-    home_one_axis( y_axis, 1, feed);
-    // reference 'home' position to current position
-    gcode_set_pos( 'Y', MM_TO_POS( Y_MIN));
-  } else {
-    // reference current position as 'home'
-    gcode_set_pos( 'Y', 0);
-  }
-}
-
-/// find Y MAX endstop
-void home_y_positive( uint32_t feed) {
-  if (limsw_y_has_max()) {
-    uint32_t max_feed = traject_get_max_feed( y_axis);
-    if (feed > max_feed) {
-      feed = max_feed;
-    }
-    home_one_axis( y_axis, 0, feed);
-    // reference 'home' position to current position
-    gcode_set_pos( 'Y', MM_TO_POS( Y_MAX));
-  } else {
-    // reference current position as 'home'
-    gcode_set_pos( 'Y', 0);
-  }
-}
-
-/// find Z MIN endstop
-void home_z_negative( uint32_t feed) {
-  if (limsw_z_has_min()) {
-    uint32_t max_feed = traject_get_max_feed( z_axis);
-    if (feed > max_feed) {
-      feed = max_feed;
-    }
-    home_one_axis( z_axis, 1, feed);
-    // reference 'home' position to current position
-    gcode_set_pos( 'Z', MM_TO_POS( Z_MIN));
-  } else {
-    // reference current position as 'home'
-    gcode_set_pos( 'Z', 0);
-  }
-}
-
-/// find Z MAX endstop
-void home_z_positive( uint32_t feed) {
-  if (limsw_z_has_max()) {
-    uint32_t max_feed = traject_get_max_feed( z_axis);
-    if (feed > max_feed) {
-      feed = max_feed;
-    }
-    home_one_axis( z_axis, 0, feed);
-    // reference 'home' position to current position
-    gcode_set_pos( 'Z', MM_TO_POS( Z_MAX));
-  } else {
-    // reference current position as 'home'
-    gcode_set_pos( 'Z', 0);
+    gcode_set_axis_pos( axis, 0);
   }
 }
