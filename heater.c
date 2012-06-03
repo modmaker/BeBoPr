@@ -59,7 +59,7 @@ static pthread_rwlock_t	control_lock;
 
 static int log_file_open( const char* fname)
 {
-  char s[ 200];
+  char s[ 250];
   snprintf( s, sizeof( s), "./pid-%s.log", fname);
   if (debug_flags & DEBUG_HEATER) {
     printf( "log_file_open - using file '%s'\n", s);
@@ -71,19 +71,22 @@ static int log_file_open( const char* fname)
   if (debug_flags & DEBUG_HEATER) {
     printf( "log_file_open - start logging to file '%s'\n", s);
   }
-  snprintf( s, sizeof( s), "----------------------------------\n"
-                           "     time      celsius duty-cycle\n"
-                           "----------------------------------\n");
+  snprintf( s, sizeof( s), "--------------------------------------------------------------------------------\n"
+                           "  time    channel        setpoint    temp   pwm   out_p     out_i    out_d\n"
+                           "--------------------------------------------------------------------------------\n");
   write( fd, s, strlen( s));
   return fd;
 }
 
-static void log_entry( int fd, double celsius, int duty_cycle)
+static void log_entry( const char* name, int fd,
+		double setpoint, double celsius, double error,
+		int duty_cycle, double out_p, double out_i, double out_d)
 {
   struct timespec ts;
-  char s[ 100];
+  char s[ 120];
   clock_gettime( CLOCK_MONOTONIC, &ts);
-  snprintf( s, sizeof( s), "%7u.%03u,  %3.2lf,  %3d\n", (int)ts.tv_sec, (int)ts.tv_nsec / 1000000, celsius, duty_cycle);
+  snprintf( s, sizeof( s), "%7ld   %s   %6.2lf   %6.2lf   %3d   %6.2lf   %6.2lf   %6.2lf\n",
+	  ts.tv_sec, name, setpoint, celsius, duty_cycle, out_p, out_i, out_d);
   write( fd, s, strlen( s));
 
 }
@@ -136,8 +139,10 @@ void* heater_thread( void* arg)
           heater_d -= celsius;
 	}
 	// combine factors
-        double out = (heater_p * p->pid_settings.P) +
-		(p->pid_integral * p->pid_settings.I) + (heater_d * p->pid_settings.D);
+	double out_p = heater_p * p->pid_settings.P;
+	double out_i = p->pid_integral * p->pid_settings.I;
+	double out_d = heater_d * p->pid_settings.D;
+	double out   = out_p + out_i + out_d;
         if (debug_flags & DEBUG_HEATER) {
           printf( "heater_thread - p=%1.6lf, i=%1.6lf, d=%1.6lf, out=%1.3lf.\n",
 		  heater_p, p->pid_integral, heater_d, out);
@@ -147,7 +152,8 @@ void* heater_thread( void* arg)
           printf( "heater_thread - set output '%s' to %d %%.\n",
 		  tag_name( output_channel), duty_cycle);
 	}
-	log_entry( p->log_fd, celsius, duty_cycle);
+		log_entry( tag_name( input_channel), p->log_fd,
+			p->setpoint, celsius, t_error, duty_cycle, out_p, out_i, out_d);
         pwm_set_output( output_channel, duty_cycle);
       }
     }
