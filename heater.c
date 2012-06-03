@@ -92,13 +92,15 @@ static void log_entry( const char* name, int fd, time_t time,
 
 #define TIMER_CLOCK CLOCK_MONOTONIC
 
-static void ms_sleep( struct timespec* ts, unsigned int ms)
+static void ns_sleep( struct timespec* ts, unsigned int ns)
 {
   struct timespec tso;
-//  printf( "  old ts = %ld.%09ld\n", ts->tv_sec, ts->tv_nsec);
-  ts->tv_sec  += (ts->tv_nsec + ms * 1000000) / 1000000000;
-  ts->tv_nsec  = (ts->tv_nsec + ms * 1000000) % 1000000000;
-//  printf( "  sleep until ts = %ld.%09ld\n", ts->tv_sec, ts->tv_nsec);
+  ts->tv_nsec += ns;
+  if (ts->tv_nsec >= 1000000000) {
+	  ts->tv_nsec -= 1000000000;
+	  ts->tv_sec  += 1;
+  }
+//  printf( "  sleep (%d), until ts = %ld.%09ld\n", ns, ts->tv_sec, ts->tv_nsec);
   for (;;) {
     if (clock_nanosleep( TIMER_CLOCK, TIMER_ABSTIME, ts, &tso) == -1) {
       if (errno == EINTR) {
@@ -114,21 +116,24 @@ static void ms_sleep( struct timespec* ts, unsigned int ms)
   }
 }
 
+#define PID_LOOP_FREQUENCY	5 /* Hz */
+
 /*
  * This is the worker thread that controls the heaters
  * depending on the setpoint and temperature measured.
  */
 void* heater_thread( void* arg)
 {
-  fprintf( stderr, "heater_thread: started\n");
   struct timespec ts;
+  struct timespec old_ts;
+  fprintf( stderr, "heater_thread: started\n");
   clock_getres( TIMER_CLOCK, &ts); 
   printf( "  timer resolution is %ld [ns]\n", ts.tv_nsec);
   clock_gettime( TIMER_CLOCK, &ts);
-  time_t old_tv_sec = ts.tv_sec;
+  old_ts = ts;
   while (1) {
     // Sleep until some time after last sleep ended
-    ms_sleep( &ts, 200);        // pid cycle is 5 Hz
+    ns_sleep( &ts, 1000000000 / PID_LOOP_FREQUENCY);
     for (int ix = 0 ; ix < num_heater_channels ; ++ix) {
       struct heater* p = &heaters[ ix];
       channel_tag input_channel  = p->input;
@@ -167,14 +172,14 @@ void* heater_thread( void* arg)
           double out   = out_p + out_i + out_d;
           int duty_cycle = (int) clip( 0.0, out, 100.0);
           // Only log once every second
-          if (old_tv_sec != ts.tv_sec) {
-          log_entry( tag_name( input_channel), p->log_fd, ts.tv_sec,
-                  p->setpoint, celsius, t_error, duty_cycle, out_p, out_i, out_d);
+          if (old_ts.tv_sec != ts.tv_sec) {
+            log_entry( tag_name( input_channel), p->log_fd, ts.tv_sec,
+		    p->setpoint, celsius, t_error, out_ff, out_p, out_i, out_d, duty_cycle);
           }
           pwm_set_output( output_channel, duty_cycle);
         }
-        if (old_tv_sec != ts.tv_sec) {
-          old_tv_sec = ts.tv_sec;
+        if (old_ts.tv_sec != ts.tv_sec) {
+          old_ts = ts;
         }
       }
     }
