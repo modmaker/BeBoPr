@@ -63,7 +63,6 @@ static void run_home_one_axis( axis_e axis, int reverse, uint32_t feed)
   if (feed > 3000) {
     feed = 3000;
   }
-  feed = 60000;
 
   double dv = (double)feed / (60 * 1000);	/* [mm/min] -> [m/s] */
   double a = 1.5;		/* [m/s^s] */
