@@ -3,7 +3,6 @@
 
 #include	<stdint.h>
 
-#include	"beaglebone-stubs.h"
 
 // initialise serial subsystem
 int serial_init(void);
