@@ -7,6 +7,7 @@
 #include <pthread.h>
 #include <string.h>
 #include <time.h>
+#include <errno.h>
 
 #include "heater.h"
 #include "debug.h"
@@ -90,6 +91,29 @@ static void log_entry( const char* name, int fd, time_t time,
 }
 
 #define TIMER_CLOCK CLOCK_MONOTONIC
+
+static void ms_sleep( struct timespec* ts, unsigned int ms)
+{
+  struct timespec tso;
+//  printf( "  old ts = %ld.%09ld\n", ts->tv_sec, ts->tv_nsec);
+  ts->tv_sec  += (ts->tv_nsec + ms * 1000000) / 1000000000;
+  ts->tv_nsec  = (ts->tv_nsec + ms * 1000000) % 1000000000;
+//  printf( "  sleep until ts = %ld.%09ld\n", ts->tv_sec, ts->tv_nsec);
+  for (;;) {
+    if (clock_nanosleep( TIMER_CLOCK, TIMER_ABSTIME, ts, &tso) == -1) {
+      if (errno == EINTR) {
+        printf( "  sleep interrupted, tso = %ld.%09ld\n", tso.tv_sec, tso.tv_nsec);
+        *ts = tso;
+      } else {
+        perror( "clock_nanoslaap failed");
+	break;
+      }
+    } else {
+      break;
+    }
+  }
+}
+
 /*
  * This is the worker thread that controls the heaters
  * depending on the setpoint and temperature measured.
@@ -98,9 +122,13 @@ void* heater_thread( void* arg)
 {
   fprintf( stderr, "heater_thread: started\n");
   struct timespec ts;
+  clock_getres( TIMER_CLOCK, &ts); 
+  printf( "  timer resolution is %ld [ns]\n", ts.tv_nsec);
+  clock_gettime( TIMER_CLOCK, &ts);
+  time_t old_tv_sec = ts.tv_sec;
   while (1) {
-    clock_gettime( TIMER_CLOCK, &ts);
-    usleep( 1000000);
+    // Sleep until some time after last sleep ended
+    ms_sleep( &ts, 200);        // pid cycle is 5 Hz
     for (int ix = 0 ; ix < num_heater_channels ; ++ix) {
       struct heater* p = &heaters[ ix];
       channel_tag input_channel  = p->input;
@@ -111,52 +139,43 @@ void* heater_thread( void* arg)
       if (result < 0) {
         fprintf( stderr, "heater_thread - failed to read temperature from '%s'\n", tag_name( input_channel));
       } else {
-        if (debug_flags & DEBUG_HEATER) {
-          printf( "heater_thread - temperature from '%s' is %2.1lf\n", tag_name( input_channel), celsius);
-	}
-	// A setpoint of 0.0 means: disable heater
-	if (p->setpoint == 0.0) {
+        if (p->setpoint == 0.0) {
+          // A setpoint of 0.0 means: disable heater
           pwm_set_output( output_channel, 0);
-	  continue;
-	}
-	double t_error = p->setpoint - celsius;
-        if (debug_flags & DEBUG_HEATER) {
-          printf( "heater_thread - setpoint=%1.2lf, error=%1.2lf.\n",
-		  p->setpoint, t_error);
-	}
-	p->celsius_history[ p->history_ix] = celsius;
-	if (++(p->history_ix) >= NR_ITEMS( p->celsius_history)) {
-          p->history_ix = 0;
-	}
+        } else {
+          double t_error = p->setpoint - celsius;
+          p->celsius_history[ p->history_ix] = celsius;
+          if (++(p->history_ix) >= NR_ITEMS( p->celsius_history)) {
+            p->history_ix = 0;
+          }
 
-	// proportional part
-	double heater_p = t_error;
-	// integral part (prevent integrator wind-up)
-	p->pid_integral = clip( -p->pid_settings.I_limit,
-			p->pid_integral + t_error, p->pid_settings.I_limit);
-	// derivative (note: D follows temp rather than error so there's
-	// no large derivative when the target changes)
-	double heater_d = p->celsius_history[ p->history_ix];
-	if (heater_d != 0.0) {
-          heater_d -= celsius;
-	}
-	// combine factors
-	double out_p = heater_p * p->pid_settings.P;
-	double out_i = p->pid_integral * p->pid_settings.I;
-	double out_d = heater_d * p->pid_settings.D;
-	double out   = out_p + out_i + out_d;
-        if (debug_flags & DEBUG_HEATER) {
-          printf( "heater_thread - p=%1.6lf, i=%1.6lf, d=%1.6lf, out=%1.3lf.\n",
-		  heater_p, p->pid_integral, heater_d, out);
-	}
-	int duty_cycle = (int) clip( 0.0, out, 100.0);
-        if (debug_flags & DEBUG_HEATER) {
-          printf( "heater_thread - set output '%s' to %d %%.\n",
-		  tag_name( output_channel), duty_cycle);
-	}
-		log_entry( tag_name( input_channel), p->log_fd, ts.tv_sec,
-			p->setpoint, celsius, t_error, duty_cycle, out_p, out_i, out_d);
-        pwm_set_output( output_channel, duty_cycle);
+          // proportional part
+          double heater_p = t_error;
+          // integral part (prevent integrator wind-up)
+          p->pid_integral = clip( -p->pid_settings.I_limit,
+                          p->pid_integral + t_error, p->pid_settings.I_limit);
+          // derivative (note: D follows temp rather than error so there's
+          // no large derivative when the target changes)
+          double heater_d = p->celsius_history[ p->history_ix];
+          if (heater_d != 0.0) {
+            heater_d -= celsius;
+          }
+          // combine factors
+          double out_p = heater_p * p->pid_settings.P;
+          double out_i = p->pid_integral * p->pid_settings.I;
+          double out_d = heater_d * p->pid_settings.D;
+          double out   = out_p + out_i + out_d;
+          int duty_cycle = (int) clip( 0.0, out, 100.0);
+          // Only log once every second
+          if (old_tv_sec != ts.tv_sec) {
+          log_entry( tag_name( input_channel), p->log_fd, ts.tv_sec,
+                  p->setpoint, celsius, t_error, duty_cycle, out_p, out_i, out_d);
+          }
+          pwm_set_output( output_channel, duty_cycle);
+        }
+        if (old_tv_sec != ts.tv_sec) {
+          old_tv_sec = ts.tv_sec;
+        }
       }
     }
   }
