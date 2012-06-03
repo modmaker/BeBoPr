@@ -78,18 +78,18 @@ static int log_file_open( const char* fname)
   return fd;
 }
 
-static void log_entry( const char* name, int fd,
+static void log_entry( const char* name, int fd, time_t time, 
 		double setpoint, double celsius, double error,
 		int duty_cycle, double out_p, double out_i, double out_d)
 {
-  struct timespec ts;
   char s[ 120];
-  clock_gettime( CLOCK_MONOTONIC, &ts);
   snprintf( s, sizeof( s), "%7ld   %s   %6.2lf   %6.2lf   %3d   %6.2lf   %6.2lf   %6.2lf\n",
-	  ts.tv_sec, name, setpoint, celsius, duty_cycle, out_p, out_i, out_d);
+	  time, name, setpoint, celsius, duty_cycle, out_p, out_i, out_d);
   write( fd, s, strlen( s));
 
 }
+
+#define TIMER_CLOCK CLOCK_MONOTONIC
 /*
  * This is the worker thread that controls the heaters
  * depending on the setpoint and temperature measured.
@@ -97,7 +97,9 @@ static void log_entry( const char* name, int fd,
 void* heater_thread( void* arg)
 {
   fprintf( stderr, "heater_thread: started\n");
+  struct timespec ts;
   while (1) {
+    clock_gettime( TIMER_CLOCK, &ts);
     usleep( 1000000);
     for (int ix = 0 ; ix < num_heater_channels ; ++ix) {
       struct heater* p = &heaters[ ix];
@@ -152,7 +154,7 @@ void* heater_thread( void* arg)
           printf( "heater_thread - set output '%s' to %d %%.\n",
 		  tag_name( output_channel), duty_cycle);
 	}
-		log_entry( tag_name( input_channel), p->log_fd,
+		log_entry( tag_name( input_channel), p->log_fd, ts.tv_sec,
 			p->setpoint, celsius, t_error, duty_cycle, out_p, out_i, out_d);
         pwm_set_output( output_channel, duty_cycle);
       }
