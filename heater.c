@@ -149,25 +149,33 @@ void* heater_thread( void* arg)
           pwm_set_output( output_channel, 0);
         } else {
           double t_error = p->setpoint - celsius;
+          const double dt = 1.0 / PID_LOOP_FREQUENCY;
+
+          // proportional part
+          double heater_p = t_error;
+
+          // integral part (prevent integrator wind-up)
+          double heater_i = clip( -p->pid_settings.I_limit,
+                                   p->pid_integral + t_error * dt,
+                                   p->pid_settings.I_limit);
+          p->pid_integral = heater_i;
+
+          // derivative (note: D follows temp rather than error so there's
+          // no large derivative when the target changes)
           p->celsius_history[ p->history_ix] = celsius;
           if (++(p->history_ix) >= NR_ITEMS( p->celsius_history)) {
             p->history_ix = 0;
           }
-
-          // proportional part
-          double heater_p = t_error;
-          // integral part (prevent integrator wind-up)
-          p->pid_integral = clip( -p->pid_settings.I_limit,
-                          p->pid_integral + t_error, p->pid_settings.I_limit);
-          // derivative (note: D follows temp rather than error so there's
-          // no large derivative when the target changes)
-          double heater_d = p->celsius_history[ p->history_ix];
-          if (heater_d != 0.0) {
-            heater_d -= celsius;
+          double old_celsius = p->celsius_history[ p->history_ix];
+          if (old_celsius == 0.0) {
+            // if no history, force heater_d to 0.0
+            old_celsius = celsius;
           }
+          double heater_d = (celsius - old_celsius) / ((NR_ITEMS( p->celsius_history) - 1) * dt);
+
           // combine factors
           double out_p = heater_p * p->pid_settings.P;
-          double out_i = p->pid_integral * p->pid_settings.I;
+          double out_i = heater_i * p->pid_settings.I;
           double out_d = heater_d * p->pid_settings.D;
           double out   = out_p + out_i + out_d;
           int duty_cycle = (int) clip( 0.0, out, 100.0);
