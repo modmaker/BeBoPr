@@ -881,8 +881,8 @@ void process_gcode_command() {
 					heater = heater_extruder;
 				}
 				heater_get_pid_values( heater, &pid);
-				printf( "P:%1.3f I:%1.3f D:%1.3f Ilim:%1.3f",
-					pid.P, pid.I, pid.D, pid.I_limit);
+				printf( "P:%1.3f I:%1.3f D:%1.3f Ilim:%1.3f FF_factor:%1.3f FF_offset:%1.3f",
+					pid.P, pid.I, pid.D, pid.I_limit, pid.FF_factor, pid.FF_offset);
 				break;
 			}
 			#endif
