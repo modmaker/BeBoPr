@@ -78,7 +78,7 @@ static const pwm_config_record pwm_config_data[] = {
   {
     .tag		= pwm_extruder,
     .device_path	= PWM_PATH_PREFIX "ehrpwm.2:0",	// BEBOPR_R2_J3 - PWM1
-    .frequency		= 10,
+    .frequency		= 100,
   },
   {
     .tag		= pwm_fan,
@@ -99,11 +99,12 @@ static const heater_config_record heater_config_data[] = {
     .analog_output	= pwm_extruder,
     .pid =
     {
-	    .K = 0.0,
+	    .FF_factor = 0.33,
+	    .FF_offset = 40.0,
 	    .P = 15.0,
-	    .I = 10.0,
+	    .I = 0.0,
 	    .D = 0.0,
-	    .I_limit = 0.7,
+	    .I_limit = 10.0,
     },
   },
   {

@@ -8,11 +8,12 @@
 
 
 typedef struct {
-  double	K;
   double	P;
   double	I;
   double	D;
   double	I_limit;
+  double	FF_factor;
+  double	FF_offset;
 } pid_settings;
 
 typedef const struct {

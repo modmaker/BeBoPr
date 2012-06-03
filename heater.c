@@ -221,7 +221,8 @@ int heater_init( void)
       pd->pid_settings.P	= ps->pid.P;
       pd->pid_settings.I	= ps->pid.I;
       pd->pid_settings.D	= ps->pid.D;
-      pd->pid_settings.K	= 0.0;
+      pd->pid_settings.FF_factor= ps->pid.FF_factor;
+      pd->pid_settings.FF_offset= ps->pid.FF_offset;
       pd->pid_settings.I_limit	= ps->pid.I_limit;
       pd->setpoint		= 0.0;
       pd->history_ix		= 0;
