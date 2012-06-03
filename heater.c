@@ -72,22 +72,23 @@ static int log_file_open( const char* fname)
   if (debug_flags & DEBUG_HEATER) {
     printf( "log_file_open - start logging to file '%s'\n", s);
   }
-  snprintf( s, sizeof( s), "--------------------------------------------------------------------------------\n"
-                           "  time    channel        setpoint    temp   pwm   out_p     out_i    out_d\n"
-                           "--------------------------------------------------------------------------------\n");
+  snprintf( s, sizeof( s), "-----------------------------------------------------------------------------------\n"
+                           "  time    channel        setpoint    temp   ff        p         i        d     dc%%\n"
+                           "-----------------------------------------------------------------------------------\n");
   write( fd, s, strlen( s));
   return fd;
 }
 
-static void log_entry( const char* name, int fd, time_t time, 
-		double setpoint, double celsius, double error,
-		int duty_cycle, double out_p, double out_i, double out_d)
+static void log_entry( const char* name, int fd, time_t time, double setpoint, double celsius, double error,
+                double out_ff, double out_p, double out_i, double out_d, int duty_cycle)
 {
   char s[ 120];
-  snprintf( s, sizeof( s), "%7ld   %s   %6.2lf   %6.2lf   %3d   %6.2lf   %6.2lf   %6.2lf\n",
-	  time, name, setpoint, celsius, duty_cycle, out_p, out_i, out_d);
+  snprintf( s, sizeof( s), "%7ld   %s   %6.2lf   %6.2lf   %6.2lf   %6.2lf   %6.2lf   %6.2lf   %3d\n",
+          time, name, setpoint, celsius, out_ff, out_p, out_i, out_d, duty_cycle);
   write( fd, s, strlen( s));
-
+  if (debug_flags & DEBUG_HEATER) {
+    printf( s);
+  }
 }
 
 #define TIMER_CLOCK CLOCK_MONOTONIC
@@ -100,7 +101,6 @@ static void ns_sleep( struct timespec* ts, unsigned int ns)
 	  ts->tv_nsec -= 1000000000;
 	  ts->tv_sec  += 1;
   }
-//  printf( "  sleep (%d), until ts = %ld.%09ld\n", ns, ts->tv_sec, ts->tv_nsec);
   for (;;) {
     if (clock_nanosleep( TIMER_CLOCK, TIMER_ABSTIME, ts, &tso) == -1) {
       if (errno == EINTR) {
