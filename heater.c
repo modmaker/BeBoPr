@@ -177,7 +177,8 @@ void* heater_thread( void* arg)
           double out_p = heater_p * p->pid_settings.P;
           double out_i = heater_i * p->pid_settings.I;
           double out_d = heater_d * p->pid_settings.D;
-          double out   = out_p + out_i + out_d;
+          double out_ff= (p->setpoint - p->pid_settings.FF_offset) * p->pid_settings.FF_factor;
+          double out   = out_p + out_i + out_d + out_ff;
           int duty_cycle = (int) clip( 0.0, out, 100.0);
           // Only log once every second
           if (old_ts.tv_sec != ts.tv_sec) {
