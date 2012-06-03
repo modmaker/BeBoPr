@@ -527,8 +527,10 @@ void process_gcode_command() {
 				} else {
 					heater_get_celsius( heater_extruder, &celsius);
 					printf( "\nT:%1.1lf", celsius);
-					heater_get_celsius( heater_bed, &celsius);
-					printf( " B:%1.1lf", celsius);
+					if (heater_bed != NULL) {
+						heater_get_celsius( heater_bed, &celsius);
+						printf( " B:%1.1lf", celsius);
+					}
 				}
 				break;
 			}
