@@ -446,7 +446,7 @@ int traject_init( void)
 		  SI2MM( RECIPR( recipr_a_max_x)), SI2MM( RECIPR( recipr_a_max_y)),
 		  SI2MM( RECIPR( recipr_a_max_z)), SI2MM( RECIPR( recipr_a_max_e)));
 	  printf( "  vmax: X = %9.3lf, Y = %9.3lf, Z = %9.3lf, E = %9.3lf [mm/s]\n",
-		  SI2MM( vx_max), SI2MM( vx_max), SI2MM( vx_max), SI2MM( vx_max)); 
+		  SI2MM( vx_max), SI2MM( vy_max), SI2MM( vz_max), SI2MM( ve_max)); 
   }
   /*
    *  Configure PRUSS and propagate stepper configuration
