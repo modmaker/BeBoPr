@@ -22,6 +22,7 @@
 #include "pruss_stepper.h"
 #include "heater.h"
 #include "mendel.h"
+#include "limit_switches.h"
 
 /// the current tool
 static uint8_t tool;
@@ -793,35 +794,39 @@ void process_gcode_command() {
 
 			// M200 - report endstop status
 			case 200:
+			{
 				//? ==== M200: report endstop status ====
 				//? Report the current status of the endstops configured in the firmware to the host.
-#if ARCH == arm
-			  // TODO: implement
-#else
-                                #if defined(X_MIN_PIN)
-				    printf("x_min:%d ", x_min());
-                                #endif
-                                #if defined(X_MAX_PIN)
-				    printf("x_max:%d ", x_max());
-                                #endif
-                                #if defined(Y_MIN_PIN)
-				    printf("y_min:%d ", y_min());
-                                #endif
-                                #if defined(Y_MAX_PIN)
-				    printf("y_max:%d ", y_max());
-                                #endif
-                                #if defined(Z_MIN_PIN)
-				    printf("z_min:%d ", z_min());
-                                #endif
-                                #if defined(Z_MAX_PIN)
-				    printf("z_max:%d ", z_max());
-                                #endif
-                                #if !(defined(X_MIN_PIN) || defined(X_MAX_PIN) || defined(Y_MIN_PIN) || defined(Y_MAX_PIN) || defined(Z_MIN_PIN) || defined(Z_MAX_PIN))
-				    printf("no endstops defined"));
-                                #endif
-#endif
+				int no_limit_switches = 1;
+				if (config_axis_has_min_limit_switch( x_axis)) {
+				    printf( "x_min:%d ", limsw_min( x_axis));
+				    no_limit_switches = 0;
+				}
+				if (config_axis_has_max_limit_switch( x_axis)) {
+				    printf( "x_max:%d ", limsw_max( x_axis));
+				    no_limit_switches = 0;
+				}
+				if (config_axis_has_min_limit_switch( y_axis)) {
+				    printf( "y_min:%d ", limsw_min( y_axis));
+				    no_limit_switches = 0;
+				}
+				if (config_axis_has_max_limit_switch( y_axis)) {
+				    printf( "y_max:%d ", limsw_max( y_axis));
+				    no_limit_switches = 0;
+				}
+				if (config_axis_has_min_limit_switch( z_axis)) {
+				    printf( "z_min:%d ", limsw_min( z_axis));
+				    no_limit_switches = 0;
+				}
+				if (config_axis_has_max_limit_switch( z_axis)) {
+				    printf( "z_max:%d ", limsw_max( z_axis));
+				    no_limit_switches = 0;
+				}
+				if (no_limit_switches) {
+				    printf("no endstops defined");
+				}
 				break;
-
+			}
 			#ifdef	DEBUG
 			// M240- echo off
 			case 240:
