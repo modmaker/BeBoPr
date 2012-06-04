@@ -15,6 +15,7 @@
 	#define		DEBUG_ANALOG	128
 	#define		DEBUG_HEATER	256
 	#define		DEBUG_PWM	512
+	#define		DEBUG_LIMSW	1024
 #else
 	// by setting these to zero, the compiler should optimise the relevant code out
 	#define		DEBUG_PID	0
@@ -27,9 +28,10 @@
 	#define		DEBUG_ANALOG	0
 	#define		DEBUG_HEATER	0
 	#define		DEBUG_PWM	0
+	#define		DEBUG_LIMSW	0
 #endif
 
-#define			DEBUG_ECHO	1024
+#define			DEBUG_ECHO	(1<<31)
 
 extern volatile uint32_t debug_flags;
 

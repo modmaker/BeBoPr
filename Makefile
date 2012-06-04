@@ -154,7 +154,7 @@ gcode_parse.o: gcode_parse.c gcode_parse.h serial.h sermsg.h debug.h \
 gcode_process.o: gcode_process.c bebopr.h config.h config_macros.h \
  prusa_mech.h wades_extruder.h gcode_process.h gcode_parse.h serial.h \
  pinio.h debug.h temp.h beaglebone.h heater.h pwm.h home.h traject.h \
- pruss_stepper.h algo2cmds.h mendel.h
+ pruss_stepper.h algo2cmds.h mendel.h limit_switches.h
 gpio.o: gpio.c gpio.h
 heater.o: heater.c heater.h temp.h beaglebone.h pwm.h debug.h config.h \
  config_macros.h prusa_mech.h wades_extruder.h mendel.h
@@ -162,7 +162,8 @@ home.o: home.c beaglebone.h home.h bebopr.h config.h config_macros.h \
  prusa_mech.h wades_extruder.h limit_switches.h traject.h pruss_stepper.h \
  algo2cmds.h gcode_process.h
 limit_switches.o: limit_switches.c limit_switches.h traject.h bebopr.h \
- config.h config_macros.h prusa_mech.h wades_extruder.h mendel.h gpio.h
+ config.h config_macros.h prusa_mech.h wades_extruder.h mendel.h gpio.h \
+ debug.h
 pinio.o: pinio.c pinio.h config.h config_macros.h prusa_mech.h \
  wades_extruder.h
 pruss.o: pruss.c pruss.h algo2cmds.h beaglebone.h
