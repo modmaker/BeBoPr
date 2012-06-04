@@ -881,17 +881,8 @@ void process_gcode_command() {
 				//? ==== M253: read arbitrary memory location ====
 				//? Undocumented
 				//? This command is only available in DEBUG builds.
-				if (next_target.seen_P == 0)
-					next_target.P = 1;
-				for (; next_target.P; next_target.P--) {
-#if ARCH == arm
-				  // TODO: implementation
-#else
-					serwrite_hex8(*(volatile uint8_t *)(next_target.S));
-#endif
-					next_target.S++;
-				}
-				// newline is sent from gcode_parse after we return
+
+				// 2012-06-04 modmaker - not implemented, this is not an AVR!
 				break;
 
 			// DEBUG: write arbitrary memory location
@@ -899,13 +890,8 @@ void process_gcode_command() {
 				//? ==== M254: write arbitrary memory location ====
 				//? Undocumented
 				//? This command is only available in DEBUG builds.
-#if ARCH == arm
-				  // TODO: implementation
-#else
-				printf("%x:%x->%x", next_target.S, *(volatile uint8_t *)(next_target.S), next_target.P);
-				(*(volatile uint8_t *)(next_target.S)) = next_target.P;
-#endif
-				// newline is sent from gcode_parse after we return
+
+				// 2012-06-04 modmaker - not implemented, this is not an AVR!
 				break;
 			#endif /* DEBUG */
 				// unknown mcode: spit an error
