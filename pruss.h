@@ -2,8 +2,36 @@
 #define _PRUSS_H
 
 #include <stdint.h>
-#include "algo2cmds.h"
 
+#ifndef PRU_NR
+#  define PRU_NR	0
+#endif
+
+#define PRUSS_RAM0_OFFSET  0x00000000
+#define PRUSS_RAM1_OFFSET  0x00002000
+#define PRUSS_RAM2_OFFSET  0x00010000
+#define PRUSS_CTL0_OFFSET  0x00022000
+#define PRUSS_DBG0_OFFSET  0x00022400
+#define PRUSS_CTL1_OFFSET  0x00024000
+#define PRUSS_DBG1_OFFSET  0x00024400
+#define PRUSS_CFG_OFFSET   0x00026000
+#define PRUSS_ECAP0_OFFSET 0x00030000
+#define PRUSS_IRAM0_OFFSET 0x00034000
+#define PRUSS_IRAM1_OFFSET 0x00038000
+
+#if PRU_NR == 0
+#  define PRUSS_RAM_OFFSET   PRUSS_RAM0_OFFSET
+#  define PRUSS_CTL_OFFSET   PRUSS_CTL0_OFFSET
+#  define PRUSS_DBG_OFFSET   PRUSS_DBG0_OFFSET
+#  define PRUSS_IRAM_OFFSET  PRUSS_IRAM0_OFFSET
+#elif PRU_NR == 1
+#  define PRUSS_RAM_OFFSET   PRUSS_RAM1_OFFSET
+#  define PRUSS_CTL_OFFSET   PRUSS_CTL1_OFFSET
+#  define PRUSS_DBG_OFFSET   PRUSS_DBG1_OFFSET
+#  define PRUSS_IRAM_OFFSET  PRUSS_IRAM1_OFFSET
+#else
+#  error Illegal PRU_NR setting
+#endif
 /* Low level interface */
 
 extern uint32_t pruss_rd32( unsigned int addr);
@@ -13,29 +41,18 @@ extern void pruss_wr32( unsigned int addr, uint32_t data);
 extern void pruss_wr16( unsigned int addr, uint16_t data);
 extern void pruss_wr8( unsigned int addr, uint8_t data);
 
-
 /* High level interface */
 
+extern int locate_pruss_device( const char* driver_name, char* drv_name, int drv_name_len, char* uio_name, int uio_name_len);
+extern int map_device( const char* uio_name);
 extern int pruss_load_code( const char* fname, unsigned int* start_addr);
-extern int pruss_init( void);
+extern int pruss_init( const char* ucodename);
 extern void pruss_wait_for_halt( void);
 extern int pruss_dump_state( void);
 extern int pruss_halt_pruss( void);
+extern int pruss_stop_pruss( void);
+extern void pruss_start_pruss( void);
+extern int pruss_is_halted( void);
 
-extern int pruss_queue_full( void);
-extern int pruss_queue_empty( void);
-extern int pruss_queue_set_origin( int axis);
-extern int pruss_queue_set_accel( int axis, uint32_t c0);
-extern int pruss_queue_accel_more( int axis, uint32_t cmin, int32_t delta);
-extern int pruss_queue_accel( int axis, uint32_t c0, uint32_t cmin, int32_t delta);
-extern int pruss_queue_dwell( int axis, uint32_t cmin, int32_t delta);
-extern int pruss_queue_decel( int axis, int32_t delta);
-extern int pruss_queue_execute( void);
-extern int pruss_queue_set_pulse_length( int axis, uint16_t length);
-extern int pruss_queue_set_idle_timeout( uint8_t period);
-extern int pruss_queue_config_axis( int axis, uint32_t ssi, uint16_t sst, uint16_t ssn, int reverse);
-extern int pruss_queue_set_enable( int on);
-
-extern void pruss_dump_position( int axis);
 
 #endif

@@ -19,7 +19,7 @@
 #include "heater.h"
 #include "home.h"
 #include "traject.h"
-#include "pruss.h"
+#include "pruss_stepper.h"
 #include "heater.h"
 #include "mendel.h"
 
@@ -378,7 +378,7 @@ void process_gcode_command() {
 			default:
 				printf("E: Bad G-code %d", next_target.G);
 				// newline is sent from gcode_parse after we return
-				pruss_dump_state();
+				pruss_stepper_dump_state();
 				return;
 		}
 #ifdef	DEBUG

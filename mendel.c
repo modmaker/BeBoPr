@@ -17,7 +17,7 @@
 #include "gcode_process.h"
 #include "gcode_parse.h"
 #include "limit_switches.h"
-#include "pruss.h"
+#include "pruss_stepper.h"
 
 
 static int arm_init( void)

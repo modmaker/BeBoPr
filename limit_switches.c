@@ -11,7 +11,6 @@
 #include	<pthread.h>
 
 #include	"limit_switches.h"
-#include	"pruss.h"
 #include "mendel.h"
 #include "bebopr.h"
 #include "gpio.h"

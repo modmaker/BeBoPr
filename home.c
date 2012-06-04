@@ -12,7 +12,7 @@
 #include "beaglebone.h"
 #include "home.h"
 #include "limit_switches.h"
-#include "pruss.h"
+#include "pruss_stepper.h"
 #include "gcode_process.h"
 #include "traject.h"
 #include "bebopr.h"

@@ -5,7 +5,7 @@
 
 #include "bebopr.h"
 #include "traject.h"
-#include "pruss.h"
+#include "pruss_stepper.h"
 #include "debug.h"
 #include "beaglebone.h"
 #include "mendel.h"
@@ -451,7 +451,7 @@ int traject_init( void)
   /*
    *  Configure PRUSS and propagate stepper configuration
    */
-  mendel_sub_init( "pruss", pruss_init);
+  mendel_sub_init( "pruss_stepper", pruss_stepper_init);
 
   // Set per axis step size and reversal bit
   pruss_axis_config( 1, step_size_x, config_reverse_axis( x_axis));
