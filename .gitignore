@@ -1,0 +1,16 @@
+*.o
+*.elf
+*.lst
+*.map
+*.sym
+*.lss
+*.eep
+*.srec
+*.bin
+*.hex
+*.al
+*.i
+*.s
+*~
+config.h
+
