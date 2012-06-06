@@ -123,7 +123,7 @@ typedef union {
 #define IX_IN	(PRUSS_RAM_OFFSET + 0xC0)
 #define IX_OUT	(PRUSS_RAM_OFFSET + 0xC1)
 
-static void eCapInit( void)
+static int pruss_ecap_init( void)
 {
 #define O_TSCTR		0
 #define O_CTRPHS	4
@@ -171,35 +171,31 @@ static void eCapInit( void)
   if (debug_flags & DEBUG_PRUSS) {
     printf( "eCap0 initialized and found operational\n");
   }
+  return 0;
 }
 
 #define UCODENAME "stepper.bin"
 
 int pruss_stepper_init( void)
 {
-  int ix_in, ix_out;
-
-#undef MM_PRUSS_SYSCFG
-#undef MM_PRUSS_REVID
-
   if (pruss_init( UCODENAME) < 0) {
     return -1;
   }
   if (debug_flags & DEBUG_PRUSS) {
     printf( "pruss_stepper_init - pruss_init was successfull\n");
   }
+  if (pruss_ecap_init() < 0) {
+    return -1;
+  }
+  if (debug_flags & DEBUG_PRUSS) {
+    printf( "pruss_stepper_init - pruss_init was successfull\n");
+  }
 
-  eCapInit();
-
+  int ix_out = 0;
+  int ix_in  = 0;
   if (debug_flags & DEBUG_PRUSS) {
     printf( "Setting FIFO pointers to %d (in) and %d (out).\n", ix_in, ix_out);
   }
-  printf( "pruss_stepper_init - PRUSS successfully initialized\n");
-
-  printf( "------- START -------\n");
-
-  ix_out = ix_in = 0;
-  printf( "Setting SRAM ix_in to %d and ix_out to %d...\n", ix_in, ix_out);
   pruss_wr8( IX_IN, ix_in);		// in
   pruss_wr8( IX_OUT, ix_out);		// out
   pruss_wr16( IX_OUT + 1, 0xdeaf);	// filler
