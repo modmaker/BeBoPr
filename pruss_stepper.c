@@ -223,7 +223,7 @@ int pruss_stepper_dump_state( void)
   unsigned int sp  = pruss_rd16( PRUSS_DBG_OFFSET + 4 * 2 + 2);	// R2.w2
   unsigned int pc  = pruss_rd16( PRUSS_CTL_OFFSET + 4);
   printf( "PC == 0x%03x (%d), SP == 0x%03x (%d), RET == 0x%04x (%4d)\n", pc, pc, sp, sp, ret, ret);
-  for ( sp = (sp & 0xFFF0), i = 0 ; ; ++i) {
+  for ( sp = (sp & 0xFFF0), i = 0 ; i < 16 ; ++i) {
     ret = pruss_rd16( PRUSS_RAM_OFFSET + sp);
     if (ret == 0xdead || ret == 0xbeef) {
       break;
