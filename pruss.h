@@ -7,6 +7,7 @@
 #  define PRU_NR	0
 #endif
 
+// These are global map offsets !
 #define PRUSS_RAM0_OFFSET  0x00000000
 #define PRUSS_RAM1_OFFSET  0x00002000
 #define PRUSS_RAM2_OFFSET  0x00010000
