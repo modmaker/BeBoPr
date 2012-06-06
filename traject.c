@@ -317,6 +317,12 @@ void traject_delta_on_all_axes( traject5D* traject)
       printf( "Queue X: accelerate to %1.3lf [mm/s] with a=%1.3lf [m/s^2] over %1.6lf [mm] (c0=%u,cmin=%u)\n",
 	      SI2MM( vx), ax, SI2MM( ramp_dx), c0x, cminx);
     }
+    if (c0x < cminx) {
+      if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
+        printf( "Queue X: clipping accel start speed to dwell speed\n");
+      }
+      c0x = cminx;
+    }
     pruss_queue_accel( 1, c0x, cminx, (int32_t)(1.0E9 * ramp_dx));
     any_move = 1;
   }
@@ -324,6 +330,12 @@ void traject_delta_on_all_axes( traject5D* traject)
     if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
       printf( "Queue Y: accelerate to %1.3lf [mm/s] with a=%1.3lf [m/s^2] over %1.6lf [mm] (c0=%d,cmin=%u)\n",
 	      SI2MM( vy), ay, SI2MM( ramp_dy), c0y, cminy);
+    }
+    if (c0y < cminy) {
+      if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
+        printf( "Queue Y: clipping accel start speed to dwell speed\n");
+      }
+      c0y = cminy;
     }
     pruss_queue_accel( 2, c0y, cminy, (int32_t)(1.0E9 * ramp_dy));
     any_move = 1;
@@ -333,6 +345,12 @@ void traject_delta_on_all_axes( traject5D* traject)
       printf( "Queue Z: accelerate to %1.3lf [mm/s] with a=%1.3lf [m/s^2] over %1.6lf [mm] (c0=%d,cmin=%u)\n",
 	      SI2MM( vz), az, SI2MM( ramp_dz), c0z, cminz);
     }
+    if (c0z < cminz) {
+      if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
+        printf( "Queue Z: clipping accel start speed to dwell speed\n");
+      }
+      c0z = cminz;
+    }
     pruss_queue_accel( 3, c0z, cminz, (int32_t)(1.0E9 * ramp_dz));
     any_move = 1;
   }
@@ -340,6 +358,12 @@ void traject_delta_on_all_axes( traject5D* traject)
     if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
       printf( "Queue E: accelerate to %1.3lf [mm/s] with a=%1.3lf [m/s^2] over %1.9lf [mm] (c0=%d,cmin=%u)\n",
 	      SI2MM( ve), ae, SI2MM( ramp_de), c0e, cmine);
+    }
+    if (c0e < cmine) {
+      if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
+        printf( "Queue E: clipping accel start speed to dwell speed\n");
+      }
+      c0e = cmine;
     }
     pruss_queue_accel( 4, c0e, cmine, (int32_t)(1.0E9 * ramp_de));
     any_move = 1;
