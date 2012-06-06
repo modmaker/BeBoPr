@@ -403,8 +403,9 @@ int pruss_load_code( const char* fname, unsigned int* start_addr)
 
 int pruss_halt_pruss( void)
 {
+  /* Do not return until the PRU is halted! */
   int timeout = 25;
-  while (pruss_rd32( PRUSS_CTL_OFFSET) & (1 << 15)) {
+  while (pruss_rd32( PRUSS_PRU_CTRL_CONTROL) & PRUSS_PRU_CTRL_CONTROL_RUNSTATE) {
     pruss_wr32( PRUSS_CTL_OFFSET + 0, 0x00000001);	// disable
     printf( ".");
     if (--timeout == 0) {
@@ -455,7 +456,7 @@ int pruss_init( const char* ucodename)
       return 1;
     }
 
-    if (pruss_rd32( PRUSS_CTL_OFFSET) & (1 << 15)) {
+    if (pruss_rd32( PRUSS_PRU_CTRL_CONTROL) & PRUSS_PRU_CTRL_CONTROL_RUNSTATE) {
       if (debug_flags & DEBUG_PRUSS) {
         printf( "Found running PRU%d, disable it...", PRU_NR);
       }

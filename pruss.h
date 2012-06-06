@@ -33,6 +33,25 @@
 #else
 #  error Illegal PRU_NR setting
 #endif
+
+
+/*
+ * PRUSS control register offsets and bits
+ */
+#define PRUSS_PRU_CTRL_CONTROL          (PRUSS_CTL_OFFSET + 0)
+#define PRUSS_PRU_CTRL_STATUS           (PRUSS_CTL_OFFSET + 4)
+#define PRUSS_PRU_CTRL_WAKEUP_EN        (PRUSS_CTL_OFFSET + 8)
+#define PRUSS_PRU_CTRL_CYCLE            (PRUSS_CTL_OFFSET + 12)
+#define PRUSS_PRU_CTRL_STALL            (PRUSS_CTL_OFFSET + 16)
+#define PRUSS_PRU_CTRL_CTBIR0           (PRUSS_CTL_OFFSET + 32)
+#define PRUSS_PRU_CTRL_CTBIR1           (PRUSS_CTL_OFFSET + 36)
+#define PRUSS_PRU_CTRL_CTPPR0           (PRUSS_CTL_OFFSET + 40)
+#define PRUSS_PRU_CTRL_CTPPR1           (PRUSS_CTL_OFFSET + 44)
+
+#define PRUSS_PRU_CTRL_CONTROL_RUNSTATE         (1 << 15)
+#define PRUSS_PRU_CTRL_CONTROL_ENABLE           (1 <<  1)
+#define PRUSS_PRU_CTRL_CONTROL_COUNTER_ENABLE   (1 <<  3)
+
 /* Low level interface */
 
 extern uint32_t pruss_rd32( unsigned int addr);
