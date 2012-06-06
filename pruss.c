@@ -405,14 +405,17 @@ int pruss_halt_pruss( void)
 {
   /* Do not return until the PRU is halted! */
   int timeout = 25;
-  while (pruss_rd32( PRUSS_PRU_CTRL_CONTROL) & PRUSS_PRU_CTRL_CONTROL_RUNSTATE) {
-    pruss_wr32( PRUSS_PRU_CTRL_CONTROL, 0x00000001);	// disable
+  uint32_t ctlreg = pruss_rd32( PRUSS_PRU_CTRL_CONTROL);
+  while (ctlreg & PRUSS_PRU_CTRL_CONTROL_RUNSTATE) {
+    /* Clear the enable bit to stop the PRU running */
+    pruss_wr32( PRUSS_PRU_CTRL_CONTROL, ctlreg & ~PRUSS_PRU_CTRL_CONTROL_ENABLE);
     printf( ".");
     if (--timeout == 0) {
-      // Sometimes disable won't work...
+      /* Sometimes disable won't work... */
       printf( "cannot disable, soft reset ... ");
-      pruss_wr32( PRUSS_PRU_CTRL_CONTROL, 0x00000000);	// reset
-    }
+      pruss_wr32( PRUSS_PRU_CTRL_CONTROL,  ctlreg & ~PRUSS_PRU_CTRL_CONTROL_NRESET);
+    } 
+    ctlreg = pruss_rd32( PRUSS_PRU_CTRL_CONTROL);
   }
   return 0;
 }
