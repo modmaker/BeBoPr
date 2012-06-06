@@ -288,7 +288,7 @@ void traject_delta_on_all_axes( traject5D* traject)
   int any_move = 0;
   if (vx != 0.0) {
     if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
-      printf( "Queue X: accelerate to %1.3lf [mm/s] with a=%1.3lf [m/s^2] over %1.3lf [mm] (c0=%u,cmin=%u)\n",
+      printf( "Queue X: accelerate to %1.3lf [mm/s] with a=%1.3lf [m/s^2] over %1.6lf [mm] (c0=%u,cmin=%u)\n",
 	      SI2MM( vx), ax, SI2MM( ramp_dx), c0x, cminx);
     }
     pruss_queue_accel( 1, c0x, cminx, (int32_t)(1.0E9 * ramp_dx));
@@ -296,7 +296,7 @@ void traject_delta_on_all_axes( traject5D* traject)
   }
   if (vy != 0.0) {
     if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
-      printf( "Queue Y: accelerate to %1.3lf [mm/s] with a=%1.3lf [m/s^2] over %1.3lf [mm] (c0=%d,cmin=%u)\n",
+      printf( "Queue Y: accelerate to %1.3lf [mm/s] with a=%1.3lf [m/s^2] over %1.6lf [mm] (c0=%d,cmin=%u)\n",
 	      SI2MM( vy), ay, SI2MM( ramp_dy), c0y, cminy);
     }
     pruss_queue_accel( 2, c0y, cminy, (int32_t)(1.0E9 * ramp_dy));
@@ -304,7 +304,7 @@ void traject_delta_on_all_axes( traject5D* traject)
   }
   if (vz != 0.0) {
     if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
-      printf( "Queue Z: accelerate to %1.3lf [mm/s] with a=%1.3lf [m/s^2] over %1.3lf [mm] (c0=%d,cmin=%u)\n",
+      printf( "Queue Z: accelerate to %1.3lf [mm/s] with a=%1.3lf [m/s^2] over %1.6lf [mm] (c0=%d,cmin=%u)\n",
 	      SI2MM( vz), az, SI2MM( ramp_dz), c0z, cminz);
     }
     pruss_queue_accel( 3, c0z, cminz, (int32_t)(1.0E9 * ramp_dz));
@@ -312,7 +312,7 @@ void traject_delta_on_all_axes( traject5D* traject)
   }
   if (ve != 0.0) {
     if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
-      printf( "Queue E: accelerate to %1.3lf [mm/s] with a=%1.3lf [m/s^2] over %1.3lf [mm] (c0=%d,cmin=%u)\n",
+      printf( "Queue E: accelerate to %1.3lf [mm/s] with a=%1.3lf [m/s^2] over %1.9lf [mm] (c0=%d,cmin=%u)\n",
 	      SI2MM( ve), ae, SI2MM( ramp_de), c0e, cmine);
     }
     pruss_queue_accel( 4, c0e, cmine, (int32_t)(1.0E9 * ramp_de));
