@@ -329,8 +329,6 @@ int pruss_wait_for_queue_space( void)
 {
   while (pruss_queue_full()) {
     if (pruss_is_halted()) {
-      printf( "ERROR: found pruss halted while waiting for queue space\n");
-      pruss_stepper_dump_state();
       return -1;
     }
     sched_yield();    // TODO: sleep until PRUSS interrupt ?
@@ -360,8 +358,10 @@ int pruss_command( PruCommandUnion* cmd)
   int ix_in = pruss_rd8( IX_IN);
   //  int ix_out = pruss_rd8( IX_OUT);
   if (pruss_wait_for_queue_space() < 0) {
-    printf( "pruss_command, bailing out because of failing pruss_wait_for_queue_space()\n");
-    return -1;
+    pruss_stepper_dump_state();
+    printf( "ERROR: found pruss halted waiting for queue space for command %d, bailing out!\n",
+	    cmd->command.value);
+    exit( EXIT_FAILURE);
   }
   //  printf( "pruss_command - write to SRAM buffer at index %d, out index is %d.\n", ix_in, ix_out);
   (void) pruss_write_command_struct( ix_in, cmd);
