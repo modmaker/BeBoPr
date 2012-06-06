@@ -206,51 +206,71 @@ void traject_delta_on_all_axes( traject5D* traject)
     }
   } else {
 
-    ramp_dx = 0.5 * double_sx;
-    ramp_dy = 0.5 * double_sy;
-    ramp_dz = 0.5 * double_sz;
-    ramp_de = 0.5 * double_se;
-
     if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
       printf( "Initial ramps - X: %1.6lf, Y: %1.6lf, Z: %1.6lf, E: %1.6lf [mm])\n",
-	      SI2MM( ramp_dx), SI2MM( ramp_dy), SI2MM( ramp_dz), SI2MM( ramp_de));
+	      SI2MM( 0.5 * double_sx), SI2MM( 0.5 * double_sy),
+	      SI2MM( 0.5 * double_sz), SI2MM( 0.5 * double_se));
     }
 
-    if (ramp_dx < step_size_x) {
-      if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
-        printf( "ramp for X is fraction (%1.6f) of step size, setting ramp to 0\n", ramp_dx / step_size_x);
+    if (dx != 0.0) {
+      ramp_dx = 0.5 * double_sx;
+      if (ramp_dx < step_size_x) {
+        if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
+          printf( "ramp for X is fraction (%1.6f) of step size, setting ramp to 0\n", ramp_dx / step_size_x);
+        }
+        ramp_dx  = 0.0;
+        dwell_dx = dx;
+      } else {
+        dwell_dx = dx - double_sx;
       }
+    } else {
       ramp_dx  = 0.0;
-      dwell_dx = dx;
-    } else {
-      dwell_dx = dx - double_sx;
+      dwell_dx = 0.0;
     }
-    if (ramp_dy < step_size_y) {
-      if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
-        printf( "ramp for Y is fraction (%1.6f) of step size, setting ramp to 0\n", ramp_dy / step_size_y);
+    if (dy != 0.0) {
+      ramp_dy = 0.5 * double_sy;
+      if (ramp_dy < step_size_y) {
+        if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
+          printf( "ramp for Y is fraction (%1.6f) of step size, setting ramp to 0\n", ramp_dy / step_size_y);
+        }
+        ramp_dy  = 0.0;
+        dwell_dy = dy;
+      } else {
+        dwell_dy = dy - double_sy;
       }
+    } else {
       ramp_dy  = 0.0;
-      dwell_dy = dy;
-    } else {
-      dwell_dy = dy - double_sy;
+      dwell_dy = 0.0;
     }
-    if (ramp_dz < step_size_z) {
-      if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
-        printf( "ramp for Z is fraction (%1.6f) of step size, setting ramp to 0\n", ramp_dz / step_size_z);
+    if (dz != 0.0) {
+      ramp_dz = 0.5 * double_sz;
+      if (ramp_dz < step_size_z) {
+        if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
+          printf( "ramp for Z is fraction (%1.6f) of step size, setting ramp to 0\n", ramp_dz / step_size_z);
+        }
+        ramp_dz  = 0.0;
+        dwell_dz = dz;
+      } else {
+        dwell_dz = dz - double_sz;
       }
+    } else {
       ramp_dz  = 0.0;
-      dwell_dz = dz;
-    } else {
-      dwell_dz = dz - double_sz;
+      dwell_dz = 0.0;
     }
-    if (ramp_de < step_size_e) {
-      if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
-        printf( "ramp for E is fraction (%1.6f) of step size, setting ramp to 0\n", ramp_de / step_size_e);
+    if (de != 0.0) {
+      ramp_de = 0.5 * double_se;
+      if (ramp_de < step_size_e) {
+        if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
+          printf( "ramp for E is fraction (%1.6f) of step size, setting ramp to 0\n", ramp_de / step_size_e);
+        }
+        ramp_de  = 0.0;
+        dwell_de = de;
+      } else {
+        dwell_de = de - double_se;
       }
-      ramp_de  = 0.0;
-      dwell_de = de;
     } else {
-      dwell_de = de - double_se;
+      ramp_de  = 0.0;
+      dwell_de = 0.0;
     }
   }
   // Put sign back into distances
