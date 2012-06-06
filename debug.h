@@ -11,11 +11,12 @@
 	#define		DEBUG_HOMING	8
 	#define		DEBUG_TRAJECT	16
 	#define		DEBUG_GCODE_PROCESS	32
-	#define		DEBUG_TEMP	64
-	#define		DEBUG_ANALOG	128
-	#define		DEBUG_HEATER	256
-	#define		DEBUG_PWM	512
-	#define		DEBUG_LIMSW	1024
+	#define		DEBUG_TEMP	0x0040
+	#define		DEBUG_ANALOG	0x0080
+	#define		DEBUG_HEATER	0x0100
+	#define		DEBUG_PWM	0x0200
+	#define		DEBUG_LIMSW	0x0400
+	#define		DEBUG_PRUSS	0x0800
 #else
 	// by setting these to zero, the compiler should optimise the relevant code out
 	#define		DEBUG_PID	0
@@ -29,6 +30,7 @@
 	#define		DEBUG_HEATER	0
 	#define		DEBUG_PWM	0
 	#define		DEBUG_LIMSW	0
+	#define		DEBUG_PRUSS	0
 #endif
 
 #define			DEBUG_ECHO	(1<<31)
