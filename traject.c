@@ -161,14 +161,12 @@ void traject_delta_on_all_axes( traject5D* traject)
   double az = vz * recipr_t_acc;
   double ae = ve * recipr_t_acc;
   if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
-    printf( "Acceleration factor - X: %1.3lf, Y: %1.3lf, Z: %1.3lf, E: %1.3lf [m/s^2]\n", ax, ay, az, ae);
+    printf( "Acceleration constant - X: %1.3lf, Y: %1.3lf, Z: %1.3lf, E: %1.3lf [m/s^2]\n", ax, ay, az, ae);
   }
 
   /*
    * s = v^2/2a or s = a.t^2/2
    */
-  //  printf( "sqrt( dx/ax)=%1.6lf [s], sqrt( dx/ax)=%1.6lf [s], sqrt( dx/ax)=%1.6lf [s], sqrt( dx/ax)=%1.6lf [s]\n",
-  //	  sqrt( dx / ax), sqrt( dy / ay), sqrt( dz / az), sqrt( de / ae));
   double t_square  = t_acc * t_acc;
   double double_sx = ax * t_square;
   double double_sy = ay * t_square;
@@ -178,11 +176,8 @@ void traject_delta_on_all_axes( traject5D* traject)
     printf( "Distance to reach full speed: - X:%1.6lf Y:%1.6lf Z:%1.6lf E:%1.6lf [mm]\n",
 	    SI2MM( 0.5 * double_sx), SI2MM( 0.5 * double_sy), SI2MM( 0.5 * double_sz), SI2MM( 0.5 * double_se));
   }
-  //
-  //  double half_t_square = 0.5 * t_acc * t_acc;
   double ramp_dx, ramp_dy, ramp_dz, ramp_de;
   double dwell_dx, dwell_dy, dwell_dz, dwell_de;
-  //
 
   // Split traject into ramp-up, dwell and ramp-down
   if ((double_sx > dx) || (double_sy > dy) || (double_sz > dz) || (double_se > de)) {
