@@ -283,10 +283,16 @@ void traject_delta_on_all_axes( traject5D* traject)
   uint32_t cminy = fclk * step_size_y / vy ;
   uint32_t cminz = fclk * step_size_z / vz ;
   uint32_t cmine = fclk * step_size_e / ve ;
-  //
-  //  printf( "ramping up in %1.3lf [ms]\n", 1000 / dt);
+
+ /*
+  * For now, do not generate ramps with length zero.
+  *
+  * TODO: This gives a potential problem in synchronization between the axes if
+  * ramping for one axis is suppressed and for another not. Investigate!
+  * TODO: the suppressed ramps needs to be corrected for in the dwell!
+  */
   int any_move = 0;
-  if (vx != 0.0) {
+  if (vx != 0.0 && ramp_dx != 0.0) {
     if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
       printf( "Queue X: accelerate to %1.3lf [mm/s] with a=%1.3lf [m/s^2] over %1.6lf [mm] (c0=%u,cmin=%u)\n",
 	      SI2MM( vx), ax, SI2MM( ramp_dx), c0x, cminx);
@@ -294,7 +300,7 @@ void traject_delta_on_all_axes( traject5D* traject)
     pruss_queue_accel( 1, c0x, cminx, (int32_t)(1.0E9 * ramp_dx));
     any_move = 1;
   }
-  if (vy != 0.0) {
+  if (vy != 0.0 && ramp_dy != 0.0) {
     if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
       printf( "Queue Y: accelerate to %1.3lf [mm/s] with a=%1.3lf [m/s^2] over %1.6lf [mm] (c0=%d,cmin=%u)\n",
 	      SI2MM( vy), ay, SI2MM( ramp_dy), c0y, cminy);
@@ -302,7 +308,7 @@ void traject_delta_on_all_axes( traject5D* traject)
     pruss_queue_accel( 2, c0y, cminy, (int32_t)(1.0E9 * ramp_dy));
     any_move = 1;
   }
-  if (vz != 0.0) {
+  if (vz != 0.0 && ramp_dz != 0.0) {
     if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
       printf( "Queue Z: accelerate to %1.3lf [mm/s] with a=%1.3lf [m/s^2] over %1.6lf [mm] (c0=%d,cmin=%u)\n",
 	      SI2MM( vz), az, SI2MM( ramp_dz), c0z, cminz);
@@ -310,7 +316,7 @@ void traject_delta_on_all_axes( traject5D* traject)
     pruss_queue_accel( 3, c0z, cminz, (int32_t)(1.0E9 * ramp_dz));
     any_move = 1;
   }
-  if (ve != 0.0) {
+  if (ve != 0.0 && ramp_de != 0.0) {
     if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
       printf( "Queue E: accelerate to %1.3lf [mm/s] with a=%1.3lf [m/s^2] over %1.9lf [mm] (c0=%d,cmin=%u)\n",
 	      SI2MM( ve), ae, SI2MM( ramp_de), c0e, cmine);
@@ -360,7 +366,7 @@ void traject_delta_on_all_axes( traject5D* traject)
     any_move = 0;
   }
   //
-  if (vx != 0.0) {
+  if (vx != 0.0 && ramp_dx != 0.0) {
     if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
       printf( "Queue X: decelerate over %1.6lf [mm] with a=-%1.3lf [m/s^2]\n",
 	      SI2MM( ramp_dx), ax);
@@ -368,7 +374,7 @@ void traject_delta_on_all_axes( traject5D* traject)
     pruss_queue_decel( 1, (int32_t)(1.0E9 * ramp_dx));
     any_move = 1;
   }
-  if (vy != 0.0) {
+  if (vy != 0.0 && ramp_dy != 0.0) {
     if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
       printf( "Queue Y: decelerate over %1.6lf [mm] with a=-%1.3lf [m/s^2]\n",
 	      SI2MM( ramp_dy), ay);
@@ -376,7 +382,7 @@ void traject_delta_on_all_axes( traject5D* traject)
     pruss_queue_decel( 2, (int32_t)(1.0E9 * ramp_dy));
     any_move = 1;
   }
-  if (vz != 0.0) {
+  if (vz != 0.0 && ramp_dz != 0.0) {
     if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
       printf( "Queue Z: decelerate over %1.6lf [mm] with a=-%1.3lf [m/s^2]\n",
 	      SI2MM( ramp_dz), az);
@@ -384,7 +390,7 @@ void traject_delta_on_all_axes( traject5D* traject)
     pruss_queue_decel( 3, (int32_t)(1.0E9 * ramp_dz));
     any_move = 1;
   }
-  if (ve != 0.0) {
+  if (ve != 0.0 && ramp_de != 0.0) {
     if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
       printf( "Queue E: decelerate over %1.6lf [mm] with a=-%1.3lf [m/s^2]\n",
 	      SI2MM( ramp_de), ae);
