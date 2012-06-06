@@ -308,7 +308,7 @@ int pruss_wait_for_queue_space( void)
   while (pruss_queue_full()) {
     if (pruss_is_halted()) {
       printf( "ERROR: found pruss halted while waiting for queue space\n");
-      pruss_dump_state();
+      pruss_stepper_dump_state();
       return -1;
     }
     sched_yield();    // TODO: sleep until PRUSS interrupt ?
@@ -463,7 +463,7 @@ int pruss_queue_execute( void)
 {
   if (pruss_is_halted()) {
     fprintf( stderr, "FATAL: PRUSS found halted when queueing execute command\n");
-    pruss_dump_state();
+    pruss_stepper_dump_state();
     exit( 1);
     return -1;
   }
