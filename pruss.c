@@ -17,6 +17,7 @@
 #include "pruss.h"
 #include "algo2cmds.h"
 #include "beaglebone.h"
+#include "debug.h"
 
 #define MAX_UIO_MAPS	5	// TODO: should be taken from the right UIO .h file!
 
@@ -425,7 +426,9 @@ int pruss_init( const char* ucodename)
   unsigned int start_addr = 0;
 
   if (locate_pruss_device( UIO_DRIVER, drv_name, sizeof( drv_name), uio_name, sizeof( uio_name))) {
-    printf( "Located driver '%s' for the 'pruss' device '%s'.\n", drv_name, uio_name);
+    if (debug_flags & DEBUG_PRUSS) {
+      printf( "Located driver '%s' for the 'pruss' device '%s'.\n", drv_name, uio_name);
+    }
     // Read PRUSS version register as simple check to verify proper mapping
 
     map_device( uio_name);
@@ -439,26 +442,31 @@ int pruss_init( const char* ucodename)
     // Enable clock for the outgoing OCP_HP0&1 (L3_FAST) busses
     // This will only work if the PRUSS is operational (not reset)!
     if (pruss_rd32( MM_PRUSS_REVID) == 0x47000000UL) {
-      printf( "Valid PRUSS ID found.\n");
+      if (debug_flags & DEBUG_PRUSS) {
+        printf( "Valid PRUSS ID found.\n");
+      }
       int status = pruss_rd32( MM_PRUSS_SYSCFG);
       if ((status & 0x10) != 0) {
 	pruss_wr32( MM_PRUSS_SYSCFG, status & ~(1 << 4));
 	printf( "PRUSS enabled OCP master ports.\n");
       }
     } else {
-      printf( "PRUSS ID is not found.\n");
+      fprintf( stderr, "PRUSS ID is not found.\n");
       return 1;
     }
 
     if (pruss_rd32( PRUSS_CTL_OFFSET) & (1 << 15)) {
-      printf( "Found running PRU%d, disable ..", PRU_NR);
-      pruss_halt_pruss();
-      if (pruss_rd32( PRUSS_CTL_OFFSET) & (1 << 15)) {
-	printf( "Strange....\n");
+      if (debug_flags & DEBUG_PRUSS) {
+        printf( "Found running PRU%d, disable it...", PRU_NR);
       }
-      printf( " done.\n");
+      pruss_halt_pruss();
+      if (debug_flags & DEBUG_PRUSS) {
+        printf( " done.\n");
+      }
     } else {
-      printf( "Found halted/idle PRUSS\n");
+      if (debug_flags & DEBUG_PRUSS) {
+        printf( "Found halted/idle PRU%d\n", PRU_NR);
+      }
     }
   } else {
     printf( "PRUSS driver not found, bailing out\n");
@@ -466,34 +474,46 @@ int pruss_init( const char* ucodename)
   }
 
   // Reset PRUSS counters
-  printf( "Clearing PRUSS counters, old: cycle = %u, stall = %u\n",
-	  pruss_rd32( PRUSS_CTL_OFFSET + 12), pruss_rd32( PRUSS_CTL_OFFSET + 16));
+  if (debug_flags & DEBUG_PRUSS) {
+    printf( "Clearing PRUSS counters, old: cycle = %u, stall = %u\n",
+	    pruss_rd32( PRUSS_CTL_OFFSET + 12), pruss_rd32( PRUSS_CTL_OFFSET + 16));
+  }
   pruss_wr32( PRUSS_CTL_OFFSET + 12, 0);
   pruss_wr32( PRUSS_CTL_OFFSET + 16, 0);
 
-  printf( "Loading microcode from file '%s'\n", ucodename);
-  printf( "------- LOAD -------\n");
+  if (debug_flags & DEBUG_PRUSS) {
+    printf( "Loading microcode from file '%s'\n", ucodename);
+  }
   if (!pruss_load_code( ucodename, (start_addr_arg) ? NULL : &start_addr)) {
     return 1;
   }
-  printf( "Clearing register space...\n");
+  if (debug_flags & DEBUG_PRUSS) {
+    printf( "Clearing register space...\n");
+  }
   for (int i = 0 ; i < 30 ; ++i) {
     pruss_wr32( PRUSS_DBG_OFFSET + 4 * i, 0);
   }
-  printf( "Initializing 8KB SRAM with deadbeef pattern...\n");
+  if (debug_flags & DEBUG_PRUSS) {
+    printf( "Initializing 8KB SRAM with deadbeef pattern...\n");
+  }
   for (int i = 0 ; i < 2048 ; ++i) {
     pruss_wr32( PRUSS_RAM_OFFSET + 4 * i, 0xdeadbeef);
   }
-  printf( "Initializing SRAM buffer with fixed patterns...\n");
+  if (debug_flags & DEBUG_PRUSS) {
+    printf( "Initializing SRAM buffer with fixed patterns...\n");
+  }
   for (int i = 0 ; i < 8 ; ++i) {
     for (int j = 0 ; j < 4 ; ++j) {
       pruss_wr32( PRUSS_RAM_OFFSET + 256 + 4 * (4 * i + j), 0xcafe0000 + 256 * i + j);
     }
   }
-  printf( "Reset: ");
+  if (debug_flags & DEBUG_PRUSS) {
+    printf( "Reset PRU%d and set program counter to %d\n", PRU_NR, start_addr);
+  }
+  /* clear bit 0 to reset the PRU, this is a self clearing (setting) bit! */
   pruss_wr32( PRUSS_CTL_OFFSET + 0, (start_addr << 16) | 0x00000000);	// pc + #softreset
   if (pruss_rd32( PRUSS_CTL_OFFSET + 4) != start_addr) {
-    printf( "Failed set set PRUSS code start address (PC)\n");
+    fprintf( stderr, "Failed to set PRUSS code start address (PC)\n");
     return -1;
   }
   return 0;
@@ -551,7 +571,7 @@ int pruss_dump_state( void)
       printf( "\n");
     }
   }
-  printf( "Number of PRUSS cycles = %d, stall count = %d\n",
+  printf( "Number of PRUSS cycles = %u, stall count = %u\n",
 	  pruss_rd32( PRUSS_CTL_OFFSET + 12), pruss_rd32( PRUSS_CTL_OFFSET + 16));
 
   if (pruss_ena) {

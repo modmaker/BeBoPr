@@ -10,7 +10,7 @@
 #define PRU_NR		1
 #include "pruss.h"
 #include "beaglebone.h"
-
+#include "debug.h"
 
 #define PRUSS_FIFO_LENGTH 8
 
@@ -168,7 +168,9 @@ static void eCapInit( void)
     value = pruss_rd16( PRUSS_ECAP0_OFFSET + O_ECFLG);
   } while ((value & (1 << 6)) == 0);
   pruss_wr16( PRUSS_ECAP0_OFFSET + O_ECCLR, (1 << 6));
-  printf( "eCap0 initialized and found operational\n");
+  if (debug_flags & DEBUG_PRUSS) {
+    printf( "eCap0 initialized and found operational\n");
+  }
 }
 
 #define UCODENAME "stepper.bin"
@@ -183,9 +185,15 @@ int pruss_stepper_init( void)
   if (pruss_init( UCODENAME) < 0) {
     return -1;
   }
+  if (debug_flags & DEBUG_PRUSS) {
+    printf( "pruss_stepper_init - pruss_init was successfull\n");
+  }
 
   eCapInit();
 
+  if (debug_flags & DEBUG_PRUSS) {
+    printf( "Setting FIFO pointers to %d (in) and %d (out).\n", ix_in, ix_out);
+  }
   printf( "pruss_stepper_init - PRUSS successfully initialized\n");
 
   printf( "------- START -------\n");
@@ -198,13 +206,18 @@ int pruss_stepper_init( void)
 
   pruss_wr32( PRUSS_CTL_OFFSET, 0x0000000B);		// pc:=0 + enable + counter_enable
   if ((pruss_rd32( PRUSS_CTL_OFFSET + 0) & (1 <<15)) == 0) {
-    printf( "Failed to start PRUSS code\n");
+    fprintf( stderr, "Failed to start PRUSS code\n");
     exit( EXIT_FAILURE);
   }
-
-  printf( "Pruss setting axis origins\n");
+  }
+  if (debug_flags & DEBUG_PRUSS) {
+    printf( "PRUSS successfully started at PC=%d.\n", pc);
+  }
   for (int i = 1 ; i <= 4 ; ++i) {
-    pruss_queue_set_origin( i);
+    if (pruss_queue_set_origin( i) < 0) {
+      fprintf( stderr, "Failed to execute PRUSS queue command.\n");
+      exit( EXIT_FAILURE);
+    }
   }
   return 0;
 }
@@ -228,7 +241,7 @@ int pruss_stepper_dump_state( void)
     if (ret == 0xdead || ret == 0xbeef) {
       break;
     }
-    printf( "Stack[ %3d] @ SRAM[ 0x%03x] == 0x%04x (%4d)\n", i, sp, ret, ret);
+    printf( "Stack[%3d] @ SRAM[ 0x%03x] == 0x%04x (%5d)\n", i, sp, ret, ret);
     sp += 2;
   }
 
