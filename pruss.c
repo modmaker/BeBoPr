@@ -406,12 +406,12 @@ int pruss_halt_pruss( void)
   /* Do not return until the PRU is halted! */
   int timeout = 25;
   while (pruss_rd32( PRUSS_PRU_CTRL_CONTROL) & PRUSS_PRU_CTRL_CONTROL_RUNSTATE) {
-    pruss_wr32( PRUSS_CTL_OFFSET + 0, 0x00000001);	// disable
+    pruss_wr32( PRUSS_PRU_CTRL_CONTROL, 0x00000001);	// disable
     printf( ".");
     if (--timeout == 0) {
       // Sometimes disable won't work...
       printf( "cannot disable, soft reset ... ");
-      pruss_wr32( PRUSS_CTL_OFFSET + 0, 0x00000000);	// reset
+      pruss_wr32( PRUSS_PRU_CTRL_CONTROL, 0x00000000);	// reset
     }
   }
   return 0;
@@ -477,10 +477,10 @@ int pruss_init( const char* ucodename)
   // Reset PRUSS counters
   if (debug_flags & DEBUG_PRUSS) {
     printf( "Clearing PRUSS counters, old: cycle = %u, stall = %u\n",
-	    pruss_rd32( PRUSS_CTL_OFFSET + 12), pruss_rd32( PRUSS_CTL_OFFSET + 16));
+	    pruss_rd32( PRUSS_PRU_CTRL_CYCLE), pruss_rd32( PRUSS_PRU_CTRL_STALL));
   }
-  pruss_wr32( PRUSS_CTL_OFFSET + 12, 0);
-  pruss_wr32( PRUSS_CTL_OFFSET + 16, 0);
+  pruss_wr32( PRUSS_PRU_CTRL_CYCLE, 0);
+  pruss_wr32( PRUSS_PRU_CTRL_STALL, 0);
 
   if (debug_flags & DEBUG_PRUSS) {
     printf( "Loading microcode from file '%s'\n", ucodename);
@@ -512,8 +512,8 @@ int pruss_init( const char* ucodename)
     printf( "Reset PRU%d and set program counter to %d\n", PRU_NR, start_addr);
   }
   /* clear bit 0 to reset the PRU, this is a self clearing (setting) bit! */
-  pruss_wr32( PRUSS_CTL_OFFSET + 0, (start_addr << 16) | 0x00000000);	// pc + #softreset
-  if (pruss_rd32( PRUSS_CTL_OFFSET + 4) != start_addr) {
+  pruss_wr32( PRUSS_PRU_CTRL_CONTROL, (start_addr << 16) | 0x00000000);	// pc + #softreset
+  if (pruss_rd32( PRUSS_PRU_CTRL_STATUS) != start_addr) {
     fprintf( stderr, "Failed to set PRUSS code start address (PC)\n");
     return -1;
   }
@@ -524,16 +524,16 @@ void pruss_wait_for_halt( void)
 {
   do {
     // The microcode is running, wait for HALT
-  } while (pruss_rd32( PRUSS_CTL_OFFSET + 0) & (1 << 15));
+  } while (pruss_rd32( PRUSS_PRU_CTRL_CONTROL) & PRUSS_PRU_CTRL_CONTROL_RUNSTATE);
 }
 
 // return old 'enable' state
 int pruss_stop_pruss( void)
 {
-  uint32_t pruss_ctrl = pruss_rd32( PRUSS_CTL_OFFSET + 0);
-  if (pruss_ctrl & (1 << 15)) {
+  uint32_t pruss_ctrl = pruss_rd32( PRUSS_PRU_CTRL_CONTROL);
+  if (pruss_ctrl & PRUSS_PRU_CTRL_CONTROL_RUNSTATE) {
     pruss_ctrl &= ~ (1 << 1);	// clear enable bit
-    pruss_wr32( PRUSS_CTL_OFFSET + 0, pruss_ctrl);
+    pruss_wr32( PRUSS_PRU_CTRL_CONTROL, pruss_ctrl);
     pruss_wait_for_halt();
     return 1;
   } else {
@@ -543,13 +543,13 @@ int pruss_stop_pruss( void)
 
 void pruss_start_pruss( void)
 {
-  uint32_t pruss_ctrl = pruss_rd32( PRUSS_CTL_OFFSET + 0);
-  if ((pruss_ctrl & (1 << 15)) == 0) {
+  uint32_t pruss_ctrl = pruss_rd32( PRUSS_PRU_CTRL_CONTROL);
+  if ((pruss_ctrl & PRUSS_PRU_CTRL_CONTROL_RUNSTATE) == 0) {
     pruss_ctrl |=  (1 << 1);	// set enable bit
-    pruss_wr32( PRUSS_CTL_OFFSET + 0, pruss_ctrl);
+    pruss_wr32( PRUSS_PRU_CTRL_CONTROL, pruss_ctrl);
   }
   do {
-  } while ((pruss_rd32( PRUSS_CTL_OFFSET + 0) & (1 << 15)) == 0);
+  } while ((pruss_rd32( PRUSS_PRU_CTRL_CONTROL) & PRUSS_PRU_CTRL_CONTROL_RUNSTATE) == 0);
 }
 
 int pruss_dump_state( void)
@@ -573,7 +573,7 @@ int pruss_dump_state( void)
     }
   }
   printf( "Number of PRUSS cycles = %u, stall count = %u\n",
-	  pruss_rd32( PRUSS_CTL_OFFSET + 12), pruss_rd32( PRUSS_CTL_OFFSET + 16));
+	  pruss_rd32( PRUSS_PRU_CTRL_CYCLE), pruss_rd32( PRUSS_PRU_CTRL_STALL));
 
   if (pruss_ena) {
     pruss_start_pruss();
@@ -583,5 +583,5 @@ int pruss_dump_state( void)
 
 int pruss_is_halted( void)
 {
-  return ((pruss_rd32( PRUSS_CTL_OFFSET + 0) & (1 <<15)) == 0);
+  return ((pruss_rd32( PRUSS_PRU_CTRL_CONTROL) & (1 <<15)) == 0);
 }
