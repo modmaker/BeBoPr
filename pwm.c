@@ -5,6 +5,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <string.h>
+#include <errno.h>
 
 #include "pwm.h"
 #include "debug.h"
@@ -67,8 +68,8 @@ static int pwm_write_int_to_file( const char* path, const char* fname, int value
   int count = strlen( s);
   int result = write( fd, s, count);
   if (result < 0) {
-    perror( "pwm_write_int_to_file: write failed");
-    fprintf( stderr, "pwm_write_int_to_file: write error on file '%s'\n", fname);
+    // TODO: do we need strerror_r ?
+    fprintf( stderr, "pwm_write_int_to_file: write to '%s' failed: %s\n", fname, strerror( errno));
   } else if (result == count) {
     result = 0;
   } else {
