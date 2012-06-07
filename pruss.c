@@ -59,13 +59,13 @@ static int map_device_l2( const char* path, struct uio_dev_info* info)
     printf( "    Determine mapping from '%s'\n", path);
   }
   if (!info) {
-    return 0;
+    return -1;
   }
   snprintf( buffer, sizeof( buffer), "%s/addr", path);
   fd = open( buffer, O_RDONLY );
   if (fd < 0) {
     perror( "    Cannot open UIO map 'addr' descriptor file.\n");
-    return 0;
+    return -1;
   }
   read( fd, buffer2, sizeof( buffer2));
   info->addr = (void *)strtoul( buffer2, NULL, 0);
@@ -75,7 +75,7 @@ static int map_device_l2( const char* path, struct uio_dev_info* info)
   fd = open( buffer, O_RDONLY );
   if (fd < 0) {
     perror( "    Cannot open UIO map 'size' descriptor file.\n");
-    return 0;
+    return -1;
   }
   read( fd, buffer2, sizeof( buffer2));
   info->size = (int)strtol( buffer2, NULL, 0);
@@ -85,7 +85,7 @@ static int map_device_l2( const char* path, struct uio_dev_info* info)
   fd = open( buffer, O_RDONLY );
   if (fd < 0) {
     perror( "    Cannot open UIO map 'offset' descriptor file.\n");
-    return 0;
+    return -1;
   }
   read( fd, buffer2, sizeof( buffer2));
   info->offset = (int)strtol( buffer2, NULL, 0);
@@ -95,7 +95,7 @@ static int map_device_l2( const char* path, struct uio_dev_info* info)
     printf( "    Map info found: addr=0x%08x, size=0x%08x, offset=0x%08x\n",
 	    (unsigned int)info->addr, info->size, info->offset);
   }
-  return 1;	// Success
+  return 0;	// Success
 }
 
 int map_device( const char* uio_name)
@@ -136,7 +136,7 @@ int map_device( const char* uio_name)
     info->fd = open( info->dev, O_RDWR);
     if (info->fd < 0) {
       perror( "Cannot open device to map");
-      return 0;
+      return -1;
     }
     // According to the UserSpace I/O Howto, mapping N is selected by specifying
     // an offset of (N * pagesize) for the mmap call. This seems to work!
@@ -144,7 +144,7 @@ int map_device( const char* uio_name)
     info->maddr = mmap( NULL, info->size, PROT_READ | PROT_WRITE, MAP_SHARED, info->fd, map_nr * getpagesize());
     if (info->maddr == MAP_FAILED) {
       perror( "  Cannot mmap device");
-      return 0;
+      return -1;
     }
     if (debug && debug_level > 2) {
       printf( "  Mapped '%s' map%d [0x%08x..0x%08x] onto VA 0x%08x\n",
@@ -154,7 +154,7 @@ int map_device( const char* uio_name)
     close( info->fd);
     path[ strlen( path) - 1] = '1' + map_nr;
   }
-  return 1;
+  return 0;
 }
 
 //============================================================================
@@ -366,7 +366,7 @@ int pruss_load_code( const char* fname, unsigned int* start_addr)
 
   if (fd < 0) {
     perror( "Cannot open microcode file.\n");
-    return 0;
+    return -1;
   }
   for (address = 0, skip_zeros = 1 ; address < 8192 ; address += 4) {
     count = read( fd, &opcode, sizeof( opcode));
@@ -398,7 +398,7 @@ int pruss_load_code( const char* fname, unsigned int* start_addr)
     }
   }
   close( fd);
-  return (error) ? 0 : 1;
+  return (error) ? -1 : 0;
 }
 
 int pruss_halt_pruss( void)
@@ -456,7 +456,7 @@ int pruss_init( const char* ucodename)
       }
     } else {
       fprintf( stderr, "PRUSS ID is not found.\n");
-      return 1;
+      return -1;
     }
 
     if (pruss_rd32( PRUSS_PRU_CTRL_CONTROL) & PRUSS_PRU_CTRL_CONTROL_RUNSTATE) {
@@ -474,7 +474,7 @@ int pruss_init( const char* ucodename)
     }
   } else {
     printf( "PRUSS driver not found, bailing out\n");
-    return 1;
+    return -1;
   }
 
   // Reset PRUSS counters
@@ -488,8 +488,8 @@ int pruss_init( const char* ucodename)
   if (debug_flags & DEBUG_PRUSS) {
     printf( "Loading microcode from file '%s'\n", ucodename);
   }
-  if (!pruss_load_code( ucodename, (start_addr_arg) ? NULL : &start_addr)) {
-    return 1;
+  if (pruss_load_code( ucodename, (start_addr_arg) ? NULL : &start_addr) != 0) {
+    return -1;
   }
   if (debug_flags & DEBUG_PRUSS) {
     printf( "Clearing register space...\n");
