@@ -31,7 +31,7 @@ static double vz_max;
 static double ve_max;
 
 static const double fclk = 200000000.0;
-static const double c_acc = 191201673.632;	// = 0.676 * fclk * sqrt( 2.0);
+static const double c_acc = 282842712.5;	// = fclk * sqrt( 2.0);
 
 /*
  * All dimensions are in SI units and relative
