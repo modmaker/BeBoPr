@@ -53,6 +53,14 @@
 #define PRUSS_PRU_CTRL_CONTROL_ENABLE           (1 <<  1)
 #define PRUSS_PRU_CTRL_CONTROL_COUNTER_ENABLE   (1 <<  3)
 
+struct ucode_signature {
+	uint32_t	pruss_magic;
+	uint32_t	ucode_magic;
+	uint16_t	fw_revision;
+	uint16_t	fw_version;
+	uint32_t	spare[ 6];
+};
+
 /* Low level interface */
 
 extern uint32_t pruss_rd32( unsigned int addr);
@@ -66,8 +74,8 @@ extern void pruss_wr8( unsigned int addr, uint8_t data);
 
 extern int locate_pruss_device( const char* driver_name, char* drv_name, int drv_name_len, char* uio_name, int uio_name_len);
 extern int map_device( const char* uio_name);
-extern int pruss_load_code( const char* fname, unsigned int* start_addr);
-extern int pruss_init( const char* ucodename);
+extern int pruss_load_code( const char* fname, unsigned int* start_addr, struct ucode_signature* signature);
+extern int pruss_init( const char* ucodename, struct ucode_signature* signature);
 extern void pruss_wait_for_halt( void);
 extern int pruss_dump_state( void);
 extern int pruss_halt_pruss( void);

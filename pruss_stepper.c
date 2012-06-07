@@ -178,17 +178,22 @@ static int pruss_ecap_init( void)
 
 int pruss_stepper_init( void)
 {
-  if (pruss_init( UCODENAME) < 0) {
+  struct ucode_signature signature;
+
+  if (pruss_init( UCODENAME, &signature) < 0) {
     return -1;
   }
-  if (debug_flags & DEBUG_PRUSS) {
-    printf( "pruss_stepper_init - pruss_init was successfull\n");
+  if (signature.ucode_magic == UCODE_MAGIC) {
+    if (debug_flags & DEBUG_PRUSS) {
+      printf( "Valid STEPPER microcode found (version: %d.%d).\n",
+	      signature.fw_version, signature.fw_revision);
+    }
+  } else {
+    fprintf( stderr, "Incompatible microde found, bailing out!\n");
+    return -1;
   }
   if (pruss_ecap_init() < 0) {
     return -1;
-  }
-  if (debug_flags & DEBUG_PRUSS) {
-    printf( "pruss_stepper_init - pruss_init was successfull\n");
   }
 
   int ix_out = 0;

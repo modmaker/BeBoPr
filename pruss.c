@@ -354,7 +354,7 @@ void pruss_wr8( unsigned int addr, uint8_t data)
 
 #define VERBOSE 0
 
-int pruss_load_code( const char* fname, unsigned int* start_addr)
+int pruss_load_code( const char* fname, unsigned int* start_addr, struct ucode_signature* signature)
 {
   int count;
   int fd = open( fname, O_RDONLY);
@@ -373,17 +373,32 @@ int pruss_load_code( const char* fname, unsigned int* start_addr)
     if (count < 4) {
       break;
     }
+    if (skip_zeros && opcode != 0) {
+      /* If caller wants to know the start address... */
+      if (start_addr) {
+	*start_addr = address / 4;
+      }
+      /* Do this only once */
+      skip_zeros = 0;
+      /* Check code signature */
+      count = read( fd, signature, sizeof( *signature));
+      if (count != sizeof( *signature)) {
+        fprintf( stderr, "Short read on microcode signature!\n");
+        break;
+      }
+      if (signature->pruss_magic != PRUSS_MAGIC) {
+        fprintf( stderr, "This is not valid PRUSS code, bailing out!\n");
+        close( fd);
+        return -1;
+      }
+      lseek( fd, address + 4, SEEK_SET);
+    }
     pruss_wr32( PRUSS_IRAM_OFFSET + address, opcode);
     if (VERBOSE) {
       printf( "IRAM%d+%d <= 0x%08x\n", PRU_NR, address, opcode);
     }
-    if (skip_zeros && opcode) {
-      if (start_addr) {
-	*start_addr = address / 4;
-      }
-      skip_zeros = 0;
-    }
   }
+  /*  Verify contents of instruction RAM with file */
   lseek( fd, 0, SEEK_SET);
   for (address = 0 ; address < 8192 ; address += 4) {
     count = read( fd, &opcode, sizeof( opcode));
@@ -395,6 +410,7 @@ int pruss_load_code( const char* fname, unsigned int* start_addr)
       printf( "IRAM%d Verify error at address 0x%06x, read 0x%08x, should be 0x%08x.\n",
 	      PRU_NR, address, data, opcode);
       error = 1;
+      break;
     }
   }
   close( fd);
@@ -420,7 +436,7 @@ int pruss_halt_pruss( void)
   return 0;
 }
 
-int pruss_init( const char* ucodename)
+int pruss_init( const char* ucodename, struct ucode_signature* signature)
 {
   char uio_name[ NAME_MAX];
   char drv_name[ NAME_MAX];
@@ -488,7 +504,7 @@ int pruss_init( const char* ucodename)
   if (debug_flags & DEBUG_PRUSS) {
     printf( "Loading microcode from file '%s'\n", ucodename);
   }
-  if (pruss_load_code( ucodename, (start_addr_arg) ? NULL : &start_addr) != 0) {
+  if (pruss_load_code( ucodename, (start_addr_arg) ? NULL : &start_addr, signature) < 0) {
     return -1;
   }
   if (debug_flags & DEBUG_PRUSS) {
