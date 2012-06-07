@@ -233,6 +233,9 @@ int pruss_stepper_init( void)
       exit( EXIT_FAILURE);
     }
   }
+  if (DEBUG_PRUSS) {
+    debug_flags &= ~DEBUG_PRUSS;
+  }
   return 0;
 }
 
