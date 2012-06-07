@@ -535,7 +535,7 @@ int pruss_stop_pruss( void)
 {
   uint32_t pruss_ctrl = pruss_rd32( PRUSS_PRU_CTRL_CONTROL);
   if (pruss_ctrl & PRUSS_PRU_CTRL_CONTROL_RUNSTATE) {
-    pruss_ctrl &= ~ (1 << 1);	// clear enable bit
+    pruss_ctrl &= ~ PRUSS_PRU_CTRL_CONTROL_ENABLE;  	// clear enable bit
     pruss_wr32( PRUSS_PRU_CTRL_CONTROL, pruss_ctrl);
     pruss_wait_for_halt();
     return 1;
@@ -548,7 +548,7 @@ void pruss_start_pruss( void)
 {
   uint32_t pruss_ctrl = pruss_rd32( PRUSS_PRU_CTRL_CONTROL);
   if ((pruss_ctrl & PRUSS_PRU_CTRL_CONTROL_RUNSTATE) == 0) {
-    pruss_ctrl |=  (1 << 1);	// set enable bit
+    pruss_ctrl |= PRUSS_PRU_CTRL_CONTROL_ENABLE;	// set enable bit
     pruss_wr32( PRUSS_PRU_CTRL_CONTROL, pruss_ctrl);
   }
   do {
@@ -586,5 +586,5 @@ int pruss_dump_state( void)
 
 int pruss_is_halted( void)
 {
-  return ((pruss_rd32( PRUSS_PRU_CTRL_CONTROL) & (1 <<15)) == 0);
+  return ((pruss_rd32( PRUSS_PRU_CTRL_CONTROL) & PRUSS_PRU_CTRL_CONTROL_RUNSTATE) == 0);
 }
