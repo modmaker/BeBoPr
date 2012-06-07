@@ -53,30 +53,43 @@ static int arm_init( void)
 }
 
 /// Startup code, run when we come out of reset
-void init(void) {
+int init( void)
+{
+  int result;
 
   // configure
-  mendel_sub_init( "bebopr", bebopr_pre_init);
-
+  result = mendel_sub_init( "bebopr", bebopr_pre_init);
+  if (result != 0) {
+    return result;
+  }
   // set up arm & linux specific stuff
-  mendel_sub_init( "arm", arm_init);
-
+  result = mendel_sub_init( "arm", arm_init);
+  if (result != 0) {
+    return result;
+  }
   // set up limit switches
-  mendel_sub_init( "limsw", limsw_init);
-
+  result = mendel_sub_init( "limsw", limsw_init);
+  if (result != 0) {
+    return result;
+  }
   // set up serial communication
-  mendel_sub_init( "serial", serial_init);
-
+  result = mendel_sub_init( "serial", serial_init);
+  if (result != 0) {
+    return result;
+  }
   // This initializes the complete analog subsystem!
-  mendel_sub_init( "heater", heater_init);
-
+  result = mendel_sub_init( "heater", heater_init);
+  if (result != 0) {
+    return result;
+  }
   // This initializes the trajectory code and PRUSS
-  mendel_sub_init( "gcode_process", gcode_process_init);
-
-	// set up dda
-
+  result = mendel_sub_init( "gcode_process", gcode_process_init);
+  if (result != 0) {
+    return result;
+  }
   // say hi to host
   serial_writestr_P( "start\nok\n");
+  return 0;
 }
 
 int mendel_thread_create( const char* name, pthread_t* restrict thread, const pthread_attr_t* restrict attr,
@@ -113,7 +126,11 @@ int mendel_sub_init( const char* name, int (*subsys)( void))
 int main (void)
 {
   int block = 0;
-  init();
+  if (init() != 0) {
+    fprintf( stderr, "Initialization failed, terminating the application.\n");
+    exit( EXIT_FAILURE);
+  }
+
   fprintf( stderr, "Starting main loop...\n");
 
   for (;;) {

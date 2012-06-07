@@ -904,8 +904,10 @@ void process_gcode_command() {
 
 int gcode_process_init( void)
 {
-  mendel_sub_init( "traject", traject_init);
-
+  int result = mendel_sub_init( "traject", traject_init);
+  if (result != 0) {
+    return result;
+  }
   heater_extruder = heater_lookup_by_name( "heater_extruder");
   heater_bed      = heater_lookup_by_name( "heater_bed");
   temp_extruder   = temp_lookup_by_name( "temp_extruder");
