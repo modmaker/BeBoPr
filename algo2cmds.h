@@ -1,4 +1,15 @@
 
+/*
+ *  PRUSS_MAGIC is in the reserved opcodes list, so there is
+ *  less chance of finding it by accident. It identifies valid
+ *  microcode for the BeagleBone. It should be located immediately
+ *  after the first instruction (that should be jump to code start).
+ *  UCODE_MAGIC identifies the application, in this case code for
+ *  the BeBoPr (2191) board.
+ */
+#define PRUSS_MAGIC             0xbeb0c0de
+#define UCODE_MAGIC             0xba512191
+
 #define	CMD_AXIS_SET_ORIGIN	0
 #define CMD_AXIS_RAMP_UP	1
 #define CMD_AXIS_DWELL		2
