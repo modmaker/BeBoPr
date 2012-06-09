@@ -9,6 +9,7 @@ extern int pruss_stepper_dump_state( void);
 extern int pruss_queue_full( void);
 extern int pruss_queue_empty( void);
 extern int pruss_queue_set_origin( int axis);
+extern int pruss_queue_adjust_origin( int axis);
 extern int pruss_queue_set_accel( int axis, uint32_t c0);
 extern int pruss_queue_accel_more( int axis, uint32_t cmin, int32_t delta);
 extern int pruss_queue_accel( int axis, uint32_t c0, uint32_t cmin, int32_t delta);

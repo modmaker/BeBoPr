@@ -104,6 +104,14 @@ typedef struct {
   unsigned int	stepSize	: 32;
 } ConfigAxisStruct;
 
+// CMD_AXIS_ADJUST_ORIGIN
+typedef struct {
+  unsigned int			: 24;
+  unsigned int	command		:  4;
+  unsigned int	axis		:  3;
+  unsigned int			:  1;
+} AdjustOriginStruct;
+
 /* TODO: can we mmap an array of this struct directly onto SRAM ? */
 typedef union {
   uint32_t		gen[ 3];
@@ -117,6 +125,7 @@ typedef union {
   SetIdleTimeoutStruct	timeout;
   SetEnableStruct	enable;
   ConfigAxisStruct	config;
+  AdjustOriginStruct	adjust_origin;
 } PruCommandUnion;
 
 
@@ -400,6 +409,18 @@ int pruss_queue_set_origin( int axis)
     .set_origin.command		= CMD_AXIS_SET_ORIGIN,
     .set_origin.axis		= axis,
     .set_origin.position 	= VIRT_POS_MID_SCALE
+  };
+  if (pruss_command( &pruCmd) < 0) {
+    return -1;
+  }
+  return 0;
+}
+
+int pruss_queue_adjust_origin( int axis)
+{
+  PruCommandUnion pruCmd = {
+    .adjust_origin.command		= CMD_AXIS_ADJUST_ORIGIN,
+    .adjust_origin.axis		= axis
   };
   if (pruss_command( &pruCmd) < 0) {
     return -1;

@@ -446,6 +446,7 @@ void traject_delta_on_all_axes( traject5D* traject)
     pruss_queue_execute();
     any_move = 0;
   }
+  pruss_queue_adjust_origin( 4);
 }
 
 static void pruss_axis_config( int axis, double step_size, int reverse)
