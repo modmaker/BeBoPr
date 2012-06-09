@@ -315,7 +315,7 @@ int pruss_stepper_dump_state( void)
     DUMP_LINE( "stepSizeN",        16, 30, "%14u");
 
     DUMP_LINE( "requestedPos",     32, 32, "%14x");
-    DUMP_LINE( "moveDelta",        32, 36, "%14u");
+    DUMP_LINE( "nextStepCycleTime",32, 36, "%14u");
     DUMP_LINE( "accelCount",       32, 40, "%14u");
     DUMP_LINE( "dividend",         32, 44, "%14u");
   }
@@ -387,15 +387,6 @@ int pruss_command( PruCommandUnion* cmd)
   return 0;
 }
 
-#if 0
-
-static const double step_size = 6.250E-6;	// [mm] derived from 160 steps/mm
-static const double max_step_rate = 62500;	// [Hz] derived from 16us interval
-static const double fclk = 200000000;
-//static const double v_max = step_size * max_step_rate;
-static const double v_max = 6.250E-6 * 62500;
-
-#endif
 
 #define VIRT_POS_MID_SCALE	0x80000000
 
