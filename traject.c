@@ -529,6 +529,12 @@ int traject_init( void)
   pruss_queue_set_pulse_length( 3, 8 * 200);
   pruss_queue_set_pulse_length( 4, 8 * 200);
 
+  /* Set internal reference for all axis to current position */
+  pruss_queue_set_origin( 1);
+  pruss_queue_set_origin( 2);
+  pruss_queue_set_origin( 3);
+  pruss_queue_set_origin( 4);
+
   pruss_queue_set_idle_timeout( 30);	// set a 3 seconds timeout
   return 0;
 }
