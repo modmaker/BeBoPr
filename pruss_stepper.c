@@ -336,7 +336,7 @@ static inline int pruss_get_nr_of_free_buffers( void)
   int ix_in  = pruss_rd8( IX_IN);
   int ix_out = pruss_rd8( IX_OUT);
 
-  return (PRUSS_FIFO_LENGTH + ix_out - ix_in - 1) % PRUSS_FIFO_LENGTH;
+  return PRUSS_FIFO_LENGTH - 1 - (PRUSS_FIFO_LENGTH + ix_in - ix_out) % PRUSS_FIFO_LENGTH;
 }
 
 int pruss_queue_full( void)
