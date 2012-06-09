@@ -129,8 +129,9 @@ typedef union {
 } PruCommandUnion;
 
 
-#define IX_IN	(PRUSS_RAM_OFFSET + 0xC0)
-#define IX_OUT	(PRUSS_RAM_OFFSET + 0xC1)
+#define IX_IN		(PRUSS_RAM_OFFSET + 0xC0)
+#define IX_OUT		(PRUSS_RAM_OFFSET + 0xC1)
+#define BUSY_FLAG	(PRUSS_RAM_OFFSET + 0xC2)
 
 static int pruss_ecap_init( void)
 {
@@ -358,6 +359,11 @@ int pruss_wait_for_queue_space( void)
     sched_yield();    // TODO: sleep until PRUSS interrupt ?
   }
   return 0;
+}
+
+int pruss_stepper_busy( void)
+{
+  return pruss_rd8( BUSY_FLAG);
 }
 
 // Write command structure to buffer[ ix_in] on PRUSS (must be free)
