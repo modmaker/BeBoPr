@@ -9,6 +9,9 @@
 #define PRUSS_MAGIC             0xbeb0c0de
 #define UCODE_MAGIC             0xba512191
 
+//  PRUSS code and C-code must have the same FW_VERSION to be compatible
+#define FW_VERSION              2
+
 #define	CMD_AXIS_SET_ORIGIN	0
 #define CMD_AXIS_RAMP_UP	1
 #define CMD_AXIS_DWELL		2
