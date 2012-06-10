@@ -2,7 +2,13 @@
 #define	_DEBUG_H
 
 #include <stdint.h>
-#include "config.h"
+
+#define	DEBUG
+
+#ifdef DEBUG
+// initial setting for debug_flags after start
+# define DEBUG_INIT (DEBUG_TRAJECT|DEBUG_GCODE_PROCESS|DEBUG_PRUSS)
+#endif
 
 #ifdef	DEBUG
 	#define		DEBUG_GCODE_PROCESS 	0x0001

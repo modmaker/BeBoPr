@@ -11,9 +11,7 @@
 #include "bebopr.h"
 #include "gcode_process.h"
 #include "gcode_parse.h"
-#include "config.h"
 #include "serial.h"
-#include "pinio.h"
 #include "debug.h"
 #include "temp.h"
 #include "heater.h"
@@ -121,45 +119,51 @@ void process_gcode_command() {
 
 	// implement axis limits
 	if (config_axis_has_min_limit_switch( x_axis)) {
-		if (next_target.target.X < MM2POS( X_MIN)) {
+		double x_min = config_axis_get_min_pos( x_axis);
+		if (next_target.target.X < MM2POS( x_min)) {
 			printf( "WARNING: Limiting target.X (%d) to X_MIN (%d)\n",
-				next_target.target.X, MM2POS( X_MIN));
-			next_target.target.X = MM2POS( X_MIN);
+				next_target.target.X, MM2POS( x_min));
+			next_target.target.X = MM2POS( x_min);
 		}	
 	}
 	if (config_axis_has_max_limit_switch( x_axis)) {
-		if (next_target.target.X > MM2POS( X_MAX)) {
+		double x_max = config_axis_get_max_pos( x_axis);
+		if (next_target.target.X > MM2POS( x_max)) {
 			printf( "WARNING: Limiting target.X (%d) to X_MAX (%d)\n",
-				next_target.target.X, MM2POS( X_MAX));
-			next_target.target.X = MM2POS( X_MAX);
+				next_target.target.X, MM2POS( x_max));
+			next_target.target.X = MM2POS( x_max);
 		}
 	}
 	if (config_axis_has_min_limit_switch( y_axis)) {
-		if (next_target.target.Y < MM2POS( Y_MIN)) {
+		double y_min = config_axis_get_min_pos( y_axis);
+		if (next_target.target.Y < MM2POS( y_min)) {
 			printf( "WARNING: Limiting target.Y (%d) to Y_MIN (%d)\n",
-				next_target.target.Y, MM2POS( Y_MIN));
-			next_target.target.Y = MM2POS( X_MIN);
+				next_target.target.Y, MM2POS( y_min));
+			next_target.target.Y = MM2POS( y_min);
 		}
 	}
 	if (config_axis_has_max_limit_switch( y_axis)) {
-		if (next_target.target.Y > MM2POS( Y_MAX)) {
+		double y_max = config_axis_get_max_pos( y_axis);
+		if (next_target.target.Y > MM2POS( y_max)) {
 			printf( "WARNING: Limiting target.Y (%d) to Y_MAX (%d)\n",
-				next_target.target.Y, MM2POS( Y_MAX));
-			next_target.target.Y = MM2POS( Y_MAX);
+				next_target.target.Y, MM2POS( y_max));
+			next_target.target.Y = MM2POS( y_max);
 		}
 	}
 	if (config_axis_has_min_limit_switch( z_axis)) {
-		if (next_target.target.Z < MM2POS( Z_MIN)) {
+		double z_min = config_axis_get_min_pos( z_axis);
+		if (next_target.target.Z < MM2POS( z_min)) {
 			printf( "WARNING: Limiting target.Z (%d) to Z_MIN (%d)\n",
-				next_target.target.Z, MM2POS( Z_MIN));
-			next_target.target.Z = MM2POS( Z_MIN);
+				next_target.target.Z, MM2POS( z_min));
+			next_target.target.Z = MM2POS( z_min);
 		}
 	}
 	if (config_axis_has_max_limit_switch( z_axis)) {
-		if (next_target.target.Z > MM2POS( Z_MAX)) {
+		double z_max = config_axis_get_max_pos( z_axis);
+		if (next_target.target.Z > MM2POS( z_max)) {
 			printf( "WARNING: Limiting target.Z (%d) to Z_MAX (%d)\n",
-				next_target.target.Z, MM2POS( Z_MAX));
-			next_target.target.Z = MM2POS( Z_MAX);
+				next_target.target.Z, MM2POS( z_max));
+			next_target.target.Z = MM2POS( z_max);
 		}
 	}
 	// The GCode documentation was taken from http://reprap.org/wiki/Gcode .
@@ -197,7 +201,7 @@ void process_gcode_command() {
 				//? In this case move rapidly to X = 12 mm.  In fact, the RepRap firmware uses exactly the same code for rapid as it uses for controlled moves (see G1 below), as - for the RepRap machine - this is just as efficient as not doing so.  (The distinction comes from some old machine tools that used to move faster if the axes were not driven in a straight line.  For them G0 allowed any movement in space to get to the destination as fast as possible.)
 
 				backup_f = next_target.target.F;
-				next_target.target.F = MAXIMUM_FEEDRATE_X * 2L;
+				next_target.target.F = 100000;	// will be limited by the limitations of the individual axes
 				enqueue_pos( &next_target.target);
 				next_target.target.F = backup_f;
 				break;

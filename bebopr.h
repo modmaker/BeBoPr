@@ -1,8 +1,6 @@
 #ifndef _BEBOPR_H
 #define _BEBOPR_H
 
-#include "config.h"
-
 // Define the frequency of the PRUSS clock
 #define TIMER_CLOCK	200.0E6
 
@@ -32,5 +30,18 @@ extern double config_axis_get_max_pos( axis_e axis);
 extern double config_get_max_feed( axis_e axis);
 extern double config_get_max_accel( axis_e axis);
 extern double config_get_step_size( axis_e axis);
+
+// workaround for defines from pinio until removed from code
+/* the axis enable signals are handled in the PRUSS code! */
+#define	x_enable()	do { /* void */ } while (0)
+#define	y_enable()	do { /* void */ } while (0)
+#define	z_enable()	do { /* void */ } while (0)
+#define	e_enable()	do { /* void */ } while (0)
+#define	x_disable()	do { /* void */ } while (0)
+#define	y_disable()	do { /* void */ } while (0)
+#define	z_disable()	do { /* void */ } while (0)
+#define	e_disable()	do { /* void */ } while (0)
+#define	power_on()	do { /* void */ } while (0)
+#define	power_off()	do { /* void */ } while (0)
 
 #endif

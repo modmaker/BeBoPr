@@ -254,10 +254,10 @@ int config_reverse_axis( axis_e axis)
 double config_axis_get_max_pos( axis_e axis)
 {
   switch (axis) {
-  case x_axis:	return X_MAX;
-  case y_axis:	return Y_MAX;
-  case z_axis:	return Z_MAX;
-  default:	return 0.0;
+  case x_axis:	return 215.0;
+  case y_axis:	return 200.0;
+  case z_axis:	return  80.0;
+  default:	return   0.0;
   }
 }
 
@@ -267,9 +267,9 @@ double config_axis_get_max_pos( axis_e axis)
 double config_axis_get_min_pos( axis_e axis)
 {
   switch (axis) {
-  case x_axis:	return X_MIN;
-  case y_axis:	return Y_MIN;
-  case z_axis:	return Z_MIN;
+  case x_axis:	return 0.0;
+  case y_axis:	return 0.0;
+  case z_axis:	return 0.0;
   default:	return 0.0;
   }
 }

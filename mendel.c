@@ -9,7 +9,6 @@
 #include <sched.h>
 #include <pthread.h>
 
-#include "config.h"
 #include "serial.h"
 #include "heater.h"
 #include "bebopr.h"

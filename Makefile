@@ -56,7 +56,6 @@ SOURCES = \
 	heater.c \
 	home.c \
 	limit_switches.c \
-	pinio.c \
 	pruss.c \
 	pruss_stepper.c \
 	pwm.c \
@@ -85,7 +84,7 @@ OBJ = $(patsubst %.c,%.o,${SOURCES})
 .PHONY: all program clean subdirs doc
 .PRECIOUS: %.o %.elf
 
-all: config.h $(PROGRAM).elf
+all: $(PROGRAM).elf
 
 $(PROGRAM).elf: $(LIBDEPS)
 
@@ -105,7 +104,7 @@ clean-subdirs:
 doc: Doxyfile *.c *.h
 	doxygen $<
 
-%.o: %.c config.h Makefile
+%.o: %.c Makefile
 	@echo "  CC        $@"
 	@$(CC) -c $(CFLAGS) -Wa,-adhlns=$(<:.c=.al) -o $@ $(subst .o,.c,$@)
 
@@ -141,47 +140,31 @@ install:	all
 .PHONY:	all build elf hex eep lss sym program coff extcoff clean depend applet_files install
 
 # DO NOT DELETE THIS LINE -- make depend depends on it.
-analog.o: analog.c analog.h beaglebone.h mendel.h debug.h config.h \
- config_macros.h prusa_mech.h wades_extruder.h
+analog.o: analog.c analog.h beaglebone.h mendel.h debug.h
 bebopr_r2.o: bebopr_r2.c analog.h beaglebone.h temp.h thermistor.h \
- bebopr.h config.h config_macros.h prusa_mech.h wades_extruder.h heater.h \
- pwm.h traject.h
-debug.o: debug.c debug.h config.h config_macros.h prusa_mech.h \
- wades_extruder.h
+ bebopr.h heater.h pwm.h traject.h
+debug.o: debug.c debug.h
 gcode_parse.o: gcode_parse.c gcode_parse.h serial.h sermsg.h debug.h \
- config.h config_macros.h prusa_mech.h wades_extruder.h gcode_process.h \
- bebopr.h
-gcode_process.o: gcode_process.c bebopr.h config.h config_macros.h \
- prusa_mech.h wades_extruder.h gcode_process.h gcode_parse.h serial.h \
- pinio.h debug.h temp.h beaglebone.h heater.h pwm.h home.h traject.h \
+ gcode_process.h bebopr.h
+gcode_process.o: gcode_process.c bebopr.h gcode_process.h gcode_parse.h \
+ serial.h debug.h temp.h beaglebone.h heater.h pwm.h home.h traject.h \
  pruss_stepper.h algo2cmds.h mendel.h limit_switches.h
 gpio.o: gpio.c gpio.h
-heater.o: heater.c heater.h temp.h beaglebone.h pwm.h debug.h config.h \
- config_macros.h prusa_mech.h wades_extruder.h mendel.h
-home.o: home.c beaglebone.h home.h bebopr.h config.h config_macros.h \
- prusa_mech.h wades_extruder.h limit_switches.h traject.h pruss_stepper.h \
- algo2cmds.h gcode_process.h
+heater.o: heater.c heater.h temp.h beaglebone.h pwm.h debug.h mendel.h
+home.o: home.c beaglebone.h home.h bebopr.h limit_switches.h traject.h \
+ pruss_stepper.h algo2cmds.h gcode_process.h debug.h
 limit_switches.o: limit_switches.c limit_switches.h traject.h bebopr.h \
- config.h config_macros.h prusa_mech.h wades_extruder.h mendel.h gpio.h \
- debug.h
-pinio.o: pinio.c pinio.h config.h config_macros.h prusa_mech.h \
- wades_extruder.h
-pruss.o: pruss.c pruss.h algo2cmds.h beaglebone.h debug.h config.h \
- config_macros.h prusa_mech.h wades_extruder.h
+ mendel.h gpio.h debug.h
+pruss.o: pruss.c pruss.h algo2cmds.h beaglebone.h debug.h
 pruss_stepper.o: pruss_stepper.c pruss_stepper.h algo2cmds.h pruss.h \
- beaglebone.h debug.h config.h config_macros.h prusa_mech.h \
- wades_extruder.h
-pwm.o: pwm.c pwm.h beaglebone.h debug.h config.h config_macros.h \
- prusa_mech.h wades_extruder.h
+ beaglebone.h debug.h
+pwm.o: pwm.c pwm.h beaglebone.h debug.h
 serial.o: serial.c serial.h mendel.h
 sermsg.o: sermsg.c sermsg.h serial.h
-temp.o: temp.c temp.h beaglebone.h analog.h debug.h config.h \
- config_macros.h prusa_mech.h wades_extruder.h mendel.h
+temp.o: temp.c temp.h beaglebone.h analog.h debug.h mendel.h
 thermistor.o: thermistor.c beaglebone.h thermistor.h
-traject.o: traject.c bebopr.h config.h config_macros.h prusa_mech.h \
- wades_extruder.h traject.h pruss_stepper.h algo2cmds.h debug.h \
- beaglebone.h mendel.h
-mendel.o: mendel.c config.h config_macros.h prusa_mech.h wades_extruder.h \
- serial.h heater.h temp.h beaglebone.h pwm.h bebopr.h mendel.h \
- gcode_process.h gcode_parse.h limit_switches.h traject.h pruss_stepper.h \
- algo2cmds.h
+traject.o: traject.c bebopr.h traject.h pruss_stepper.h algo2cmds.h \
+ debug.h beaglebone.h mendel.h
+mendel.o: mendel.c serial.h heater.h temp.h beaglebone.h pwm.h bebopr.h \
+ mendel.h gcode_process.h gcode_parse.h limit_switches.h traject.h \
+ pruss_stepper.h algo2cmds.h
