@@ -41,7 +41,7 @@ int limsw_max( axis_e axis)
 
 int limsw_min( axis_e axis)
 {
-  int active_state = !config_max_limit_switch_is_active_low( axis);
+  int active_state = !config_min_limit_switch_is_active_low( axis);
   switch (axis) {
   case x_axis:	return (x_min_state == active_state);
   case y_axis:	return (y_min_state == active_state);
