@@ -241,8 +241,9 @@ double config_get_max_accel( axis_e axis)
 int config_reverse_axis( axis_e axis)
 {
   switch (axis) {
-  case x_axis:
-  case z_axis:	return 1;
+  case x_axis:  return 1;
+  case y_axis:	return 0;
+  case z_axis:	return 0;
   default:	return 0;
   }
 }
