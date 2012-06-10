@@ -180,12 +180,12 @@ void home_axis_to_min_limit_switch( axis_e axis, double feed) {
 
 /// find MAX endstop for an axis
 void home_axis_to_max_limit_switch( axis_e axis, double feed) {
-  if (config_axis_has_max_limit_switch( z_axis)) {
-    double max_feed = config_get_max_feed( z_axis);
+  if (config_axis_has_max_limit_switch( axis)) {
+    double max_feed = config_get_max_feed( axis);
     if (feed > max_feed) {
       feed = max_feed;
     }
-    home_one_axis( z_axis, 0 /* forward */, feed);
+    home_one_axis( axis, 0 /* forward */, feed);
     // reference 'home' position to current position
     gcode_set_axis_pos( axis, config_axis_get_max_pos( axis));
   } else {
