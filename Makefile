@@ -166,9 +166,11 @@ limit_switches.o: limit_switches.c limit_switches.h traject.h bebopr.h \
  debug.h
 pinio.o: pinio.c pinio.h config.h config_macros.h prusa_mech.h \
  wades_extruder.h
-pruss.o: pruss.c pruss.h algo2cmds.h beaglebone.h
+pruss.o: pruss.c pruss.h algo2cmds.h beaglebone.h debug.h config.h \
+ config_macros.h prusa_mech.h wades_extruder.h
 pruss_stepper.o: pruss_stepper.c pruss_stepper.h algo2cmds.h pruss.h \
- beaglebone.h
+ beaglebone.h debug.h config.h config_macros.h prusa_mech.h \
+ wades_extruder.h
 pwm.o: pwm.c pwm.h beaglebone.h debug.h config.h config_macros.h \
  prusa_mech.h wades_extruder.h
 serial.o: serial.c serial.h mendel.h
