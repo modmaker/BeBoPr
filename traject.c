@@ -33,6 +33,31 @@ static double ve_max;
 static const double fclk = 200000000.0;
 static const double c_acc = 282842712.5;	// = fclk * sqrt( 2.0);
 
+static inline int queue_move( const char* axis_name, double ramp, double a, double v, double dwell, uint32_t c0, uint32_t cmin)
+{
+  int axis = *axis_name - ((*axis_name < 'x') ? 'e' - 4 : 'x' - 1);
+  fprintf( stderr, "axis = %d, ramp = %1.6lf, a = %1.6lf, v = %1.6lf, dwell = %1.6lf, c0 = %u, cmin = %u\n",
+	  axis, ramp, a, v, dwell, c0, cmin);
+  if (v != 0.0 && ramp != 0.0) {
+    if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
+      printf( "Queue %c: ramping to and from %1.3lf [mm/s] "
+	      "with a=%1.3lf [m/s^2] over %1.6lf [mm] (c0=%u,cmin=%u)\n",
+	      *axis_name + 'A' - 'a', SI2MM( v), a, SI2MM( ramp + dwell), c0, cmin);
+    }
+    if (c0 < cmin) {
+      if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
+        printf( "Queue %c: motor starts at dwell speed, no acceleration needed\n", 'X' - 1 + axis);
+      }
+      c0 = cmin;
+    }
+    pruss_queue_accel( axis, c0, cmin, (int32_t)(1.0E9 * (ramp + dwell)));
+    return 1;
+  }
+  return 0;
+}
+
+#define QUEUE_MOVE( axis) queue_move( #axis, ramp_d##axis, a##axis, v##axis, dwell_d##axis, c0##axis, cmin##axis)
+
 /*
  * All dimensions are in SI units and relative
  */
@@ -305,147 +330,23 @@ void traject_delta_on_all_axes( traject5D* traject)
   uint32_t cmine = fclk * step_size_e / ve ;
 
  /*
-  * For now, do not generate ramps with length zero.
-  *
-  * TODO: This gives a potential problem in synchronization between the axes if
-  * ramping for one axis is suppressed and for another not. Investigate!
-  * TODO: the suppressed ramps needs to be corrected for in the dwell!
+  * Up from version v3.0 of the stepper firmware, the stepper driver does acceleration
+  * and deceleration timing and switching all by itself. Only one command needs to be
+  * queued to accelerate from zero speed to max speed, dwell at max speed and decelerate
+  * back to zero speed.
   */
   int any_move = 0;
-  if (vx != 0.0 && ramp_dx != 0.0) {
-    if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
-      printf( "Queue X: accelerate to %1.3lf [mm/s] with a=%1.3lf [m/s^2] over %1.6lf [mm] (c0=%u,cmin=%u)\n",
-	      SI2MM( vx), ax, SI2MM( ramp_dx), c0x, cminx);
-    }
-    if (c0x < cminx) {
-      if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
-        printf( "Queue X: clipping accel start speed to dwell speed\n");
-      }
-      c0x = cminx;
-    }
-    pruss_queue_accel( 1, c0x, cminx, (int32_t)(1.0E9 * ramp_dx));
-    any_move = 1;
-  }
-  if (vy != 0.0 && ramp_dy != 0.0) {
-    if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
-      printf( "Queue Y: accelerate to %1.3lf [mm/s] with a=%1.3lf [m/s^2] over %1.6lf [mm] (c0=%d,cmin=%u)\n",
-	      SI2MM( vy), ay, SI2MM( ramp_dy), c0y, cminy);
-    }
-    if (c0y < cminy) {
-      if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
-        printf( "Queue Y: clipping accel start speed to dwell speed\n");
-      }
-      c0y = cminy;
-    }
-    pruss_queue_accel( 2, c0y, cminy, (int32_t)(1.0E9 * ramp_dy));
-    any_move = 1;
-  }
-  if (vz != 0.0 && ramp_dz != 0.0) {
-    if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
-      printf( "Queue Z: accelerate to %1.3lf [mm/s] with a=%1.3lf [m/s^2] over %1.6lf [mm] (c0=%d,cmin=%u)\n",
-	      SI2MM( vz), az, SI2MM( ramp_dz), c0z, cminz);
-    }
-    if (c0z < cminz) {
-      if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
-        printf( "Queue Z: clipping accel start speed to dwell speed\n");
-      }
-      c0z = cminz;
-    }
-    pruss_queue_accel( 3, c0z, cminz, (int32_t)(1.0E9 * ramp_dz));
-    any_move = 1;
-  }
-  if (ve != 0.0 && ramp_de != 0.0) {
-    if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
-      printf( "Queue E: accelerate to %1.3lf [mm/s] with a=%1.3lf [m/s^2] over %1.9lf [mm] (c0=%d,cmin=%u)\n",
-	      SI2MM( ve), ae, SI2MM( ramp_de), c0e, cmine);
-    }
-    if (c0e < cmine) {
-      if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
-        printf( "Queue E: clipping accel start speed to dwell speed\n");
-      }
-      c0e = cmine;
-    }
-    pruss_queue_accel( 4, c0e, cmine, (int32_t)(1.0E9 * ramp_de));
-    any_move = 1;
-  }
+
+  any_move += QUEUE_MOVE( x);
+  any_move += QUEUE_MOVE( y);
+  any_move += QUEUE_MOVE( z);
+  any_move += QUEUE_MOVE( e);
+
   if (any_move) {
     pruss_queue_execute();
     any_move = 0;
   }
-  //
-  if (dwell_dx != 0.0) {
-    if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
-      printf( "Queue X: dwell at speed %1.3lf [mm/s] over %1.6f [mm] (cmin=%u)\n",
-	      SI2MM( vx), SI2MM( dwell_dx), cminx);
-    }
-    pruss_queue_dwell( 1, cminx, (int32_t)(1.0E9 * dwell_dx));
-    any_move = 1;
-  }
-  if (dwell_dy != 0.0) {
-    if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
-      printf( "Queue Y: dwell at speed %1.3lf [mm/s] over %1.6f [mm] (cmin=%u)\n",
-	      SI2MM( vy), SI2MM( dwell_dy), cminy);
-    }
-    pruss_queue_dwell( 2, cminy, (int32_t)(1.0E9 * dwell_dy));
-    any_move = 1;
-  }
-  if (dwell_dz != 0.0) {
-    if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
-      printf( "Queue Z: dwell at speed %1.3lf [mm/s] over %1.6f [mm] (cmin=%u)\n",
-	      SI2MM( vz), SI2MM( dwell_dz), cminz);
-    }
-    pruss_queue_dwell( 3, cminz, (int32_t)(1.0E9 * dwell_dz));
-    any_move = 1;
-  }
-  if (dwell_de != 0.0) {
-    if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
-      printf( "Queue E: dwell at speed %1.3lf [mm/s] over %1.6f [mm] (cmin=%u)\n",
-	      SI2MM( ve), SI2MM( dwell_de), cmine);
-    }
-    pruss_queue_dwell( 4, cmine, (int32_t)(1.0E9 * dwell_de));
-    any_move = 1;
-  }
-  if (any_move) {
-    pruss_queue_execute();
-    any_move = 0;
-  }
-  //
-  if (vx != 0.0 && ramp_dx != 0.0) {
-    if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
-      printf( "Queue X: decelerate over %1.6lf [mm] with a=-%1.3lf [m/s^2]\n",
-	      SI2MM( ramp_dx), ax);
-    }
-    pruss_queue_decel( 1, (int32_t)(1.0E9 * ramp_dx));
-    any_move = 1;
-  }
-  if (vy != 0.0 && ramp_dy != 0.0) {
-    if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
-      printf( "Queue Y: decelerate over %1.6lf [mm] with a=-%1.3lf [m/s^2]\n",
-	      SI2MM( ramp_dy), ay);
-    }
-    pruss_queue_decel( 2, (int32_t)(1.0E9 * ramp_dy));
-    any_move = 1;
-  }
-  if (vz != 0.0 && ramp_dz != 0.0) {
-    if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
-      printf( "Queue Z: decelerate over %1.6lf [mm] with a=-%1.3lf [m/s^2]\n",
-	      SI2MM( ramp_dz), az);
-    }
-    pruss_queue_decel( 3, (int32_t)(1.0E9 * ramp_dz));
-    any_move = 1;
-  }
-  if (ve != 0.0 && ramp_de != 0.0) {
-    if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
-      printf( "Queue E: decelerate over %1.6lf [mm] with a=-%1.3lf [m/s^2]\n",
-	      SI2MM( ramp_de), ae);
-    }
-    pruss_queue_decel( 4, (int32_t)(1.0E9 * ramp_de));
-    any_move = 1;
-  }
-  if (any_move) {
-    pruss_queue_execute();
-    any_move = 0;
-  }
+
   pruss_queue_adjust_origin( 4);
 }
 
@@ -464,7 +365,7 @@ static void pruss_axis_config( int axis, double step_size, int reverse)
 
 int traject_wait_for_completion( void)
 {
-  while (pruss_queue_empty() == 0) {
+  while (!pruss_queue_empty()) {
     sched_yield();
   }
   return 0;
