@@ -225,6 +225,7 @@ int pruss_stepper_init( void)
  /*
   * Now start the code: Enable the PRUSS.
   */
+#if 0
   uint32_t ctlreg = pruss_rd32( PRUSS_PRU_CTRL_CONTROL);
   uint16_t pc = (ctlreg >> 16) & 0xFFFF;
   ctlreg = (ctlreg & 0xFFFF0001) |
@@ -233,7 +234,7 @@ int pruss_stepper_init( void)
   if ((pruss_rd32( PRUSS_PRU_CTRL_CONTROL) & PRUSS_PRU_CTRL_CONTROL_RUNSTATE) == 0) {
     /*
      * If a HALT is executed before we check RUNSTATE, it will look
-     * like a failure to start. Therefor do an extra check to see
+     * like a failure to start. Therefore do an extra check to see
      * if the PC has changed.
      */
     if (pruss_rd32( PRUSS_PRU_CTRL_STATUS) == pc) {
@@ -241,6 +242,10 @@ int pruss_stepper_init( void)
       exit( EXIT_FAILURE);
     }
   }
+#else
+  uint16_t pc = pruss_rd16( PRUSS_PRU_CTRL_STATUS);
+  pruss_start_pruss();
+#endif
   if (debug_flags & DEBUG_PRUSS) {
     printf( "PRUSS successfully started at PC=%d.\n", pc);
   }
