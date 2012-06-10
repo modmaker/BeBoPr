@@ -110,6 +110,7 @@ typedef struct {
   unsigned int	command		:  4;
   unsigned int	axis		:  3;
   unsigned int			:  1;
+  unsigned int	position	: 32;
 } AdjustOriginStruct;
 
 // CMD_AXIS_ADJUST_FOR_RAMP
@@ -415,7 +416,11 @@ int pruss_command( PruCommandUnion* cmd)
   return 0;
 }
 
-
+/*
+ * The stepper code uses a 32-bit unsigned integer to keep track of position.
+ * This gives a usable range of a little more than 4000 mm.
+ * To split this range from -2000 .. +2000, set the virtual origin midscale:
+ */
 #define VIRT_POS_MID_SCALE	0x80000000
 
 /*
@@ -438,8 +443,9 @@ int pruss_queue_set_origin( int axis)
 int pruss_queue_adjust_origin( int axis)
 {
   PruCommandUnion pruCmd = {
-    .adjust_origin.command		= CMD_AXIS_ADJUST_ORIGIN,
-    .adjust_origin.axis		= axis
+    .adjust_origin.command	= CMD_AXIS_ADJUST_ORIGIN,
+    .adjust_origin.axis		= axis,
+    .adjust_origin.position 	= VIRT_POS_MID_SCALE
   };
   if (pruss_command( &pruCmd) < 0) {
     return -1;
