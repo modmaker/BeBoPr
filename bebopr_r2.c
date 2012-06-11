@@ -194,20 +194,6 @@ int config_max_limit_switch_is_active_low( axis_e axis)
 int use_pololu_drivers( void) { return 0; }
 
 /*
- *  Specify maximum allowed feed for each axis in [mm/min]
- */
-double config_get_max_feed( axis_e axis)
-{
-  switch (axis) {
-  case x_axis:	return 68571.0;
-  case y_axis:	return 68571.0;
-  case z_axis:	return   900.0;
-  case e_axis:	return  1000.0;
-  default:	return 0.0;
-  }
-}
-
-/*
  *  Specify step size for each axis in [m]
  */
 double config_get_step_size( axis_e axis)
@@ -217,6 +203,20 @@ double config_get_step_size( axis_e axis)
   case y_axis:	return 6250.0E-9;
   case z_axis:	return 390.125E-9;
   case e_axis:	return 2100.0E-9;
+  default:	return 0.0;
+  }
+}
+
+/*
+ *  Specify maximum allowed feed for each axis in [mm/min]
+ */
+double config_get_max_feed( axis_e axis)
+{
+  switch (axis) {
+  case x_axis:	return 22500.0;	// 0.00625 mm/step @ 60 kHz
+  case y_axis:	return 16000.0;	// 0.00625 mm/step @ 53 kHz
+  case z_axis:	return  1400.0; // 0.00039 mm/step @ 60 kHz
+  case e_axis:	return  1000.0;
   default:	return 0.0;
   }
 }
@@ -273,3 +273,32 @@ double config_axis_get_min_pos( axis_e axis)
   default:	return 0.0;
   }
 }
+
+/*
+ *  Specify the feed used during homing operations
+ *  to release the home switch.
+ */
+double config_get_home_release_feed( axis_e axis)
+{
+  switch (axis) {
+  case x_axis:	return  150.0;
+  case y_axis:	return  150.0;
+  case z_axis:	return  150.0;
+  default:	return    0.0;
+  }
+}
+
+/*
+ *  Specify the maximum feed that may be used during homing
+ *  operations when moving towards the home switch.
+ */
+double config_get_home_max_feed( axis_e axis)
+{
+  switch (axis) {
+  case x_axis:	return 3000.0;
+  case y_axis:	return 3000.0;
+  case z_axis:	return  450.0;
+  default:	return    0.0;
+  }
+}
+

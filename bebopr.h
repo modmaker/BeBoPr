@@ -27,9 +27,15 @@ extern int config_reverse_axis( axis_e axis);
 // these all return a hardware dimenstion
 extern double config_axis_get_min_pos( axis_e axis);
 extern double config_axis_get_max_pos( axis_e axis);
+extern double config_get_step_size( axis_e axis);
+
+// these all return physical limitations
 extern double config_get_max_feed( axis_e axis);
 extern double config_get_max_accel( axis_e axis);
-extern double config_get_step_size( axis_e axis);
+
+// these return preferred settings
+extern double config_get_home_max_feed( axis_e axis);
+extern double config_get_home_release_feed( axis_e axis);
 
 // workaround for defines from pinio until removed from code
 /* the axis enable signals are handled in the PRUSS code! */

@@ -52,8 +52,11 @@ static void run_home_one_axis( axis_e axis, int reverse, uint32_t feed)
     fprintf( stderr, "BUG: trying to home illegal axis (%d)!\n", axis);
     pruss_axis = 0;
   }
-  if (feed > 3000) {
-    feed = 3000;
+  if (feed > config_get_home_max_feed( axis)) {
+    feed = config_get_home_max_feed( axis);
+    if (debug_flags & DEBUG_HOME) {
+      printf( "  %c: limiting home speed to %d\n", axisNames[ pruss_axis], feed);
+    }
   }
   double speed = feed / 60000.0;
   uint32_t cmin = fclk * step_size / speed ;
@@ -82,10 +85,11 @@ static void run_home_one_axis( axis_e axis, int reverse, uint32_t feed)
   if (debug_flags & DEBUG_HOME) {
     pruss_dump_position( pruss_axis);
   }
-  direction = -direction;
-  speed = -0.1 * speed;
-  cmin = 10 * cmin;
+  feed = config_get_home_release_feed( axis);
+  speed = feed / 60000.0;
+  cmin = fclk * step_size / speed ;
   c0 = cmin;
+  direction = -direction;
   /*
    * Run away from the switch
    */
