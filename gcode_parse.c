@@ -7,10 +7,18 @@
 #include <string.h>
 
 #include "gcode_parse.h"
-#include "serial.h"
-#include "sermsg.h"
 #include "debug.h"
 #include "gcode_process.h"
+
+
+// stubs that replace code from sersendf and sermsg:
+#define serwrite_uint8( x)  printf( "%u", x)
+#define serwrite_uint16( x) printf( "%u", x)
+#define serwrite_uint32( x) printf( "%u", x)
+#define serwrite_int32( x)  printf( "%d", x)
+#define serial_writechar( c) printf( "%c", c)
+#define serial_writestr_P( s) printf( "%s", s)
+
 
 /*
 	Convert input values (mm/inch) into nanometers for all positions.
@@ -83,6 +91,7 @@ static int32_t decfloat_to_int( decfloat *df, double multiplicand)
 
 	return (int32_t) ((df->sign) ? -r : r);
 }
+
 
 /// Character Received - add it to our command
 /// \param c the next character to process

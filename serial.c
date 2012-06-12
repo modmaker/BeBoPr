@@ -72,7 +72,7 @@ void* serial_input( void* arg)
 int serial_init( void)
 {
   // open serial port and set communication parameters (baud,parity,stop,flow-control,etc.)
-  // NOPE: we're just using stdout...
+  // NOPE: we're just using stdio...
   in_ptr = 0; //sizeof( input_buffer);
   out_ptr = 0;
 

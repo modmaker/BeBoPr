@@ -60,7 +60,6 @@ SOURCES = \
 	pruss_stepper.c \
 	pwm.c \
 	serial.c \
-	sermsg.c \
 	temp.c \
 	thermistor.c \
 	traject.c \
@@ -144,8 +143,8 @@ analog.o: analog.c analog.h beaglebone.h mendel.h debug.h
 bebopr_r2.o: bebopr_r2.c analog.h beaglebone.h temp.h thermistor.h \
  bebopr.h heater.h pwm.h traject.h
 debug.o: debug.c debug.h
-gcode_parse.o: gcode_parse.c gcode_parse.h serial.h sermsg.h debug.h \
- gcode_process.h bebopr.h
+gcode_parse.o: gcode_parse.c gcode_parse.h debug.h gcode_process.h \
+ bebopr.h
 gcode_process.o: gcode_process.c bebopr.h gcode_process.h gcode_parse.h \
  serial.h debug.h temp.h beaglebone.h heater.h pwm.h home.h traject.h \
  pruss_stepper.h algo2cmds.h mendel.h limit_switches.h
@@ -160,7 +159,6 @@ pruss_stepper.o: pruss_stepper.c pruss_stepper.h algo2cmds.h pruss.h \
  beaglebone.h debug.h bebopr.h
 pwm.o: pwm.c pwm.h beaglebone.h debug.h
 serial.o: serial.c serial.h mendel.h
-sermsg.o: sermsg.c sermsg.h serial.h
 temp.o: temp.c temp.h beaglebone.h analog.h debug.h mendel.h
 thermistor.o: thermistor.c beaglebone.h thermistor.h
 traject.o: traject.c bebopr.h traject.h pruss_stepper.h algo2cmds.h \
