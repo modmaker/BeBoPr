@@ -191,7 +191,10 @@ int config_max_limit_switch_is_active_low( axis_e axis)
   }
 }
 
-int use_pololu_drivers( void) { return 0; }
+int config_use_pololu_drivers( void)
+{
+  return 1;
+}
 
 /*
  *  Specify step size for each axis in [m]

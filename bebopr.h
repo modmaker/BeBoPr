@@ -12,10 +12,10 @@ typedef enum {
 // Early init that pushes configuration to subsystems
 extern int bebopr_pre_init( void);
 
-// determines stepper driver control
-extern int use_pololu_drivers( void);
-
 // Configuration
+
+// determines stepper driver control
+extern int config_use_pololu_drivers( void);
 
 // these all return either 0 for false or 1 for true
 extern int config_axis_has_min_limit_switch( axis_e axis);

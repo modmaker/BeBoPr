@@ -428,10 +428,10 @@ int traject_init( void)
   pruss_axis_config( 4, step_size_e, config_reverse_axis( e_axis));
 
   /* Set the duration of the active part of the step pulse */
-  pruss_queue_set_pulse_length( 1, 8 * 200);
-  pruss_queue_set_pulse_length( 2, 8 * 200);
-  pruss_queue_set_pulse_length( 3, 8 * 200);
-  pruss_queue_set_pulse_length( 4, 8 * 200);
+  pruss_queue_set_pulse_length( 1, 10 * 200);
+  pruss_queue_set_pulse_length( 2, 10 * 200);
+  pruss_queue_set_pulse_length( 3, 10 * 200);
+  pruss_queue_set_pulse_length( 4, 10 * 200);
 
   /* Set internal reference for all axis to current position */
   pruss_queue_set_origin( 1);

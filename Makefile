@@ -157,7 +157,7 @@ limit_switches.o: limit_switches.c limit_switches.h traject.h bebopr.h \
  mendel.h gpio.h debug.h
 pruss.o: pruss.c pruss.h algo2cmds.h beaglebone.h debug.h
 pruss_stepper.o: pruss_stepper.c pruss_stepper.h algo2cmds.h pruss.h \
- beaglebone.h debug.h
+ beaglebone.h debug.h bebopr.h
 pwm.o: pwm.c pwm.h beaglebone.h debug.h
 serial.o: serial.c serial.h mendel.h
 sermsg.o: sermsg.c sermsg.h serial.h

@@ -11,6 +11,7 @@
 #include "pruss.h"
 #include "beaglebone.h"
 #include "debug.h"
+#include "bebopr.h"
 
 #define PRUSS_FIFO_LENGTH 8
 
@@ -87,8 +88,8 @@ typedef struct {
 
 // CMD_SET_ENABLE
 typedef struct {
-  unsigned int	on		:  1;
-  unsigned int			: 23;
+  unsigned int	mode		:  8;
+  unsigned int			: 16;
   unsigned int	command		:  4;
 } SetEnableStruct;
 
@@ -197,6 +198,8 @@ static int pruss_ecap_init( void)
 
 #define UCODENAME "stepper.bin"
 
+static int pruss_command( PruCommandUnion* cmd);
+
 int pruss_stepper_init( void)
 {
   struct ucode_signature signature;
@@ -236,27 +239,9 @@ int pruss_stepper_init( void)
  /*
   * Now start the code: Enable the PRUSS.
   */
-#if 0
-  uint32_t ctlreg = pruss_rd32( PRUSS_PRU_CTRL_CONTROL);
-  uint16_t pc = (ctlreg >> 16) & 0xFFFF;
-  ctlreg = (ctlreg & 0xFFFF0001) |
-	  PRUSS_PRU_CTRL_CONTROL_COUNTER_ENABLE | PRUSS_PRU_CTRL_CONTROL_ENABLE;
-  pruss_wr32( PRUSS_PRU_CTRL_CONTROL, ctlreg);
-  if ((pruss_rd32( PRUSS_PRU_CTRL_CONTROL) & PRUSS_PRU_CTRL_CONTROL_RUNSTATE) == 0) {
-    /*
-     * If a HALT is executed before we check RUNSTATE, it will look
-     * like a failure to start. Therefore do an extra check to see
-     * if the PC has changed.
-     */
-    if (pruss_rd32( PRUSS_PRU_CTRL_STATUS) == pc) {
-      fprintf( stderr, "Failed to start PRUSS code\n");
-      exit( EXIT_FAILURE);
-    }
-  }
-#else
   uint16_t pc = pruss_rd16( PRUSS_PRU_CTRL_STATUS);
   pruss_start_pruss();
-#endif
+
   if (debug_flags & DEBUG_PRUSS) {
     printf( "PRUSS successfully started at PC=%d.\n", pc);
   }
@@ -265,6 +250,12 @@ int pruss_stepper_init( void)
       fprintf( stderr, "Failed to execute PRUSS queue command.\n");
       exit( EXIT_FAILURE);
     }
+  }
+  PruCommandUnion pruCmd;
+  pruCmd.enable.command	= CMD_SET_ENABLE;
+  pruCmd.enable.mode	= (config_use_pololu_drivers()) ? 2 : 3;
+  if (pruss_command( &pruCmd) < 0) {
+    return -1;
   }
   if (DEBUG_PRUSS) {
     debug_flags &= ~DEBUG_PRUSS;
@@ -399,7 +390,7 @@ int pruss_write_command_struct( int ix_in, PruCommandUnion* data)
 }
 
 // Write command structure to PRUSS, wait for free buffer is nescessary
-int pruss_command( PruCommandUnion* cmd)
+static int pruss_command( PruCommandUnion* cmd)
 {
   int ix_in = pruss_rd8( IX_IN);
   //  int ix_out = pruss_rd8( IX_OUT);
@@ -487,12 +478,6 @@ int pruss_queue_set_accel( int axis, uint32_t c0)
     .set_accel.accelCount 	= 0,
     .set_accel.stepCycle 	= c0
   };
-#if 0
-  if (c0 >= (1 << 24)) {
-    fprintf( stderr, "*** WARNING: clipping c0 because it's larger than 24-bits, speed may be too high!\n");
-    pruCmd.set_accel.stepCycle = (1 << 24) - 1;
-  }
-#endif
   if (pruss_command( &pruCmd) < 0) {
     return -1;
   }
@@ -609,7 +594,7 @@ int pruss_queue_set_enable( int on)
 {
   PruCommandUnion pruCmd = {
     .enable.command		= CMD_SET_ENABLE,
-    .enable.on			= !!on,
+    .enable.mode		= (on) ? 1 : 0,
   };
   if (pruss_command( &pruCmd) < 0) {
     return -1;
