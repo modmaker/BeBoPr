@@ -50,6 +50,9 @@ int pwm_config( pwm_config_record* config_data, int nr_config_items)
   pwm_config_items = nr_config_items;
   // this mustn't be called more than once, so keep the code simple
   pwm_channels     = calloc( nr_config_items, sizeof( struct pwm_channel_record));
+  for (int ch = 0 ; ch < nr_config_items ; ++ch) {
+    pwm_channels[ ch].duty_fd = -1;
+  }
   num_pwm_channels = 0;
   return 0;
 }
@@ -80,6 +83,22 @@ static int pwm_write_int_to_file( const char* path, const char* fname, int value
   return result;
 }
 
+void pwm_exit( void)
+{
+  if (debug_flags & DEBUG_PWM) {
+    printf( "pwm_exit called, releasing PWM subsystem\n");
+  }
+  for (int ch = 0 ; ch < num_pwm_channels ; ++ch) {
+    if (pwm_channels[ ch].duty_fd != -1) {
+      struct pwm_channel_record* pd = &pwm_channels[ ch];
+      pwm_set_output( pd->id, 0);
+      pwm_write_int_to_file( pd->device_path, "run", 0);
+      pwm_write_int_to_file( pd->device_path, "request", 0);
+      close (pd->duty_fd);
+    }
+  }
+}
+
 int pwm_init( void)
 {
   if (debug_flags & DEBUG_PWM) {
@@ -87,6 +106,7 @@ int pwm_init( void)
   }
   if (pwm_config_data) {
     char s[ 100];
+    atexit( pwm_exit);
     for (int ch = 0 ; ch < pwm_config_items ; ++ch) {
       pwm_config_record*         ps = &pwm_config_data[ ch];
       struct pwm_channel_record* pd = &pwm_channels[ ch];
