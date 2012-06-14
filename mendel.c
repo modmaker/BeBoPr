@@ -9,7 +9,6 @@
 #include <sched.h>
 #include <pthread.h>
 
-#include "serial.h"
 #include "heater.h"
 #include "bebopr.h"
 #include "mendel.h"
@@ -71,11 +70,6 @@ int init( void)
   if (result != 0) {
     return result;
   }
-  // set up serial communication
-  result = mendel_sub_init( "serial", serial_init);
-  if (result != 0) {
-    return result;
-  }
   // This initializes the complete analog subsystem!
   result = mendel_sub_init( "heater", heater_init);
   if (result != 0) {
@@ -133,6 +127,7 @@ int main (void)
   fprintf( stderr, "Starting main loop...\n");
 
   for (;;) {
+    char s[ 100];
     if (pruss_queue_full()) {
       if (block) {
         usleep( 1000);
@@ -142,8 +137,12 @@ int main (void)
       }
     } else {
       block = 0;
-      if (serial_rxchars() > 0) {
-        gcode_parse_char( serial_popchar());
+      if (fgets( s, sizeof( s), stdin) != NULL) {
+        char* p = s;
+	fprintf( stderr, "Got '%s'\r\n", s);
+	while (*p) {
+          gcode_parse_char( *p++);
+	}
       } else {
 	sched_yield();
       }

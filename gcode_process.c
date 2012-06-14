@@ -11,7 +11,6 @@
 #include "bebopr.h"
 #include "gcode_process.h"
 #include "gcode_parse.h"
-#include "serial.h"
 #include "debug.h"
 #include "temp.h"
 #include "heater.h"
