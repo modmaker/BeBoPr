@@ -8,6 +8,7 @@
 #include <time.h>
 #include <sched.h>
 #include <pthread.h>
+#include <signal.h>
 
 #include "heater.h"
 #include "bebopr.h"
@@ -50,10 +51,20 @@ static int arm_init( void)
   return 0;
 }
 
+static void signal_handler( int signal)
+{
+  fprintf( stderr, "Terminating on signal %d\n", signal);
+  exit( 0);
+}
+
 /// Startup code, run when we come out of reset
 int init( void)
 {
   int result;
+
+  signal( SIGINT, signal_handler);
+  signal( SIGHUP, signal_handler);
+  signal( SIGTERM, signal_handler);
 
   // configure
   result = mendel_sub_init( "bebopr", bebopr_pre_init);
