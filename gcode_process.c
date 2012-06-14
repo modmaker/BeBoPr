@@ -838,7 +838,7 @@ void process_gcode_command() {
 				//? Disable echo.
 				//? This command is only available in DEBUG builds.
 				debug_flags &= ~DEBUG_ECHO;
-				serial_writestr_P("Echo off");
+				printf( "Echo off");
 				// newline is sent from gcode_parse after we return
 				break;
 				// M241- echo on
@@ -847,7 +847,7 @@ void process_gcode_command() {
 				//? Enable echo.
 				//? This command is only available in DEBUG builds.
 				debug_flags |= DEBUG_ECHO;
-				serial_writestr_P("Echo on");
+				printf( "Echo on");
 				// newline is sent from gcode_parse after we return
 				break;
 

@@ -46,20 +46,22 @@ void* serial_input( void* arg)
   //  serial_writestr( "Serial thread - initializing\n");
   fprintf( stderr, "Serial thread - initializing\n");
   for (;;) {
-    char c;
     pout = out_ptr;
     pin  = in_ptr;
     if ((pout - pin) >= 0 || (pout + sizeof( input_buffer) - pin) > 1) {
-      c = getchar();
-      input_buffer[ pin] = c;
-      if (++pin < sizeof( input_buffer)) {
-	in_ptr = pin;
-      } else {
-	in_ptr = 0;
+      int c = getchar();
+      if (c != EOF) {
+	fprintf( stderr, "Serial thread - putting char 0x%02x at in_ptr = %d, out_ptr = %d\n", c, pin, pout);
+	input_buffer[ pin] = (char) c;
+	if (++pin < sizeof( input_buffer)) {
+	  in_ptr = pin;
+	} else {
+	  in_ptr = 0;
+	}
       }
-      if (debug) {
-	fprintf( stderr, "Serial thread - exit with in_ptr = %d, out_ptr = %d\n", in_ptr, out_ptr);
-      }
+//      if (debug) {
+//      fprintf( stderr, "Serial thread - putting char 0x%02x at in_ptr = %d, out_ptr = %d\n", c, pin, pout);
+//      }
     }
     sched_yield();
   }
@@ -110,6 +112,8 @@ uint8_t serial_popchar( void)
     if (sched_yield() == -1) {
       perror( "Reader: cannot yield the processor");
     }
+    pin  = in_ptr;
+    pout = out_ptr;
   }
   uint8_t c = input_buffer[ pout];
   // Don't use out_ptr for this calculation as it may
@@ -122,30 +126,3 @@ uint8_t serial_popchar( void)
   if (debug) fprintf( stderr, "Reader thread - exit with in_ptr = %d, out_ptr = %d\n", in_ptr, out_ptr);
   return c;
 }
-
-// send one character
-void serial_writechar( uint8_t data)
-{
-  putc( (char)data, stdout);
-}
-
-// read/write many characters
-// uint8_t serial_recvblock(uint8_t *block, int blocksize);
-void serial_writeblock( void *data, int datalen)
-{
-  if (data) {
-    while (datalen--) {
-      serial_writechar( *(uint8_t*)data++);
-    }
-  }
-}
-
-void serial_writestr( const char* data)
-{
-  if (data) {
-    while (*data) {
-      serial_writechar( *data++);
-    }
-  }
-}
-

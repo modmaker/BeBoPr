@@ -87,7 +87,7 @@ int init( void)
     return result;
   }
   // say hi to host
-  serial_writestr_P( "start\nok\n");
+  printf( "start\nok\n");
   return 0;
 }
 
