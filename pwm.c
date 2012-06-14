@@ -43,7 +43,7 @@ static int pwm_config_items = 0;
 
 int pwm_config( pwm_config_record* config_data, int nr_config_items)
 {
-  if (debug_flags & DEBUG_ANALOG) {
+  if (debug_flags & DEBUG_PWM) {
     printf( "pwm_config called with %d records'\n", nr_config_items);
   }
   pwm_config_data  = config_data;
@@ -82,7 +82,7 @@ static int pwm_write_int_to_file( const char* path, const char* fname, int value
 
 int pwm_init( void)
 {
-  if (debug_flags & DEBUG_ANALOG) {
+  if (debug_flags & DEBUG_PWM) {
     printf( "pwm_init called'\n");
   }
   if (pwm_config_data) {
