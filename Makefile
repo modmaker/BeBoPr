@@ -153,7 +153,7 @@ heater.o: heater.c heater.h temp.h beaglebone.h pwm.h debug.h mendel.h
 home.o: home.c beaglebone.h home.h bebopr.h limit_switches.h traject.h \
  pruss_stepper.h algo2cmds.h gcode_process.h debug.h
 limit_switches.o: limit_switches.c limit_switches.h traject.h bebopr.h \
- mendel.h gpio.h debug.h
+ mendel.h gpio.h debug.h beaglebone.h
 pruss.o: pruss.c pruss.h algo2cmds.h beaglebone.h debug.h
 pruss_stepper.o: pruss_stepper.c pruss_stepper.h algo2cmds.h pruss.h \
  beaglebone.h debug.h bebopr.h

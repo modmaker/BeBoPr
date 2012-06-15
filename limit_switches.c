@@ -12,6 +12,7 @@
 #include "bebopr.h"
 #include "gpio.h"
 #include "debug.h"
+#include "beaglebone.h"
 
 /*
  * Limit switch handling
@@ -62,8 +63,6 @@ typedef struct {
  * limit_switch_init
  ****************************************************************/
 static struct pollfd(* fdset)[] = NULL;
-
-#define NR_ITEMS( x) (sizeof( (x)) / sizeof( *(x)))
 
 #define XMIN_GPIO 10
 #define XMAX_GPIO 11
