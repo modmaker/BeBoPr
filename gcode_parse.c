@@ -58,9 +58,9 @@ GCODE_COMMAND next_target;
 		denominator:   1 or 10         ( 4 bit)
 */
 // accordingly:
-#define	DECFLOAT_EXP_MAX 4
-#define	DECFLOAT_MANT_MM_MAX 1048075
-#define	DECFLOAT_MANT_IN_MAX 32267
+#define DECFLOAT_EXP_MAX              7
+#define DECFLOAT_MANT_MM_MAX 2147483647
+#define DECFLOAT_MANT_IN_MAX   67108863
 
 
 /// convert a floating point input value into an integer with appropriate scaling.
