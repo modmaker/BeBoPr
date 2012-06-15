@@ -35,8 +35,8 @@ static const double c_acc = 282842712.5;	// = fclk * sqrt( 2.0);
 
 static inline int queue_move( const char* axis_name, double ramp, double a, double v, double dwell, uint32_t c0, uint32_t cmin)
 {
-  int axis = *axis_name - ((*axis_name < 'x') ? 'e' - 4 : 'x' - 1);
-  if (v != 0.0 && ramp != 0.0) {
+  if (v != 0.0) {
+    int axis = *axis_name - ((*axis_name < 'x') ? 'e' - 4 : 'x' - 1);
     if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
       printf( "Queue %c: ramping to and from %1.3lf [mm/s] "
 	      "with a=%1.3lf [m/s^2] over %1.6lf [mm] (c0=%u,cmin=%u)\n",
