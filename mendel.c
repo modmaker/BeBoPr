@@ -17,6 +17,7 @@
 #include "gcode_parse.h"
 #include "limit_switches.h"
 #include "pruss_stepper.h"
+#include "comm.h"
 
 
 static int arm_init( void)
@@ -66,13 +67,18 @@ int init( void)
   signal( SIGHUP, signal_handler);
   signal( SIGTERM, signal_handler);
 
-  // configure
-  result = mendel_sub_init( "bebopr", bebopr_pre_init);
+  // set up arm & linux specific stuff
+  result = mendel_sub_init( "arm", arm_init);
   if (result != 0) {
     return result;
   }
-  // set up arm & linux specific stuff
-  result = mendel_sub_init( "arm", arm_init);
+  // keep connector alive
+  result = mendel_sub_init( "comm", comm_init);
+  if (result != 0) {
+    return result;
+  }
+  // configure
+  result = mendel_sub_init( "bebopr", bebopr_pre_init);
   if (result != 0) {
     return result;
   }
@@ -129,9 +135,8 @@ int mendel_sub_init( const char* name, int (*subsys)( void))
 // FIXME: Implement proper program termination and un-init functions.
 int main (void)
 {
-  int block = 0;
   if (init() != 0) {
-    fprintf( stderr, "Initialization failed, terminating the application.\n");
+    fprintf( stderr, "Initialization failed, terminating.\n");
     exit( EXIT_FAILURE);
   }
 
@@ -139,26 +144,18 @@ int main (void)
 
   for (;;) {
     char s[ 100];
-    if (pruss_queue_full()) {
-      if (block) {
-        usleep( 1000);
-      } else {
-        fprintf( stderr, "<queue_full>");
-        block = 1;
-      }
+
+    if (fgets( s, sizeof( s), stdin) == NULL) {
+      fprintf( stderr, "main loop - EOF on input, terminating.\n");
+      exit( 0);
     } else {
-      block = 0;
-      if (fgets( s, sizeof( s), stdin) != NULL) {
-        char* p = s;
-	fprintf( stderr, "Got '%s'\r\n", s);
-	while (*p) {
-          gcode_parse_char( *p++);
-	}
-      } else {
-	sched_yield();
+      char* p = s;
+      while (*p) {
+        gcode_parse_char( *p++);
       }
     }
   }
 }
+
 // -*- indent-tabs-mode: nil; tab-width: 4; c-basic-offset: 4; -*-
 // ex:ts=4:sw=4:sts=4:et
