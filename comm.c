@@ -30,25 +30,31 @@ static int alt_stdout;
 
 static void* comm_thread( void* arg)
 {
-  const int timeout = 10000; /* ms */
-
   if (debug_flags & DEBUG_LIMSW) {
     printf( "Socket connection keep-alive thread: started.");
   }
 
-  // read from system stdin
+  // read side of system stdin
   fds[ 0].fd = fd_stdin;
   fds[ 0].events = POLLIN | POLLPRI;
-  // write to system stdout
+  // write side of system stdout
   fds[ 1].fd = fd_stdout;
   fds[ 1].events = POLLERR | POLLHUP;
-  // read from stdout pipe
+  // read side of stdout pipe
   fds[ 2].fd = alt_stdout;
   fds[ 2].events = POLLIN | POLLPRI;
-  // write to stdin pipe
+  // write side of stdin pipe
   fds[ 3].fd = alt_stdin;
   fds[ 3].events = POLLERR | POLLHUP;
 
+  char s_out[ 100];
+  const int timeout = 100; /* ms */
+
+  /*
+   * The data from the stdout pipe does not become available until
+   * stdout is flushed. So the timer is set to a short cycle that
+   * flushes stdout with each timeout.
+   */
   while (1) {
     int rc = poll( fds, NR_ITEMS( fds), timeout);      
     if (rc < 0) {
@@ -56,9 +62,13 @@ static void* comm_thread( void* arg)
       break;
     } else if (rc == 0) {
       // timeout, send dummy character to keep connection alive
-      printf( "%c", 255);
+      static int prescaler = 0;
+      if (++prescaler > 100) {
+        printf( "%c", 255);
+        fprintf( stderr, "<KEEP ALIVE SENT>\n");
+        prescaler = 0;
+      }
       fflush( stdout);
-      fprintf( stderr, "<KEEP ALIVE SENT>\n");
     } else {
       // input pending
       for (int i = 0 ; i < NR_ITEMS( fds) ; ++i) {
@@ -81,9 +91,12 @@ static void* comm_thread( void* arg)
         } else if (events & POLLIN) {
           if (i == 2) {
             // stdout pipe has output for stdout
-            char s[ 1];
-            read(  fds[ 2].fd, s, sizeof( s));
-            write( fds[ 1].fd, s, sizeof( s));
+            int result = read(  alt_stdout, s_out, sizeof( s_out));
+	    if (result < 0) {
+	    } else if (result >= 0) {
+              fprintf( stderr, "read returned %d bytes from stdout pipe\n", result);
+              write( fds[ 1].fd, s_out, result);
+	    }
           } else if (i == 0) {
             // stdin has input for stdin pipe
             char s[ 1];
@@ -120,7 +133,7 @@ int comm_init( void)
   fprintf( stderr, "fd_stdin = %d, fd_stdout = %d\n", fd_stdin, fd_stdout);
 
   // create the stdout pipe with all new fds
-  result = pipe2( fds, 0);
+  result = pipe2( fds, O_NONBLOCK);
   if (result < 0) {
           perror( "stdout pipe creation failed");
           return -1;
@@ -133,19 +146,18 @@ int comm_init( void)
   close( fds[ 1]);
   fds[ 1] = result;
   fprintf( stderr, "stdout pipe fixed:   output side fd = %d, input side fd = %d\n", fds[ 0], fds[ 1]);
-
   alt_stdout = fds[ 0];
   fprintf( stderr, "alt_stdout = %d\n", alt_stdout);
 
   close( 0);
   result = pipe2( fds, 0);
   if (result < 0) {
-    perror( "pipe_out creation failed");
+    perror( "stdin pipe creation failed");
     return -1;
   }
   fprintf( stderr, "stdin pipe created: output side fd = %d, input side fd = %d\n", fds[ 0], fds[ 1]);
   alt_stdin = fds[ 1];
-  fprintf( stderr, "alt_stdin = %d\n", alt_stdout);
+  fprintf( stderr, "alt_stdin = %d\n", alt_stdin);
 
   result = mendel_thread_create( "comm", &worker, NULL, &comm_thread, NULL);
   if (result != 0) {
