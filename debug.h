@@ -22,6 +22,7 @@
 	#define		DEBUG_PWM		0x0100
 	#define		DEBUG_TEMP		0x0200
 	#define		DEBUG_ANALOG		0x0400
+	#define		DEBUG_COMM		0x2000
 #else
 	// by setting these to zero, the compiler should optimise the relevant code out
 	#define		DEBUG_GCODE_PROCESS	0
@@ -35,6 +36,7 @@
 	#define		DEBUG_PWM		0
 	#define		DEBUG_TEMP		0
 	#define		DEBUG_ANALOG		0
+	#define		DEBUG_COMM		0
 #endif
 
 #define			DEBUG_ECHO	(1<<31)

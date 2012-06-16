@@ -65,7 +65,9 @@ static void* comm_thread( void* arg)
       static int prescaler = 0;
       if (++prescaler > 100) {
         printf( "%c", 255);
-        fprintf( stderr, "<KEEP ALIVE SENT>\n");
+        if (DEBUG_COMM && (debug_flags & DEBUG_COMM)) {
+          fprintf( stderr, "<KEEP ALIVE SENT>\n");
+	}
         prescaler = 0;
       }
       fflush( stdout);
@@ -75,7 +77,9 @@ static void* comm_thread( void* arg)
         int events = fds[ i].revents;
         if (events & POLLHUP) {
           if (i == 0) {
-            fprintf( stderr, "comm_thread: lost connection on STDIN, closing down.\n");
+            if (DEBUG_COMM && (debug_flags & DEBUG_COMM)) {
+              fprintf( stderr, "comm_thread: lost connection on STDIN, closing down.\n");
+	    }
             close( alt_stdout);
             close( alt_stdin);
             pthread_exit( NULL);
@@ -94,7 +98,9 @@ static void* comm_thread( void* arg)
             int result = read(  alt_stdout, s_out, sizeof( s_out));
 	    if (result < 0) {
 	    } else if (result >= 0) {
-              fprintf( stderr, "read returned %d bytes from stdout pipe\n", result);
+	      if (DEBUG_COMM && (debug_flags & DEBUG_COMM)) {
+                fprintf( stderr, "read returned %d bytes from stdout pipe\n", result);
+	      }
               write( fds[ 1].fd, s_out, result);
 	    }
           } else if (i == 0) {
