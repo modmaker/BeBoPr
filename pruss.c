@@ -539,18 +539,23 @@ int pruss_init( const char* ucodename, struct ucode_signature* signature)
   return 0;
 }
 
+int pruss_is_halted( void)
+{
+  return ((pruss_rd32( PRUSS_PRU_CTRL_CONTROL) & PRUSS_PRU_CTRL_CONTROL_RUNSTATE) == 0);
+}
+
 void pruss_wait_for_halt( void)
 {
   do {
     // The microcode is running, wait for HALT
-  } while (pruss_rd32( PRUSS_PRU_CTRL_CONTROL) & PRUSS_PRU_CTRL_CONTROL_RUNSTATE);
+  } while (!pruss_is_halted());
 }
 
 // return old 'enable' state
 int pruss_stop_pruss( void)
 {
-  uint32_t pruss_ctrl = pruss_rd32( PRUSS_PRU_CTRL_CONTROL);
-  if (pruss_ctrl & PRUSS_PRU_CTRL_CONTROL_RUNSTATE) {
+  if (!pruss_is_halted()) {
+    uint32_t pruss_ctrl = pruss_rd32( PRUSS_PRU_CTRL_CONTROL);
     pruss_ctrl &= ~ PRUSS_PRU_CTRL_CONTROL_ENABLE;  	// clear enable bit
     pruss_wr32( PRUSS_PRU_CTRL_CONTROL, pruss_ctrl);
     pruss_wait_for_halt();
@@ -588,9 +593,13 @@ retry:
 int pruss_dump_state( void)
 {
   int i;
-  int pruss_ena = pruss_stop_pruss();
+  int pruss_ena = 0;
 
-  printf( "PRUSS was halted, extracting debug info...\n");
+  if (!pruss_is_halted()) {
+    pruss_stop_pruss();
+    pruss_ena = 1;
+  }
+  printf( "PRUSS %shalted, extracting debug info...\n", (pruss_ena) ? "is temporarily " : "was found ");
   for (i = 0 ; i < 32 ; ++i) {
     uint32_t reg = pruss_rd32( PRUSS_DBG_OFFSET + 4 * i);
     printf( "    R%-2d = 0x%08x (%10u)", i, reg, reg);
@@ -610,11 +619,7 @@ int pruss_dump_state( void)
 
   if (pruss_ena) {
     pruss_start_pruss();
+    printf( "PRUSS is enabled again\n");
   }
   return 0;
-}
-
-int pruss_is_halted( void)
-{
-  return ((pruss_rd32( PRUSS_PRU_CTRL_CONTROL) & PRUSS_PRU_CTRL_CONTROL_RUNSTATE) == 0);
 }

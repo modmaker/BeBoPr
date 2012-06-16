@@ -357,6 +357,12 @@ int pruss_queue_empty( void)
   return (pruss_get_nr_of_free_buffers() == PRUSS_FIFO_LENGTH - 1);
 }
 
+// Simple wrapper prevents need for pruss.h inclusion
+int pruss_stepper_halted( void)
+{
+  return pruss_is_halted();
+}
+
 int pruss_wait_for_queue_space( void)
 {
   while (pruss_queue_full()) {

@@ -23,5 +23,6 @@ extern int pruss_queue_config_axis( int axis, uint32_t ssi, uint16_t sst, uint16
 extern int pruss_queue_set_enable( int on);
 extern int pruss_dump_position( int axis);
 extern int pruss_stepper_busy( void);
+extern int pruss_stepper_halted( void);
 
 #endif
