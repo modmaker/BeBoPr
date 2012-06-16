@@ -308,31 +308,31 @@ int pruss_stepper_dump_state( void)
     for (i = 0 ; i < 4 ; ++i) {
       base[ i] = PRUSS_RAM_OFFSET + i * FullADSize;
     }
-    printf( "%20s    %14x    %14x    %14x    %14x\n", "Base Address", base[ 0], base[ 1], base[ 2], base[ 3]);
+    printf( "%20s    %14x    %14x    %14x    %14x\n", "Base Address x", base[ 0], base[ 1], base[ 2], base[ 3]);
 
-    DUMP_LINE( "cycleTimer",       32,  0, "%14u");
-    DUMP_LINE( "stepActiveTime",   32,  4, "%14u");
-    DUMP_LINE( "minStepCycleTime", 32,  8, "%14u");
-    DUMP_LINE( "stepCycleTime",    32, 12, "%14u");
-    DUMP_LINE( "stateInfo",         8, 16, "%14x");
-    DUMP_LINE( "stepPinBitNo",      8, 17, "%14u");
+    DUMP_LINE( "cycleTimer .",       32,  0, "%14u");
+    DUMP_LINE( "stepActiveTime .",   32,  4, "%14u");
+    DUMP_LINE( "minStepCycleTime .", 32,  8, "%14u");
+    DUMP_LINE( "stepCycleTime .",    32, 12, "%14u");
+    DUMP_LINE( "stateInfo x",         8, 16, "%14x");
+    DUMP_LINE( "stepPinBitNo .",      8, 17, "%14u");
     // following code uses stepPinBitNo from data[] !
     for (i = 0 ; i < 4 ; ++i) {
       data[ i] = !!(axes_config & (1 << data[ i]));
     }
-    printf( "%20s    %14x    %14x    %14x    %14x\n", "Axis reversal", data[ 0], data[ 1], data[ 2], data[ 3]);
+    printf( "%20s    %14x    %14x    %14x    %14x\n", "Axis reversal x", data[ 0], data[ 1], data[ 2], data[ 3]);
 
-    DUMP_LINE( "virtPosT",         16, 18, "%14u");
-    DUMP_LINE( "virtPos",          32, 20, "%14x");
+    DUMP_LINE( "virtPosT .",         16, 18, "%14u");
+    DUMP_LINE( "virtPos x",          32, 20, "%14x");
 
-    DUMP_LINE( "stepSize",         32, 24, "%14u");
-    DUMP_LINE( "stepSizeT",        16, 28, "%14u");
-    DUMP_LINE( "stepSizeN",        16, 30, "%14u");
+    DUMP_LINE( "stepSize .",         32, 24, "%14u");
+    DUMP_LINE( "stepSizeT .",        16, 28, "%14u");
+    DUMP_LINE( "stepSizeN .",        16, 30, "%14u");
 
-    DUMP_LINE( "requestedPos",     32, 32, "%14x");
-    DUMP_LINE( "nextStepCycleTime",32, 36, "%14u");
-    DUMP_LINE( "accelCount",       32, 40, "%14u");
-    DUMP_LINE( "dividend",         32, 44, "%14u");
+    DUMP_LINE( "requestedPos x",     32, 32, "%14x");
+    DUMP_LINE( "nextStepCycleTime .",32, 36, "%14u");
+    DUMP_LINE( "accelCount .",       32, 40, "%14u");
+    DUMP_LINE( "dividend .",         32, 44, "%14u");
   }
 
   return 0;
