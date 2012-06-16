@@ -147,7 +147,7 @@ int bebopr_pre_init( void)
     goto done;
   }
   char* s = getenv( "TB6560");
-  if (strcmp( s, "yes") == 0) {
+  if (s && strcmp( s, "yes") == 0) {
     use_pololu_drivers = 0;
   }
   fprintf( stderr, "Using stepper driver configuration: '%s'\n", (use_pololu_drivers) ? "Pololu" : "TB6560");
