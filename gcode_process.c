@@ -379,9 +379,9 @@ void process_gcode_command() {
 				break;
 
 
-			// G999 - Dump PRUSS state
-                        case 999:
-				// === G999: Dump PRUSS state ====
+			// G255 - Dump PRUSS state
+                        case 255:
+				// === G255: Dump PRUSS state ====
                                 traject_wait_for_completion();
                                 pruss_stepper_dump_state();
                                 break;
