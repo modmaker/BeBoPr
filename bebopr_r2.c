@@ -1,6 +1,8 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "analog.h"
 #include "temp.h"
@@ -118,6 +120,8 @@ static const heater_config_record heater_config_data[] = {
   },
 };
 
+static int use_pololu_drivers = 1;
+
 int bebopr_pre_init( void)
 {
   int result = -1;
@@ -142,6 +146,11 @@ int bebopr_pre_init( void)
     fprintf( stderr, "heater_config failed!\n");
     goto done;
   }
+  char* s = getenv( "TB6560");
+  if (strcmp( s, "yes") == 0) {
+    use_pololu_drivers = 0;
+  }
+  fprintf( stderr, "Using stepper driver configuration: '%s'\n", (use_pololu_drivers) ? "Pololu" : "TB6560");
  done:
   return result;
 }
@@ -193,7 +202,7 @@ int config_max_limit_switch_is_active_low( axis_e axis)
 
 int config_use_pololu_drivers( void)
 {
-  return 1;
+  return use_pololu_drivers;
 }
 
 /*
@@ -202,10 +211,10 @@ int config_use_pololu_drivers( void)
 double config_get_step_size( axis_e axis)
 {
   switch (axis) {
-  case x_axis:	return 6250.0E-9;
-  case y_axis:	return 6250.0E-9;
-  case z_axis:	return 390.125E-9;
-  case e_axis:	return 2100.0E-9;
+  case x_axis:	return 6.25E-6;
+  case y_axis:	return 6.25E-6;
+  case z_axis:	return 0.390125E-6;
+  case e_axis:	return 2.1875E-6;
   default:	return 0.0;
   }
 }
@@ -231,7 +240,7 @@ double config_get_max_accel( axis_e axis)
 {
   switch (axis) {
   case x_axis:	return 2.5;
-  case y_axis:	return 2.5;
+  case y_axis:	return 4.3;
   case z_axis:	return 2.5;
   case e_axis:	return 2.5;
   default:	return 0.0;
@@ -247,6 +256,7 @@ int config_reverse_axis( axis_e axis)
   case x_axis:  return 1;
   case y_axis:	return 0;
   case z_axis:	return 0;
+  case e_axis:	return 1;
   default:	return 0;
   }
 }
