@@ -375,6 +375,9 @@ static void pruss_axis_config( int axis, double step_size, int reverse)
 int traject_wait_for_completion( void)
 {
   while (!pruss_queue_empty()) {
+    if (pruss_stepper_halted()) {
+      return -1;
+    }
     sched_yield();
   }
   return 0;
