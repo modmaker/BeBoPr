@@ -63,6 +63,7 @@ SOURCES = \
 	thermistor.c \
 	traject.c \
 	comm.c \
+	eeprom.c \
 	$(PROGRAM).c
 
 CC = $(CROSS_COMPILE)gcc
@@ -141,7 +142,7 @@ install:	all
 # DO NOT DELETE THIS LINE -- make depend depends on it.
 analog.o: analog.c analog.h beaglebone.h mendel.h debug.h
 bebopr_r2.o: bebopr_r2.c analog.h beaglebone.h temp.h thermistor.h \
- bebopr.h heater.h pwm.h traject.h
+ bebopr.h heater.h pwm.h traject.h eeprom.h
 debug.o: debug.c debug.h
 gcode_parse.o: gcode_parse.c gcode_parse.h debug.h gcode_process.h \
  bebopr.h
@@ -163,6 +164,7 @@ thermistor.o: thermistor.c beaglebone.h thermistor.h
 traject.o: traject.c bebopr.h traject.h pruss_stepper.h algo2cmds.h \
  debug.h beaglebone.h mendel.h
 comm.o: comm.c comm.h mendel.h bebopr.h debug.h beaglebone.h
+eeprom.o: eeprom.c beaglebone.h eeprom.h
 mendel.o: mendel.c heater.h temp.h beaglebone.h pwm.h bebopr.h mendel.h \
  gcode_process.h gcode_parse.h limit_switches.h traject.h pruss_stepper.h \
  algo2cmds.h comm.h

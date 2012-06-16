@@ -12,6 +12,7 @@
 #include "heater.h"
 #include "pwm.h"
 #include "traject.h"
+#include "eeprom.h"
 
 /*
  * Here one defines where the kernel puts the analog inputs,
@@ -146,11 +147,13 @@ int bebopr_pre_init( void)
     fprintf( stderr, "heater_config failed!\n");
     goto done;
   }
-  char* s = getenv( "TB6560");
-  if (s && strcmp( s, "yes") == 0) {
+  result = get_step_io_config( EEPROM_PATH);
+  // Only differentiate between Pololu and TB6560, default to Pololu
+  if (result == TB6560_DRIVERS) {
     use_pololu_drivers = 0;
   }
   fprintf( stderr, "Using stepper driver configuration: '%s'\n", (use_pololu_drivers) ? "Pololu" : "TB6560");
+  result = 0;
  done:
   return result;
 }
