@@ -378,11 +378,18 @@ void process_gcode_command() {
 					home_axis_to_max_limit_switch( z_axis, next_target.target.F);
 				break;
 
+
+			// G999 - Dump PRUSS state
+                        case 999:
+				// === G999: Dump PRUSS state ====
+                                traject_wait_for_completion();
+                                pruss_stepper_dump_state();
+                                break;
+
 				// unknown gcode: spit an error
 			default:
 				printf("E: Bad G-code %d", next_target.G);
 				// newline is sent from gcode_parse after we return
-				pruss_stepper_dump_state();
 				return;
 		}
 #ifdef	DEBUG
