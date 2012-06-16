@@ -344,11 +344,18 @@ void traject_delta_on_all_axes( traject5D* traject)
     pruss_queue_execute();
     any_move = 0;
   }
-  pruss_queue_adjust_for_ramp( 1, (int32_t)(1.0E9 * ramp_dx));
-  pruss_queue_adjust_for_ramp( 2, (int32_t)(1.0E9 * ramp_dy));
-  pruss_queue_adjust_for_ramp( 3, (int32_t)(1.0E9 * ramp_dz));
-  pruss_queue_adjust_for_ramp( 4, (int32_t)(1.0E9 * ramp_de));
-
+  if (ramp_dx != 0.0) {
+    pruss_queue_adjust_for_ramp( 1, (int32_t)(1.0E9 * ramp_dx));
+  }
+  if (ramp_dy != 0.0) {
+    pruss_queue_adjust_for_ramp( 2, (int32_t)(1.0E9 * ramp_dy));
+  }
+  if (ramp_dz != 0.0) {
+    pruss_queue_adjust_for_ramp( 3, (int32_t)(1.0E9 * ramp_dz));
+  }
+  if (ramp_de != 0.0) {
+    pruss_queue_adjust_for_ramp( 4, (int32_t)(1.0E9 * ramp_de));
+  }
   pruss_queue_adjust_origin( 4);
 }
 
