@@ -114,8 +114,20 @@ static void run_home_one_axis( axis_e axis, int reverse, uint32_t feed)
 static void home_one_axis( axis_e axis, int reverse, uint32_t feed)
 {
   traject_wait_for_completion();
+
+  struct sched_param old_param;
+  int old_scheduler;
+  pthread_t self = pthread_self();
+  pthread_getschedparam( self, &old_scheduler, &old_param);
+  struct sched_param new_param = {
+    .sched_priority = HOME_PRIO
+  };
+  // elevate priority for undisturbed operation
+  pthread_setschedparam( self, HOME_SCHED, &new_param); 
   // move to a limit switch or sensor
   run_home_one_axis( axis, reverse, feed);
+  // return to normal scheduling
+  pthread_setschedparam( self, old_scheduler, &old_param); 
 }
 
 /// find MIN endstop for an axis

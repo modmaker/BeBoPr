@@ -33,6 +33,8 @@
 #define ANALOG_PRIO	ELEV_PRIO
 #define ANALOG_SCHED	SCHED_RR
 
+#define HOME_PRIO	ELEV_PRIO
+#define HOME_SCHED	SCHED_RR
 
 #define NR_ITEMS( x) (sizeof( (x)) / sizeof( *(x)))
 
