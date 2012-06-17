@@ -5,6 +5,7 @@
 #include <dirent.h>
 #include <string.h> 
 #include <sched.h>
+#include <unistd.h>
 
 #include "pruss_stepper.h"
 #define PRU_NR		1
@@ -369,7 +370,12 @@ int pruss_wait_for_queue_space( void)
     if (pruss_is_halted()) {
       return -1;
     }
-    sched_yield();    // TODO: sleep until PRUSS interrupt ?
+    /*
+     * Most time is spent here polling for PRUSS progress.
+     * Until an interrupt driven interface is implemented, reduce the
+     * cpu load and number of poll cycles by sleeping part of the time.
+     */
+    usleep( 200);
   }
   return 0;
 }
