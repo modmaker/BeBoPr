@@ -165,15 +165,13 @@ int comm_init( void)
   alt_stdin = fds[ 1];
   fprintf( stderr, "alt_stdin = %d\n", alt_stdin);
 
-  result = mendel_thread_create( "comm", &worker, NULL, &comm_thread, NULL);
-  if (result != 0) {
-    exit( EXIT_FAILURE);
+  if (mendel_thread_create( "comm", &worker, NULL, &comm_thread, NULL) != 0) {
+    return -1;
   }
   struct sched_param param = {
-    .sched_priority = 74
+    .sched_priority = COMM_PRIO
   };
-  // SCHED_RR seems to work for now, otherwise use SCHED_FIFO
-  pthread_setschedparam( worker, SCHED_RR, &param);
+  pthread_setschedparam( worker, COMM_SCHED, &param);
 
   return 0;
 }

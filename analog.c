@@ -195,7 +195,14 @@ int analog_init( void)
       pd->average.remainder = 0;
       ++num_analog_channels;
     }
-    return mendel_thread_create( "analog", &worker, NULL, &analog_worker, NULL);
+    if (mendel_thread_create( "analog", &worker, NULL, &analog_worker, NULL) != 0) {
+      return -1;
+    }
+    struct sched_param param = {
+      .sched_priority = ANALOG_PRIO
+    };
+    pthread_setschedparam( worker, ANALOG_SCHED, &param);
+    return 0;
   }
   fprintf( stderr, "analog_init: no configuration data!\n");
   return -1;

@@ -159,19 +159,15 @@ static pthread_t worker;
 
 int limsw_init( void)
 {
-  int result;
-
   fdset = calloc( nr_limits, sizeof( struct pollfd));
 
-  result = mendel_thread_create( "limit_switches", &worker, NULL, &limsw_watcher, NULL);
-  if (result != 0) {
-    exit( EXIT_FAILURE);
+  if (mendel_thread_create( "limit_switches", &worker, NULL, &limsw_watcher, NULL) != 0) {
+    return -1;
   }
   struct sched_param param = {
-    .sched_priority = 74
+    .sched_priority = LIMSW_PRIO
   };
-  //  pthread_setschedparam( worker, SCHED_FIFO, &param);
-  pthread_setschedparam( worker, SCHED_RR, &param);
+  pthread_setschedparam( worker, LIMSW_SCHED, &param);
 
   return 0;
 }

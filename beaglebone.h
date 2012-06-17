@@ -2,6 +2,37 @@
 #define _BEAGLEBONE_H
 
 #include <stdint.h>
+#include <sched.h>
+
+/*
+ * Posix defines priorities from 0 upto 99.
+ *  0 (lowest) is for SCHED_OTHER, the default scheduling algorithm
+ *  1 (low)    is for SCHED_RR and SCHED_FIFO
+ * 99 (high)   is for SCHED_RR and SCHED_FIFO
+ *
+ * The Linux kernel uses other values: Posix 0 gives Linux 120,
+ * Posix priority 1 gives Linux priority 98, Posix priority 99 gives Linux priority 0.
+ */
+
+#define TOP_PRIO	60
+#define ELEV_PRIO	55
+#define NORM_PRIO	50
+
+#define COMM_PRIO	TOP_PRIO	/* keep connection allive at all times */
+#define COMM_SCHED	SCHED_FIFO
+
+#define LIMSW_PRIO      TOP_PRIO
+#define LIMSW_SCHED	SCHED_FIFO
+
+#define MENDEL_PRIO	NORM_PRIO
+#define MENDEL_SCHED	SCHED_RR
+
+#define HEATER_PRIO	NORM_PRIO
+#define HEATER_SCHED	SCHED_RR
+
+#define ANALOG_PRIO	ELEV_PRIO
+#define ANALOG_SCHED	SCHED_RR
+
 
 #define NR_ITEMS( x) (sizeof( (x)) / sizeof( *(x)))
 

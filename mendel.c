@@ -6,7 +6,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <time.h>
-#include <sched.h>
 #include <pthread.h>
 #include <signal.h>
 
@@ -29,18 +28,18 @@ static int arm_init( void)
     exit( EXIT_FAILURE);
   }
 
-  int policy = SCHED_OTHER;
+  int policy = MENDEL_SCHED;
   int prio_max = sched_get_priority_max( policy);
   int prio_min = sched_get_priority_min( policy);
 
   struct sched_param sp = { 
-    .sched_priority = (prio_min + prio_max) / 2
+    .sched_priority = MENDEL_PRIO
   };
   // Set realtime process scheduling using the Round Robin scheduler
   // with absolute priority halfway between min and max.
   if (sched_setscheduler( 0, policy, &sp) < 0) {
   }
-  fprintf( stderr, "Scheduler set to %d, priority to %d\n", policy, sp.sched_priority);
+  fprintf( stderr, "Scheduler set to %d, priority to %d (min:%d,max:%d)\n", policy, sp.sched_priority, prio_min, prio_max);
 
   struct timespec clock_resolution;
   clock_getres( CLOCK_MONOTONIC, &clock_resolution);

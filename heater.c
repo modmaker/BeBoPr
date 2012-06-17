@@ -203,7 +203,14 @@ int heater_init( void)
       ++num_heater_channels;
     }
     // Start worker thread
-    return mendel_thread_create( "heater", &worker, NULL, &heater_thread, NULL);
+    if (mendel_thread_create( "heater", &worker, NULL, &heater_thread, NULL) != 0) {
+      return -1;
+    }
+    struct sched_param param = {
+      .sched_priority = HEATER_PRIO
+    };
+    pthread_setschedparam( worker, HEATER_SCHED, &param);
+    return 0;
   }
   fprintf( stderr, "temp_init: no configuration data!\n");
   return -1;
