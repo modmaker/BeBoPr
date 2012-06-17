@@ -71,13 +71,13 @@ int init( void)
   if (result != 0) {
     return result;
   }
-  // keep connector alive
-  result = mendel_sub_init( "comm", comm_init);
+  // configure
+  result = mendel_sub_init( "bebopr", bebopr_pre_init);
   if (result != 0) {
     return result;
   }
-  // configure
-  result = mendel_sub_init( "bebopr", bebopr_pre_init);
+  // keep connection alive
+  result = mendel_sub_init( "comm", comm_init);
   if (result != 0) {
     return result;
   }
