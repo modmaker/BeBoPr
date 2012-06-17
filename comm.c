@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <poll.h>
 #include <pthread.h>
+#include <errno.h>
 
 #include "comm.h"
 #include "mendel.h"
@@ -57,10 +58,10 @@ static void* comm_thread( void* arg)
    */
   while (1) {
     int rc = poll( fds, NR_ITEMS( fds), timeout);      
-    if (rc < 0) {
+    if (rc < 0 && errno != EINTR) {
       perror( "comm_thread: poll() failed, bailing out!");
       break;
-    } else if (rc == 0) {
+    } else if (rc == 0 || (rc < 0 && errno == EINTR)) {
       // timeout, send dummy character to keep connection alive
       static int prescaler = 0;
       if (++prescaler > 100) {
@@ -95,7 +96,7 @@ static void* comm_thread( void* arg)
         } else if (events & POLLIN) {
           if (i == 2) {
             // stdout pipe has output for stdout
-            int result = read(  alt_stdout, s_out, sizeof( s_out));
+            int result = read( alt_stdout, s_out, sizeof( s_out));
 	    if (result < 0) {
 	    } else if (result >= 0) {
 	      if (DEBUG_COMM && (debug_flags & DEBUG_COMM)) {

@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <poll.h>
 #include <pthread.h>
+#include <errno.h>
 
 #include "limit_switches.h"
 #include "mendel.h"
@@ -115,6 +116,9 @@ static void* limsw_watcher( void* arg)
 
     int rc = poll( *fdset, nr_limits, timeout);      
     if (rc < 0) {
+      if (errno == EINTR) {
+        continue;
+      }
       perror( "limsw_watcher: poll() failed, bailing out!");
       break;
     }
