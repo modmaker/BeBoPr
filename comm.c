@@ -31,7 +31,7 @@ static int alt_stdout;
 
 static void* comm_thread( void* arg)
 {
-  if (debug_flags & DEBUG_COMM) {
+  if (DEBUG_COMM && (debug_flags & DEBUG_COMM)) {
     printf( "Socket connection keep-alive thread: started.");
   }
 
@@ -48,15 +48,42 @@ static void* comm_thread( void* arg)
   fds[ 3].fd = alt_stdin;
   fds[ 3].events = POLLERR | POLLHUP;
 
-  char s_out[ 100];
   const int timeout = 100; /* ms */
-
+  int output_pending = 0;
+  int input_pending = 0;
+  char pending_input;
+  char pending_output;
   /*
    * The data from the stdout pipe does not become available until
    * stdout is flushed. So the timer is set to a short cycle that
    * flushes stdout with each timeout.
    */
   while (1) {
+// handle output
+    if (output_pending) {
+      int cnt = write( fd_stdout, &pending_output, 1);
+      if (cnt == 1) {
+        output_pending = 0;
+      } else {
+        fds[ e_stdout_readside].events = 0;     // block events
+      }
+    }
+    if (!output_pending) {
+      fds[ e_stdout_readside].events = POLLIN | POLLPRI;
+    }
+// handle input
+    if (input_pending) {
+      int cnt = write( alt_stdin, &pending_input, 1);
+      if (cnt == 1) {
+        input_pending = 0;
+      } else {
+        fds[ e_stdin_readside].events = 0;      // block events
+      }
+    }
+    if (!input_pending) {
+      fds[ e_stdin_readside].events = POLLIN | POLLPRI;
+    }
+// wait for event
     int rc = poll( fds, NR_ITEMS( fds), timeout);      
     if (rc < 0 && errno != EINTR) {
       perror( "comm_thread: poll() failed, bailing out!");
@@ -68,52 +95,53 @@ static void* comm_thread( void* arg)
         printf( "%c", 255);
         if (DEBUG_COMM && (debug_flags & DEBUG_COMM)) {
           fprintf( stderr, "<KEEP ALIVE SENT>\n");
-	}
+        }
         prescaler = 0;
       }
       fflush( stdout);
     } else {
-      // input pending
       for (int i = 0 ; i < NR_ITEMS( fds) ; ++i) {
         int events = fds[ i].revents;
+        int fd = fds[ i].fd;
         if (events & POLLHUP) {
-          if (i == 0) {
+          if (fd == fd_stdin) {
             if (DEBUG_COMM && (debug_flags & DEBUG_COMM)) {
               fprintf( stderr, "comm_thread: lost connection on STDIN, closing down.\n");
-	    }
+            }
             close( alt_stdout);
             close( alt_stdin);
             pthread_exit( NULL);
           } else {
-            fprintf( stderr, "Poll on fd %d returns POLLHUP\n", i);
+            fprintf( stderr, "Poll on fd %d returns POLLHUP\n", fd);
           }
         } else if (events & POLLERR) {
-          fprintf( stderr, "Poll on fd %d returns POLLERR\n", i);
+          fprintf( stderr, "Poll on fd %d returns POLLERR\n", fd);
         } else if (events & POLLNVAL) {
-          fprintf( stderr, "Poll on fd %d returns POLLNVAL\n", i);
+          fprintf( stderr, "Poll on fd %d returns POLLNVAL\n", fd);
         } else if (events & POLLPRI) {
-          fprintf( stderr, "Poll on fd %d returns POLLPRI\n", i);
+          fprintf( stderr, "Poll on fd %d returns POLLPRI\n", fd);
         } else if (events & POLLIN) {
-          if (i == 2) {
+          if (fd == alt_stdout) {
             // stdout pipe has output for stdout
-            int result = read( alt_stdout, s_out, sizeof( s_out));
-	    if (result < 0) {
-	    } else if (result >= 0) {
-	      if (DEBUG_COMM && (debug_flags & DEBUG_COMM)) {
-                fprintf( stderr, "read returned %d bytes from stdout pipe\n", result);
-	      }
-              write( fds[ 1].fd, s_out, result);
-	    }
-          } else if (i == 0) {
+            if (!output_pending) {
+              int cnt = read( alt_stdout, &pending_output, 1);
+              if (cnt == 1) {
+                output_pending = 1;
+              }
+            }
+          } else if (fd == fd_stdin) {
             // stdin has input for stdin pipe
-            char s[ 1];
-            read(  fds[ 0].fd, s, sizeof( s));
-            write( fds[ 3].fd, s, sizeof( s));
+            if (!input_pending) {
+              int cnt = read( fd_stdin, &pending_input, 1);
+              if (cnt == 1) {
+                input_pending = 1;
+              }
+            }
           } else {
-            fprintf( stderr, "Poll on fd %d returns POLLIN\n", i);
+            fprintf( stderr, "Poll on fd %d returns POLLIN\n", fd);
           }
         } else if (events & POLLOUT) {
-          fprintf( stderr, "Poll on fd %d returns POLLOUT\n", i);
+          fprintf( stderr, "Poll on fd %d returns POLLOUT\n", fd);
         }
       }
     }
@@ -142,8 +170,8 @@ int comm_init( void)
   // create the stdout pipe with all new fds
   result = pipe2( fds, O_NONBLOCK);
   if (result < 0) {
-          perror( "stdout pipe creation failed");
-          return -1;
+    perror( "stdout pipe creation failed");
+    return -1;
   }
   fprintf( stderr, "stdout pipe created: output side fd = %d, input side fd = %d\n", fds[ 0], fds[ 1]);
   // close application's stdout descriptor (1)
