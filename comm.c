@@ -31,7 +31,7 @@ static int alt_stdout;
 
 static void* comm_thread( void* arg)
 {
-  if (debug_flags & DEBUG_LIMSW) {
+  if (debug_flags & DEBUG_COMM) {
     printf( "Socket connection keep-alive thread: started.");
   }
 
