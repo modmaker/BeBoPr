@@ -29,10 +29,10 @@ static int alt_stdin;
 static int alt_stdout;
 
 typedef enum {
-  e_stdin_readside = 0,
-  e_stdout_writeside,
+  e_stdout_writeside = 0,
   e_stdout_readside,
   e_stdin_writeside,
+  e_stdin_readside,
 } fds_index;
 
 static void* comm_thread( void* arg)
@@ -71,7 +71,7 @@ static void* comm_thread( void* arg)
       if (cnt == 1) {
         output_pending = 0;
       } else {
-        fds[ e_stdout_readside].events = 0;     // block events
+        fds[ e_stdout_readside].events = 0;     // block more input
       }
     }
     if (!output_pending) {
@@ -83,7 +83,7 @@ static void* comm_thread( void* arg)
       if (cnt == 1) {
         input_pending = 0;
       } else {
-        fds[ e_stdin_readside].events = 0;      // block events
+        fds[ e_stdin_readside].events = 0;      // block more input
       }
     }
     if (!input_pending) {
@@ -106,17 +106,22 @@ static void* comm_thread( void* arg)
       }
       fflush( stdout);
     } else {
-      for (int i = 0 ; i < NR_ITEMS( fds) ; ++i) {
+      for (int i = 0 ; i < active_fds ; ++i) {
         int events = fds[ i].revents;
         int fd = fds[ i].fd;
         if (events & POLLHUP) {
           if (fd == fd_stdin) {
             if (DEBUG_COMM && (debug_flags & DEBUG_COMM)) {
-              fprintf( stderr, "comm_thread: lost connection on STDIN, closing down.\n");
+              fprintf( stderr, "comm_thread: lost connection on STDIN, closing input pipe.\n");
             }
-            close( alt_stdout);
             close( alt_stdin);
+	    active_fds = 2;
+#if 0 
+            input_eof = 1;
+            close( alt_stdout);
+            // FIXME: do not terminate until all input is processed !
             pthread_exit( NULL);
+#endif
           } else {
             fprintf( stderr, "Poll on fd %d returns POLLHUP\n", fd);
           }
