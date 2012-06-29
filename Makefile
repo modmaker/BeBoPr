@@ -117,7 +117,7 @@ doc: Doxyfile *.c *.h
 	@$(OBJDUMP) -h -S $< > $@
 
 depend:
-	@echo "  Appending dependancy information to '$(MAKEFILE)'"
+	@echo "  Appending dependency information to '$(MAKEFILE)'"
 	@if grep '^# DO NOT DELETE' $(MAKEFILE) >/dev/null; then \
 		sed -e '/^# DO NOT DELETE/,$$d' $(MAKEFILE) > $(MAKEFILE).$$$$ && \
 			mv -f $(MAKEFILE).$$$$ $(MAKEFILE); \
