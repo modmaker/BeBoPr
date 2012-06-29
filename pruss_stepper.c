@@ -14,7 +14,14 @@
 #include "debug.h"
 #include "bebopr.h"
 
-#define PRUSS_FIFO_LENGTH 8
+/*
+ * The stepper code uses a 32-bit unsigned integer to keep track of position.
+ * This gives a usable range of a little more than 4000 mm.
+ * To split this range from -2000 .. +2000, set the virtual origin midscale:
+ */
+#define VIRT_POS_MID_SCALE	0x80000000
+
+#define PRUSS_FIFO_LENGTH	8
 
 // Generic struct for access to 'command' field for all commands.
 typedef struct {
@@ -331,6 +338,11 @@ int pruss_stepper_dump_state( void)
     DUMP_LINE( "stepSizeN .",        16, 30, "%14u");
 
     DUMP_LINE( "requestedPos x",     32, 32, "%14x");
+    printf( "%20s    %14d    %14d    %14d    %14d\n", "requestedPos .",
+	    data[ 0] - VIRT_POS_MID_SCALE,
+	    data[ 1] - VIRT_POS_MID_SCALE,
+	    data[ 2] - VIRT_POS_MID_SCALE,
+	    data[ 3] - VIRT_POS_MID_SCALE);
     DUMP_LINE( "nextStepCycleTime .",32, 36, "%14u");
     DUMP_LINE( "accelCount .",       32, 40, "%14u");
     DUMP_LINE( "dividend .",         32, 44, "%14u");
@@ -418,13 +430,6 @@ static int pruss_command( PruCommandUnion* cmd)
   //  ix_out = pruss_rd8( PRUSS_RAM_OFFSET + 129);
   return 0;
 }
-
-/*
- * The stepper code uses a 32-bit unsigned integer to keep track of position.
- * This gives a usable range of a little more than 4000 mm.
- * To split this range from -2000 .. +2000, set the virtual origin midscale:
- */
-#define VIRT_POS_MID_SCALE	0x80000000
 
 /*
  *  PRUSS STEPPER.BIN COMMAND INTERFACE
