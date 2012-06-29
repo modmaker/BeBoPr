@@ -28,31 +28,37 @@ static int fd_stdout;
 static int alt_stdin;
 static int alt_stdout;
 
+typedef enum {
+  e_stdin_readside = 0,
+  e_stdout_writeside,
+  e_stdout_readside,
+  e_stdin_writeside,
+} fds_index;
 
 static void* comm_thread( void* arg)
 {
   if (DEBUG_COMM && (debug_flags & DEBUG_COMM)) {
     printf( "Socket connection keep-alive thread: started.");
   }
-
   // read side of system stdin
-  fds[ 0].fd = fd_stdin;
-  fds[ 0].events = POLLIN | POLLPRI;
+  fds[ e_stdin_readside].fd = fd_stdin;
+  fds[ e_stdin_readside].events = POLLIN | POLLPRI;
   // write side of system stdout
-  fds[ 1].fd = fd_stdout;
-  fds[ 1].events = POLLERR | POLLHUP;
+  fds[ e_stdout_writeside].fd = fd_stdout;
+  fds[ e_stdout_writeside].events = POLLERR | POLLHUP;
   // read side of stdout pipe
-  fds[ 2].fd = alt_stdout;
-  fds[ 2].events = POLLIN | POLLPRI;
+  fds[ e_stdout_readside].fd = alt_stdout;
+  fds[ e_stdout_readside].events = POLLIN | POLLPRI;
   // write side of stdin pipe
-  fds[ 3].fd = alt_stdin;
-  fds[ 3].events = POLLERR | POLLHUP;
+  fds[ e_stdin_writeside].fd = alt_stdin;
+  fds[ e_stdin_writeside].events = POLLERR | POLLHUP;
 
   const int timeout = 100; /* ms */
   int output_pending = 0;
   int input_pending = 0;
   char pending_input;
   char pending_output;
+  int active_fds = NR_ITEMS( fds);
   /*
    * The data from the stdout pipe does not become available until
    * stdout is flushed. So the timer is set to a short cycle that
@@ -84,7 +90,7 @@ static void* comm_thread( void* arg)
       fds[ e_stdin_readside].events = POLLIN | POLLPRI;
     }
 // wait for event
-    int rc = poll( fds, NR_ITEMS( fds), timeout);      
+    int rc = poll( fds, active_fds, timeout);      
     if (rc < 0 && errno != EINTR) {
       perror( "comm_thread: poll() failed, bailing out!");
       break;
