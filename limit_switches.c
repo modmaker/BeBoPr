@@ -34,10 +34,10 @@ int limsw_max( axis_e axis)
 {
   int active_state = !config_max_limit_switch_is_active_low( axis);
   switch (axis) {
-  case x_axis:	return (x_max_state == active_state);
-  case y_axis:	return (y_max_state == active_state);
-  case z_axis:	return (z_max_state == active_state);
-  default:	return 0;
+  case x_axis:  return (x_max_state == active_state);
+  case y_axis:  return (y_max_state == active_state);
+  case z_axis:  return (z_max_state == active_state);
+  default:      return 0;
   }
 }
 
@@ -45,19 +45,19 @@ int limsw_min( axis_e axis)
 {
   int active_state = !config_min_limit_switch_is_active_low( axis);
   switch (axis) {
-  case x_axis:	return (x_min_state == active_state);
-  case y_axis:	return (y_min_state == active_state);
-  case z_axis:	return (z_min_state == active_state);
-  default:	return 0;
+  case x_axis:  return (x_min_state == active_state);
+  case y_axis:  return (y_min_state == active_state);
+  case z_axis:  return (z_min_state == active_state);
+  default:      return 0;
   }
 }
 
 typedef struct {
-  int	gpio_pin_nr;
-  int	active_low;
-  int	in_use;
-  void	(*alarm_call_back)( int state);
-  int	fd;
+  int   gpio_pin_nr;
+  int   active_low;
+  int   in_use;
+  void  (*alarm_call_back)( int state);
+  int   fd;
 } limit_switch_struct;
 
 /****************************************************************
@@ -112,7 +112,7 @@ static void* limsw_watcher( void* arg)
   }
 
   while (1) {
-    const int timeout = -1;	/* no timeout */
+    const int timeout = -1;     /* no timeout */
 
     int rc = poll( *fdset, nr_limits, timeout);      
     if (rc < 0) {
@@ -129,26 +129,26 @@ static void* limsw_watcher( void* arg)
     }
     for (i = 0 ; i < nr_limits ; ++i) {
       if ((*fdset)[ i].revents & POLLPRI) {
-	int state;
-	len = read( (*fdset)[ i].fd, buf, sizeof( buf));
-	if (len == 2 && (buf[ 0] == '0' || buf[ 0] == '1')) {
-	  // Get initial state info
-	  state = buf[ 0] - '0';
+        int state = 0;
+        len = read( (*fdset)[ i].fd, buf, sizeof( buf));
+        if (len == 2 && (buf[ 0] == '0' || buf[ 0] == '1')) {
+          // Get initial state info
+          state = buf[ 0] - '0';
           if (debug_flags & DEBUG_LIMSW) {
             printf( "*** GPIO %2d event, state %d ***\n", gpio[ i], state);
           }
-	} else {
-	  fprintf( stderr, "\n*** GPIO %2d unexpected event, BUG??? ***\n", gpio[ i]);
-	}
-	switch (gpio[ i]) {
-	case XMIN_GPIO: x_min_state = state; break;
-	case XMAX_GPIO: x_max_state = state; break;
-	case YMIN_GPIO: y_min_state = state; break;
-	case YMAX_GPIO: y_max_state = state; break;
-	case ZMIN_GPIO: z_min_state = state; break;
-	case ZMAX_GPIO: z_max_state = state; break;
-	}
-	lseek( (*fdset)[ i].fd, 0, SEEK_SET);
+        } else {
+          fprintf( stderr, "\n*** GPIO %2d unexpected event, BUG??? ***\n", gpio[ i]);
+        }
+        switch (gpio[ i]) {
+        case XMIN_GPIO: x_min_state = state; break;
+        case XMAX_GPIO: x_max_state = state; break;
+        case YMIN_GPIO: y_min_state = state; break;
+        case YMAX_GPIO: y_max_state = state; break;
+        case ZMIN_GPIO: z_min_state = state; break;
+        case ZMAX_GPIO: z_max_state = state; break;
+        }
+        lseek( (*fdset)[ i].fd, 0, SEEK_SET);
       }
     }
   }
