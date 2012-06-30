@@ -317,3 +317,10 @@ double config_get_home_max_feed( axis_e axis)
   }
 }
 
+/*
+ *  Specify is the E axis is being fed relative coordinates only
+ */
+int config_e_axis_is_always_relative( void)
+{
+  return 0;
+}

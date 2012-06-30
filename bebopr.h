@@ -14,6 +14,8 @@ extern int bebopr_pre_init( void);
 
 // Configuration
 
+extern int config_e_axis_is_always_relative( void);
+
 // determines stepper driver control
 extern int config_use_pololu_drivers( void);
 

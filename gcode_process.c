@@ -76,15 +76,15 @@ static void enqueue_pos( TARGET* target)
     /* make the move */
     traject_delta_on_all_axes( &traj);
     /* update our sense of position */
-#ifndef	E_ABSOLUTE
-    /*
-     * For a 3D printer, an E-axis coordinate is often a relative setting,
-     * independant of the absolute or relative mode. (This way it doesn't
-     * overflow because it is mostly moving in one direction.)
-     * This requires special handling here.
-     */
-    target->E = gcode_home_pos.E;
-#endif
+    if (config_e_axis_is_always_relative()) {
+      /*
+       * For a 3D printer, an E-axis coordinate is often a relative setting,
+       * independant of the absolute or relative mode. (This way it doesn't
+       * overflow because it is mostly moving in one direction.)
+       * This requires special handling here.
+       */
+      target->E = gcode_home_pos.E;
+    }
     memcpy( &gcode_current_pos, target, sizeof( TARGET));
   }
 }
@@ -110,12 +110,6 @@ void process_gcode_command() {
 		next_target.target.Z += gcode_current_pos.Z;
 		next_target.target.E += gcode_current_pos.E;
 	}
-	// E ALWAYS relative, otherwise we overflow our registers after only a few layers
-	// 	next_target.target.E += startpoint.E;
-	// easier way to do this
-	// 	startpoint.E = 0;
-	// moved to dda.c, end of dda_create() and dda_queue.c, next_move()
-
 	// implement axis limits
 	if (config_axis_has_min_limit_switch( x_axis)) {
 		double x_min = config_axis_get_min_pos( x_axis);
