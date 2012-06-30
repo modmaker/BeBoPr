@@ -324,3 +324,16 @@ int config_e_axis_is_always_relative( void)
 {
   return 0;
 }
+
+/*
+ *  Specify the character code that should be used for keep-alive messages.
+ *  This character should not disturb the communication.
+ *  Pronterface seems to accept most characters, but only a newline
+ *  does not disturb the program.
+ *  Repsnapper also accepts the newline without causing problems.
+ */
+char config_keep_alive_char( void)
+{
+  return '\n';
+}
+

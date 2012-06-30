@@ -63,6 +63,7 @@ static void* comm_thread( void* arg)
   char pending_input;
   char pending_output;
   int prescaler = 0;
+  char keep_alive_char = config_keep_alive_char();
   /*
    * The data from the stdout pipe does not become available until
    * stdout is flushed. So the timer is set to a short cycle that
@@ -83,7 +84,7 @@ static void* comm_thread( void* arg)
     } else if (rc == 0 || (rc < 0 && errno == EINTR)) {
       // timeout, send dummy character to keep connection alive
       if (++prescaler > keep_alive_timeout / timeout) {
-        printf( "%c", 10);	// only safe code for pronterface !
+        printf( "%c", keep_alive_char);
         fprintf( stderr, "<KEEP ALIVE SENT>");
         prescaler = 0;
       }
