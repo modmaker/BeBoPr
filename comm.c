@@ -62,13 +62,13 @@ static void* comm_thread( void* arg)
   int eof_on_input = 0;
   char pending_input;
   char pending_output;
+  int prescaler = 0;
   /*
    * The data from the stdout pipe does not become available until
    * stdout is flushed. So the timer is set to a short cycle that
    * flushes stdout with each timeout.
    */
   while (1) {
-    int prescaler = 0;
     /* wait for event */
     int rc = poll( fds, (eof_on_input) ? 2 : 4, timeout);
 #if LL_DEBUG
@@ -83,10 +83,8 @@ static void* comm_thread( void* arg)
     } else if (rc == 0 || (rc < 0 && errno == EINTR)) {
       // timeout, send dummy character to keep connection alive
       if (++prescaler > keep_alive_timeout / timeout) {
-        printf( "%c", 0);
-        if (DEBUG_COMM && (debug_flags & DEBUG_COMM)) {
-          fprintf( stderr, "<KEEP ALIVE SENT>");
-        }
+        printf( "%c", 10);	// only safe code for pronterface !
+        fprintf( stderr, "<KEEP ALIVE SENT>");
         prescaler = 0;
       }
 #if LL_DEBUG
