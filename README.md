@@ -1,23 +1,7 @@
 BeBoPr
 ======
 
-3D printer controller software for BeagleBone with BeBoPr Cape [wiki](BeBoPr/wiki/Home-of-the-BeBoPr)
+This is the 3D printer controller software for the [BeagleBone](http://beagleboard.org/) with [BeBoPr Cape](http://circuitco.com/support/index.php?title=BeBoPr_Cape). As of 17-06-2012, the software here is operational and it controls my Prusa 3D-printer as can be seen [here](http://www.youtube.com/watch?v=yfPLskLrslA&feature=youtu.be). For now it will remain a pre-release version until more people have tested it and the initial bugs have been removed.
 
-This is still a preliminary version, large parts still being in flux. But it allows for interactive
-experiments with the stepper driver and temperature control. For this one needs the binary 'stepper.bin'
-that's not in this repository, but comes with the BeBoPr Cape.
-
-Compilation:
-------------
-Change setenv to reflect the compilation environment.
-Source setenv before running 'make'.
-After compilation, copy mendel.elf together with stepper.bin and
-bebopr_test.sh to the beaglebone.
-The Linux kernel used needs several features to be able to run this code:
-The uio_pruss module should be available and the adc, pwm and gpio
-interfaces should be present in the /sys filesystem.
-The kernel should also contain the Cape EEPROM parsing code, otherwise all
-settings must be made manually.
-If all these conditions are met, run mendel.elf as root and play with
-the interactive gcode interpreter.
+For more information see the [wiki](BeBoPr/wiki/Home-of-the-BeBoPr) pages.
 
