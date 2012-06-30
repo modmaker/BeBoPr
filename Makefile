@@ -28,25 +28,23 @@
 
 ##############################################################################
 #                                                                            #
-# These defaults should be ok, change if you need to                         #
+# There should be no need to change anything in this file.                   #
+# If the defaults are not okay, one can override them in the setenv file.    #
 #                                                                            #
 ##############################################################################
 
+DEFS ?=
+ARCH ?= arm
+CROSS_COMPILE ?= arm-arago-linux-gnueabi-
+
 # Name of this Makefile (used for "make depend").
-
-DEFS=
-
-#PATH=/home/bas/ti-sdk-am335x-evm-05.03.00.00/linux-devkit/bin:$(PATH)
-ARCH=arm
-CROSS_COMPILE=arm-arago-linux-gnueabi-
-
 MAKEFILE = Makefile
 
-CSTD=gnu99
+CSTD := gnu99
 
-PROGRAM = mendel
+PROGRAM := mendel
 
-SOURCES = \
+SOURCES := \
 	analog.c \
 	bebopr_r2.c \
 	debug.c \
@@ -66,20 +64,22 @@ SOURCES = \
 	eeprom.c \
 	$(PROGRAM).c
 
-CC = $(CROSS_COMPILE)gcc
+CC      = $(CROSS_COMPILE)gcc
 OBJDUMP = $(CROSS_COMPILE)objdump
 OBJCOPY = $(CROSS_COMPILE)objcopy
 
-#OPTIMIZE = -Os -ffunction-sections -finline-functions-called-once -mcall-prologues
-# OPTIMIZE = -O0
-CFLAGS = -g -Wall -Wstrict-prototypes $(OPTIMIZE) $(DEFS) -std=${CSTD} -funsigned-char -funsigned-bitfields -fpack-struct -save-temps -pthread
-LDFLAGS = -Wl,--as-needed -Wl,--gc-sections
-LIBS = -lm -pthread -lrt
-LIBDEPS =
+OPTIMIZE := -O2 -finline-functions-called-once
+DEBUG_FLAGS ?= 0
+DEFS	+= -DDEBUG_INIT="$(DEBUG_FLAGS)"
+# Use CFLAGS and LDFLAGS from environment and add our settings
+CFLAGS  += -Wall -Wstrict-prototypes $(OPTIMIZE) $(DEFS) -std=${CSTD} -funsigned-char -funsigned-bitfields -fpack-struct -save-temps -pthread
+LDFLAGS += -Wl,--as-needed -Wl,--gc-sections
+LIBS    := -lm -pthread -lrt
+LIBDEPS :=
 
-SUBDIRS =
+SUBDIRS :=
 
-OBJ = $(patsubst %.c,%.o,${SOURCES})
+OBJ     := $(patsubst %.c,%.o,${SOURCES})
 
 .PHONY: all program clean subdirs doc
 .PRECIOUS: %.o %.elf
@@ -130,9 +130,9 @@ depend:
 	fi
 
 install:	all
-	@echo "  INSTALLING '$(PROGRAM)' TO '$(TARGET_NFS_ROOT)'"
-	@if [ -n "$(TARGET_NFS_ROOT)" ] ; then \
-		sudo cp $(PROGRAM).elf $(TARGET_NFS_ROOT)/home/root/ ; \
+	@echo "  INSTALLING '$(PROGRAM)' TO '$(TARGET_ROOT_DIR)'"
+	@if [ -n "$(TARGET_ROOT_DIR)" ] ; then \
+		sudo cp $(PROGRAM).elf $(TARGET_ROOT_DIR)/home/root/ ; \
 	else \
 		echo "INSTALL: no destination specified" ; \
 	fi

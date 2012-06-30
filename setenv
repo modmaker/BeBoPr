@@ -1,7 +1,55 @@
+#
+# This file creates the environment for compilation
+#
+# Source this file before running make! ('. setenv' or 'source setenv')
+#
+# Change the settings below to reflect your environment
+#
+
+#
+# DEFS passes settings, e.g. '-g' to the compiler.
+#
+export DEFS="-pg -DDEBUG"
+
+#
+# TARGET_DIR is where you want 'make install' to store the binary.
+#
+export TARGET_DIR=/home/bas/ti-sdk-am335x-evm-05.03.02.00/targetNFS/home/root
+
+#
+# If you want debug output, -DDEBUG must be set in DEFS above. If you
+# want debug output at startup, set INIT_DEBUG_FLAGS (see debug.h).
+#
+INIT_DEBUG_FLAGS="DEBUG_TRAJECT + DEBUG_GCODE_PROCESS + DEBUG_PRUSS + DEBUG_COMM"
+
+#
+# Define 'CROSS_PATH' to point to the cross-compiler toolchain or set
+# it to the empty string for native compilation.
+#
 CROSS_PATH=/home/bas/ti-sdk-am335x-evm-05.03.00.00/linux-devkit/bin
-if ! echo $PATH | grep $CROSS_PATH >/dev/null ; then
-	export PATH=$CROSS_PATH:$PATH
-fi
-export ARCH=arm
+
+#
+# Define 'CROSS_COMPILE' with the cross compiler prefix for gcc.
+# e.g. if your cross compiler is arm-arago-linux-gnueabi-gcc, then
+# set this to 'arm-arago-linux-gnueabi-'
+# For native compilation set this to an empty string
+#
+
 export CROSS_COMPILE=arm-arago-linux-gnueabi-
-export TARGET_NFS_ROOT=/home/bas/ti-sdk-am335x-evm-05.03.02.00/targetNFS
+#
+# Leave the ARCH setting as is, unless you know what you're doing.
+#
+export ARCH=arm
+
+#
+if echo $DEFS | grep -- "-DDEBUG" >/dev/null ; then
+	export DEBUG_FLAGS=$INIT_DEBUG_FLAGS
+fi
+if test -n $CROSS_PATH ; then
+	if ! echo $PATH | grep $CROSS_PATH >/dev/null ; then
+		export PATH=$CROSS_PATH:$PATH
+	fi
+	echo "*** Setup for cross compilation done ***"
+else
+	echo "*** Setup for native compilation done ***"
+fi

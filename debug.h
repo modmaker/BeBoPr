@@ -3,13 +3,6 @@
 
 #include <stdint.h>
 
-#define	DEBUG
-
-#ifdef DEBUG
-// initial setting for debug_flags after start
-# define DEBUG_INIT (DEBUG_TRAJECT|DEBUG_GCODE_PROCESS|DEBUG_PRUSS)
-#endif
-
 #ifdef	DEBUG
 	#define		DEBUG_GCODE_PROCESS 	0x0001
 	#define		DEBUG_LIMSW		0x0002
