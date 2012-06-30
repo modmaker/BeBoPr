@@ -664,7 +664,7 @@ void process_gcode_command() {
 				//? sample data from firmware:
 				//?  FIRMWARE_NAME:Teacup FIRMWARE_URL:http%%3A//github.com/triffid/Teacup_Firmware/ PROTOCOL_VERSION:1.0 MACHINE_TYPE:Mendel EXTRUDER_COUNT:1 TEMP_SENSOR_COUNT:1 HEATER_COUNT:1
 
-				printf( "FIRMWARE_NAME: BeBoPr FIRMWARE_URL:n/a PROTOCOL_VERSION:1.0 MACHINE_TYPE:Mendel EXTRUDER_COUNT:%d TEMP_SENSOR_COUNT:%d HEATER_COUNT:%d", 1, 2, 2);
+				printf( "FIRMWARE_NAME: BeBoPr FIRMWARE_URL:https//github.com/modmaker/BeBoPr/ PROTOCOL_VERSION:1.0 MACHINE_TYPE:Mendel EXTRUDER_COUNT:%d TEMP_SENSOR_COUNT:%d HEATER_COUNT:%d", 1, 2, 2);
 				// newline is sent from gcode_parse after we return
 				break;
 			// M116 - Wait for all temperatures and other slowly-changing variables to arrive at their set values.
