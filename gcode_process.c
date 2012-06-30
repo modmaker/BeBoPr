@@ -928,7 +928,7 @@ int gcode_process_init( void)
 	    tag_name( heater_extruder), tag_name( heater_bed),
 	    tag_name( temp_extruder), tag_name( temp_bed));
   }
-  if (heater_extruder == NULL || heater_bed == NULL || temp_extruder == NULL || temp_bed == NULL) {
+  if (heater_extruder == NULL || temp_extruder == NULL) {
     return -1;
   }
   return 0;

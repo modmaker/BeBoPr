@@ -24,11 +24,10 @@
 #define PWM_PATH_PREFIX "/sys/class/pwm/"
 
 /*
- * Note, for the easy of implementation, the string addresses are used.
+ * Note, for the ease of implementation, the string addresses are used.
  * This means one cannot use identical strings, but must use pointers
  * to the one and only string!
  */
-//#define GENERATE_TAG( name) static const char name[] = #name
 #define GENERATE_TAG( name) static const char name[] = #name
 GENERATE_TAG( bed_thermistor);
 GENERATE_TAG( extruder_thermistor);
