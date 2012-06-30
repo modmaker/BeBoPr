@@ -416,13 +416,13 @@ int traject_init( void)
   step_size_e = config_get_step_size( e_axis);
 
   if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
-	  printf( "  step: X = %9.3lf, Y = %9.3lf, Z = %9.3lf, E = %9.3lf [um]\n",
-		  SI2UM( step_size_x), SI2UM( step_size_y), SI2UM( step_size_z), SI2UM( step_size_e)); 
-	  printf( "  amax: X = %9.3lf, Y = %9.3lf, Z = %9.3lf, E = %9.3lf [mm/s^2]\n",
-		  SI2MM( RECIPR( recipr_a_max_x)), SI2MM( RECIPR( recipr_a_max_y)),
-		  SI2MM( RECIPR( recipr_a_max_z)), SI2MM( RECIPR( recipr_a_max_e)));
-	  printf( "  vmax: X = %9.3lf, Y = %9.3lf, Z = %9.3lf, E = %9.3lf [mm/s]\n",
-		  SI2MM( vx_max), SI2MM( vy_max), SI2MM( vz_max), SI2MM( ve_max)); 
+    printf( "  step: X = %9.3lf, Y = %9.3lf, Z = %9.3lf, E = %9.3lf [um]\n",
+	    SI2UM( step_size_x), SI2UM( step_size_y), SI2UM( step_size_z), SI2UM( step_size_e)); 
+    printf( "  amax: X = %9.3lf, Y = %9.3lf, Z = %9.3lf, E = %9.3lf [mm/s^2]\n",
+	    SI2MM( RECIPR( recipr_a_max_x)), SI2MM( RECIPR( recipr_a_max_y)),
+	    SI2MM( RECIPR( recipr_a_max_z)), SI2MM( RECIPR( recipr_a_max_e)));
+    printf( "  vmax: X = %9.3lf, Y = %9.3lf, Z = %9.3lf, E = %9.3lf [mm/s]\n",
+	    SI2MM( vx_max), SI2MM( vy_max), SI2MM( vz_max), SI2MM( ve_max)); 
   }
   /*
    *  Configure PRUSS and propagate stepper configuration
