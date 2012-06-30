@@ -68,6 +68,7 @@ static void* comm_thread( void* arg)
    * flushes stdout with each timeout.
    */
   while (1) {
+    int prescaler = 0;
     /* wait for event */
     int rc = poll( fds, (eof_on_input) ? 2 : 4, timeout);
 #if LL_DEBUG
@@ -81,7 +82,6 @@ static void* comm_thread( void* arg)
       break;
     } else if (rc == 0 || (rc < 0 && errno == EINTR)) {
       // timeout, send dummy character to keep connection alive
-      static int prescaler = 0;
       if (++prescaler > keep_alive_timeout / timeout) {
         printf( "%c", 0);
         if (DEBUG_COMM && (debug_flags & DEBUG_COMM)) {
@@ -177,6 +177,7 @@ static void* comm_thread( void* arg)
             output_pending = 0;
             fds[ e_stdout_writeside].events = 0;
             fds[ e_stdout_readside].events = POLLIN;
+            prescaler = 0;	// output acts as keep-alive!
           }
         }
       } else if (events) {
