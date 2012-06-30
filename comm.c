@@ -83,7 +83,7 @@ static void* comm_thread( void* arg)
       // timeout, send dummy character to keep connection alive
       static int prescaler = 0;
       if (++prescaler > keep_alive_timeout / timeout) {
-        printf( "%c", 255);
+        printf( "%c", 0);
         if (DEBUG_COMM && (debug_flags & DEBUG_COMM)) {
           fprintf( stderr, "<KEEP ALIVE SENT>");
         }
@@ -234,7 +234,7 @@ int comm_init( void)
     return -1;
   }
   if (DEBUG_COMM && (debug_flags & DEBUG_COMM)) {
-    fprintf( stderr, "input pipe created:  output/read side fd = %d, input/write side fd = %d\n", fds[ 0], fds[ 1]);
+    fprintf( stderr, "input  pipe: output/read side fd = %d, input/write side fd = %d\n", fds[ 0], fds[ 1]);
   }
   alt_stdin = fds[ 1];
 
