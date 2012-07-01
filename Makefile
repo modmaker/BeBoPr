@@ -142,7 +142,7 @@ install:	all
 # DO NOT DELETE THIS LINE -- make depend depends on it.
 analog.o: analog.c analog.h beaglebone.h mendel.h debug.h
 bebopr_r2.o: bebopr_r2.c analog.h beaglebone.h temp.h thermistor.h \
- bebopr.h heater.h pwm.h traject.h eeprom.h
+ bebopr.h heater.h pwm.h traject.h eeprom.h gpio.h
 debug.o: debug.c debug.h
 gcode_parse.o: gcode_parse.c gcode_parse.h debug.h gcode_process.h \
  bebopr.h

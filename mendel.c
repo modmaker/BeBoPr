@@ -72,7 +72,7 @@ int init( void)
     return result;
   }
   // configure
-  result = mendel_sub_init( "bebopr", bebopr_pre_init);
+  result = mendel_sub_init( "bebopr (early)", bebopr_pre_init);
   if (result != 0) {
     return result;
   }
@@ -88,6 +88,11 @@ int init( void)
   }
   // This initializes the complete analog subsystem!
   result = mendel_sub_init( "heater", heater_init);
+  if (result != 0) {
+    return result;
+  }
+  // enable i/o power
+  result = mendel_sub_init( "bebopr (late)", bebopr_post_init);
   if (result != 0) {
     return result;
   }
@@ -117,12 +122,12 @@ int mendel_thread_create( const char* name, pthread_t* restrict thread, const pt
 
 int mendel_sub_init( const char* name, int (*subsys)( void))
 {
-  fprintf( stderr, "Starting %s_init() ...\n", name);
+  fprintf( stderr, "Starting '%s' init ...\n", name);
   int result = subsys();
   if (result != 0) {
-    fprintf( stderr, "... %s_init() failed with code %d\n", name, result);
+    fprintf( stderr, "... '%s' init failed with code %d\n", name, result);
   } else {
-    fprintf( stderr, "... %s_init() was successfull\n", name);
+    fprintf( stderr, "... '%s' init was successfull\n", name);
   }
   return result;
 }

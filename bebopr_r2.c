@@ -13,6 +13,7 @@
 #include "pwm.h"
 #include "traject.h"
 #include "eeprom.h"
+#include "gpio.h"
 
 /*
  * Here one defines where the kernel puts the analog inputs,
@@ -337,3 +338,28 @@ char config_keep_alive_char( void)
   return '\n';
 }
 
+
+/*
+ *  Late initialization enables I/O power.
+ */
+int bebopr_post_init( void)
+{
+  int result = -1;
+
+  /*
+   *  IO_PWR_ON  = R9 / GPIO1[6] / gpio38 /  gpmc_ad6
+   *  !IO_PWR_ON = R8 / GPIO1[2] / gpio34 /  gpmc_ad2
+   */
+  gpio_write_int_value_to_file( "export", 38);
+  gpio_write_value_to_pin_file( 38, "direction", "out");
+  gpio_write_value_to_pin_file( 38, "value", "1");
+
+  gpio_write_int_value_to_file( "export", 34);
+  gpio_write_value_to_pin_file( 34, "direction", "out");
+  gpio_write_value_to_pin_file( 34, "value", "0");
+
+  fprintf( stderr, "Turned BEBOPR I/O power on\n");
+  result = 0;
+
+  return result;
+}
