@@ -113,15 +113,19 @@ int map_device( const char* uio_name)
   // provide the maps in the wrong order.
   for (map_nr = 0 ; map_nr < MAX_UIO_MAPS ; ++map_nr) {
     DIR* dir = opendir( path);
-    if (debug && debug_level > 2) {
-      printf( "  opendir( '%s') returned %d, errno = %d\n", path, (int)dir, errno);
-    }
     if (dir == NULL) {
+      if (debug && debug_level > 2) {
+        printf( "  opendir( '%s') failed, errno = %d\n", path, errno);
+      }
       if (errno == ENOENT) {
 	break;	// done
       } else {
 	perror( "  Cannot open map directory");
 	exit( 1);
+      }
+    } else {
+      if (debug && debug_level > 2) {
+        printf( "  opendir( '%s') returned %d\n", path, (int)dir);
       }
     }
     closedir( dir);
@@ -263,13 +267,21 @@ int locate_pruss_device( const char* driver_name, char* drv_name, int drv_name_l
   DIR* dir;
   struct dirent* de;
   int  found = 0;
+
   // for each driver instance of type 'driver_name', scan all subdirs of
   // /sys/bus/platform/devices/<driver_name>.<instance>/uio/
   snprintf( buffer, sizeof( buffer), "/sys/bus/platform/drivers/%s", driver_name);
   dir = opendir( buffer);
   if (dir <= 0) {
-    perror( "Platform driver not found");
-    exit( 1);
+    printf( "module '%s' is not loaded, trying to load it...\n", driver_name);
+    system( "/sbin/modprobe uio_pruss");
+    // FIXME: find proper solution: mmap later on will fail if we don't delay here
+    system( "sleep 1");
+    dir = opendir( buffer);
+    if (dir <= 0) {
+      perror( "Platform driver not found");
+      exit( 1);
+    }
   }
   for (de = readdir( dir) ; de ; de = readdir( dir)) {
     if (de < 0) {
