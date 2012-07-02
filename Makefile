@@ -130,9 +130,9 @@ depend:
 	fi
 
 install:	all
-	@echo "  INSTALLING '$(PROGRAM)' TO '$(TARGET_ROOT_DIR)'"
-	@if [ -n "$(TARGET_ROOT_DIR)" ] ; then \
-		sudo cp $(PROGRAM).elf $(TARGET_ROOT_DIR)/home/root/ ; \
+	@echo "  INSTALLING '$(PROGRAM)' TO '$(TARGET_DIR)'"
+	@if [ -n "$(TARGET_DIR)" ] ; then \
+		sudo cp $(PROGRAM).elf $(TARGET_DIR)/ ; \
 	else \
 		echo "INSTALL: no destination specified" ; \
 	fi
