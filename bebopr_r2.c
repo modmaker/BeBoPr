@@ -70,7 +70,7 @@ static const temp_config_record temp_config_data[] = {
     .tag                = temp_bed,
     .source		= bed_thermistor,
     .in_range_time	= 5000,
-    .conversion		= bone_thermistor_100k,
+    .conversion		= bone_bed_thermistor_330k,
   },
 };
 
@@ -88,7 +88,7 @@ static const pwm_config_record pwm_config_data[] = {
   {
     .tag		= pwm_bed,
     .device_path	= PWM_PATH_PREFIX "ehrpwm.1:0",	// BEBOPR_R2_J4 - PWM2
-    .frequency		= 1000,
+    .frequency		= 10,
   },
 };
 
@@ -113,7 +113,7 @@ static const heater_config_record heater_config_data[] = {
     .pid =
     {
 	    .K = 0.0,
-	    .P = 1.0,
+	    .P = 10.0,
 	    .I = 0.0,
 	    .D = 0.0,
 	    .I_limit = 0.0,

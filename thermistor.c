@@ -104,6 +104,43 @@ static const struct conversion_entry epcos_b5760g104f[] = {
   {  203, 300.0 },
 };
 
+/*
+ * Calibration table derived from calculated transfer function
+ * with measured values from a recycled 330kOhm oven thermistor
+ * and the BeBoPr Cape schematics.
+ */
+static const struct conversion_entry my_330k_bed_thermistor[] = {
+{ 3619, 21.0 },
+{ 3601, 35.0 },
+{ 3597, 37.0 },
+{ 3571, 47.0 },
+{ 3546, 54.0 },
+{ 3534, 57.0 },
+{ 3519, 60.0 },
+{ 3485, 66.0 },
+{ 3452, 71.0 },
+{ 3412, 76.0 },
+{ 3393, 78.4 },
+{ 3375, 80.4 },
+{ 3357, 82.1 },
+{ 3342, 83.7 },
+{ 3328, 85.2 },
+// the following values are not measured but extrapolated from an exponential fit
+{ 3240, 90.0 },
+{ 3157, 95.0 },
+{ 3061, 100.0 },
+{ 2949, 105.0 },
+{ 2822, 110.0 },
+{ 2678, 115.0 },
+{ 2520, 120.0 },
+{ 2348, 125.0 },
+{ 2165, 130.0 },
+{ 1975, 135.0 },
+{ 1782, 140.0 },
+{ 1589, 145.0 },
+{ 1401, 150.0 },
+};
+
 static int convert_using_table( const struct conversion_entry* table, int entries, int adc, double* celsius)
 {
   // TODO: implement short to GND and short to +12V detection
@@ -150,4 +187,9 @@ int bone_thermistor_100k( int adc, double* celsius)
 int bone_epcos_b5760g104f( int adc, double* celsius)
 {
   return convert_using_table( epcos_b5760g104f, NR_ITEMS( epcos_b5760g104f), adc, celsius);
+}
+
+int bone_bed_thermistor_330k( int adc, double* celsius)
+{
+  return convert_using_table( my_330k_bed_thermistor, NR_ITEMS( my_330k_bed_thermistor), adc, celsius);
 }
