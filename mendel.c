@@ -54,7 +54,7 @@ static int arm_init( void)
 static void signal_handler( int signal)
 {
   fprintf( stderr, "Terminating on signal %d\n", signal);
-  exit( 0);
+  exit( EXIT_SUCCESS);
 }
 
 /// Startup code, run when we come out of reset
@@ -151,7 +151,7 @@ int main (void)
 
     if (fgets( s, sizeof( s), stdin) == NULL) {
       fprintf( stderr, "main loop - EOF on input, terminating.\n");
-      exit( 0);
+      exit( EXIT_SUCCESS);
     } else {
       char* p = s;
       while (*p) {

@@ -121,7 +121,7 @@ int map_device( const char* uio_name)
 	break;	// done
       } else {
 	perror( "  Cannot open map directory");
-	exit( 1);
+	exit( EXIT_FAILURE);
       }
     } else {
       if (debug && debug_level > 2) {
@@ -176,7 +176,7 @@ int locate_pruss_device_l4( const char* path, const char* device_name)
   int count = read( fd, buffer, sizeof( buffer));
   if (count < 0) {
     perror( "Reading 'name' file failed");
-    exit( 1);	
+    exit( EXIT_FAILURE);	
   }
   if (count >= 1 && buffer[ count - 1] == '\n') {
     --count;	// setup to remove newline
@@ -203,12 +203,12 @@ static int locate_pruss_device_l3( const char* path, const char* device_name)
   dir = opendir( buffer);
   if (dir <= 0) {
     perror( "Platform UIO device not found");
-    exit( 1);
+    exit( EXIT_FAILURE);
   }
   for (de = readdir( dir) ; de ; de = readdir( dir)) {
     if (de < 0) {
       perror( "Problem reading directory");
-      exit( 1);
+      exit( EXIT_FAILURE);
     }
     // find the 'name' entry with the proper contents
     if (strcmp( "name", de->d_name) == 0) {
@@ -236,12 +236,12 @@ static int locate_pruss_device_l2( const char* device_name, char* uio_name, int 
   dir = opendir( buffer);
   if (dir <= 0) {
     perror( "Platform device not found");
-    exit( 1);
+    exit( EXIT_FAILURE);
   }
   for (de = readdir( dir) ; de ; de = readdir( dir)) {
     if (de < 0) {
       perror( "Problem reading directory");
-      exit( 1);
+      exit( EXIT_FAILURE);
     }
     // find entries that are instances of the uio device
     if (strncmp( uio_dev_name, de->d_name, strlen( uio_dev_name)) == 0) {
@@ -280,13 +280,13 @@ int locate_pruss_device( const char* driver_name, char* drv_name, int drv_name_l
     dir = opendir( buffer);
     if (dir <= 0) {
       perror( "Platform driver not found");
-      exit( 1);
+      exit( EXIT_FAILURE);
     }
   }
   for (de = readdir( dir) ; de ; de = readdir( dir)) {
     if (de < 0) {
       perror( "Problem reading directory");
-      exit( 1);
+      exit( EXIT_FAILURE);
     }
     if (debug && debug_level > 3) {
       printf( "found driver device file '%s'\n", de->d_name);

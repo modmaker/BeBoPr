@@ -174,7 +174,7 @@ static int pruss_ecap_init( void)
 
   if (eCapId != 0x44d22100) {
     printf( "*** ERROR: invalid eCapId! Found 0x%08x, should be 0x44d22100\n", eCapId);
-    exit( 1);
+    exit( EXIT_FAILURE);
   }
   // Stop counter
   pruss_wr16( PRUSS_ECAP0_OFFSET + O_ECCTL2, (1 << 9) | (1 << 7) | (0 << 4));
@@ -190,7 +190,7 @@ static int pruss_ecap_init( void)
   pruss_wr16( PRUSS_ECAP0_OFFSET + O_ECCLR, (1 << 6));
   if (pruss_rd16( PRUSS_ECAP0_OFFSET + O_ECFLG) & (1 << 6)) {
     printf( "*** WARNING: could not clear eCAP0 interrupt\n");
-    exit( 1);
+    exit( EXIT_FAILURE);
   }
   // Start counter in APWM mode
   pruss_wr16( PRUSS_ECAP0_OFFSET + O_ECCTL2, (1 << 9) | (1 << 7) | (1 << 4));
@@ -222,7 +222,7 @@ int pruss_stepper_init( void)
     }
   } else {
     if (signature.ucode_magic == UCODE_MAGIC) {
-      // This is stepper code, must be a incompatible version
+      // This is stepper code, must be an incompatible version
       fprintf( stderr, "ERROR: the code in file '%s' (version %d.%d) is not compatible with this version %d.x!\n",
 	      UCODENAME, signature.fw_version, signature.fw_revision, FW_VERSION);
     } else {
@@ -558,8 +558,7 @@ int pruss_queue_execute( void)
   if (pruss_is_halted()) {
     fprintf( stderr, "FATAL: PRUSS found halted when queueing execute command\n");
     pruss_stepper_dump_state();
-    exit( 1);
-    return -1;
+    exit( EXIT_FAILURE);
   }
   //  fprintf( stderr, "pruss_queue_execute(): free buffers = %d\n",
   //	   pruss_get_nr_of_free_buffers());
