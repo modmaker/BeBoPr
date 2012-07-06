@@ -374,11 +374,15 @@ void process_gcode_command() {
 
 
 			// G255 - Dump PRUSS state
-                        case 255:
+			case 255:
 				// === G255: Dump PRUSS state ====
-                                traject_wait_for_completion();
-                                pruss_stepper_dump_state();
-                                break;
+				// The (optional) parameter S0, will disable waiting
+				// for the current command to complete, before dumping.
+				if (!next_target.seen_S || next_target.S != 0) {
+				  traject_wait_for_completion();
+				}
+				pruss_stepper_dump_state();
+				break;
 
 				// unknown gcode: spit an error
 			default:
