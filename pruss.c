@@ -580,26 +580,28 @@ int pruss_stop_pruss( void)
 void pruss_start_pruss( void)
 {
   uint32_t pruss_ctrl;
-  uint32_t cycle_counter;
-retry:
+  int retries = 1;
   pruss_ctrl = pruss_rd32( PRUSS_PRU_CTRL_CONTROL);
-  if ((pruss_ctrl & PRUSS_PRU_CTRL_CONTROL_RUNSTATE) == 0) {
-    cycle_counter = pruss_rd32( PRUSS_PRU_CTRL_CYCLE);
-    // Keep reset PC and nreset
-    pruss_ctrl = (pruss_ctrl & 0xFFFF0001) |
-	    PRUSS_PRU_CTRL_CONTROL_COUNTER_ENABLE | PRUSS_PRU_CTRL_CONTROL_ENABLE;
-    pruss_wr32( PRUSS_PRU_CTRL_CONTROL, pruss_ctrl);
-  }
-  if ((pruss_rd32( PRUSS_PRU_CTRL_CONTROL) & PRUSS_PRU_CTRL_CONTROL_RUNSTATE) == 0) {
-    if (cycle_counter == pruss_rd32( PRUSS_PRU_CTRL_CYCLE)) {
-      fprintf( stderr, "PRUSS wouldn't start, retrying!\n");
-      goto retry;
-    } else {
-      if (debug_flags & DEBUG_PRUSS) {
-        printf( "PRUSS was started, but then halted again\n");
+  do {
+    if ((pruss_ctrl & PRUSS_PRU_CTRL_CONTROL_RUNSTATE) == 0) {
+      // Keep reset PC, counter enable and #reset bits, assert pruss (run) enable
+      pruss_ctrl &= (0xFFFF << 16) | PRUSS_PRU_CTRL_CONTROL_NRESET | PRUSS_PRU_CTRL_CONTROL_COUNTER_ENABLE;
+      pruss_ctrl |= PRUSS_PRU_CTRL_CONTROL_ENABLE;
+      pruss_wr32( PRUSS_PRU_CTRL_CONTROL, pruss_ctrl);
+    }
+    pruss_ctrl = pruss_rd32( PRUSS_PRU_CTRL_CONTROL);
+    if ((pruss_ctrl & PRUSS_PRU_CTRL_CONTROL_RUNSTATE) == 0) {
+      uint16_t pc = pruss_rd16( PRUSS_PRU_CTRL_STATUS);
+      uint32_t opcode = pruss_rd32( PRUSS_IRAM_OFFSET + 4 * pc);
+      if (opcode == 0x2a000000) { /* HALT */
+        if (debug_flags & DEBUG_PRUSS) {
+          printf( "PRUSS might have been started, but is now found executing a HALT instruction\n");
+        }
+      } else {
+        fprintf( stderr, "PRUSS didn't start properly, opcode 0x%08x found at PC=%d!\n", opcode, pc);
       }
     }
-  }
+  } while (retries-- > 0 && (pruss_ctrl & PRUSS_PRU_CTRL_CONTROL_RUNSTATE) == 0);
 }
 
 /*
