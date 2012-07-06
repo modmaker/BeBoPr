@@ -602,6 +602,10 @@ retry:
   }
 }
 
+/*
+ * Dump PRUSS state (if needed, halt PRUSS first).
+ * Exit with PRUSS halted, return original running state.
+ */
 int pruss_dump_state( void)
 {
   int i;
@@ -629,9 +633,5 @@ int pruss_dump_state( void)
   printf( "Number of PRUSS cycles = %u, stall count = %u\n",
 	  pruss_rd32( PRUSS_PRU_CTRL_CYCLE), pruss_rd32( PRUSS_PRU_CTRL_STALL));
 
-  if (pruss_ena) {
-    pruss_start_pruss();
-    printf( "PRUSS is enabled again\n");
-  }
-  return 0;
+  return pruss_ena;
 }

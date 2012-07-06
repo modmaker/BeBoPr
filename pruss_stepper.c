@@ -275,7 +275,7 @@ int pruss_stepper_dump_state( void)
 {
   int i;
 
-  pruss_dump_state();
+  int pruss_ena = pruss_dump_state();
 
   /*
    *  Dump and interpreted contents of shared memory.
@@ -347,7 +347,10 @@ int pruss_stepper_dump_state( void)
     DUMP_LINE( "accelCount .",       32, 40, "%14u");
     DUMP_LINE( "dividend .",         32, 44, "%14u");
   }
-
+  if (pruss_ena) {
+    pruss_start_pruss();
+    printf( "PRUSS is resuming execution (enabled)\n");
+  }
   return 0;
 }
 
