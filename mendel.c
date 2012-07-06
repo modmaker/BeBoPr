@@ -101,8 +101,6 @@ int init( void)
   if (result != 0) {
     return result;
   }
-  // say hi to host
-  printf( "start\nok\n");
   return 0;
 }
 
@@ -144,6 +142,8 @@ int main (void)
     exit( EXIT_FAILURE);
   }
 
+  // say hi to host
+  printf( "start\nok\n");
   fprintf( stderr, "Starting main loop...\n");
 
   for (;;) {
