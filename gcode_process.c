@@ -30,7 +30,6 @@ static uint8_t next_tool;
 /// variable that holds the idea of 'current position' for the gcode interpreter.
 /// the actual machine position will probably lag!
 static TARGET gcode_current_pos;
-static TARGET gcode_home_pos;
 
 /*
  * Local copy of channel tags to prevent a lookup with each access.
@@ -46,12 +45,13 @@ static channel_tag temp_bed = NULL;
 void gcode_set_axis_pos( axis_e axis, int32_t pos)
 {
   switch (axis) {
-  case x_axis: gcode_current_pos.X = gcode_home_pos.X = pos; break;
-  case y_axis: gcode_current_pos.Y = gcode_home_pos.Y = pos; break;
-  case z_axis: gcode_current_pos.Z = gcode_home_pos.Z = pos; break;
-  case e_axis: gcode_current_pos.E = gcode_home_pos.E = pos; break;
+  case x_axis: gcode_current_pos.X = pos; break;
+  case y_axis: gcode_current_pos.Y = pos; break;
+  case z_axis: gcode_current_pos.Z = pos; break;
+  case e_axis: gcode_current_pos.E = pos; break;
   default: break;
   }
+  printf( "Setting current position for axis %d to %d\n", axis, pos);
 }
 
 /*
@@ -83,7 +83,7 @@ static void enqueue_pos( TARGET* target)
        * overflow because it is mostly moving in one direction.)
        * This requires special handling here.
        */
-      target->E = gcode_home_pos.E;
+      target->E = 0;
     }
     memcpy( &gcode_current_pos, target, sizeof( TARGET));
   }
@@ -323,27 +323,26 @@ void process_gcode_command() {
 				traject_wait_for_completion();
 
 				if (next_target.seen_X) {
-					gcode_current_pos.X = gcode_home_pos.X = next_target.target.X;
+					gcode_current_pos.X = next_target.target.X;
 					axisSelected = 1;
 				}
 				if (next_target.seen_Y) {
-					gcode_current_pos.Y = gcode_home_pos.Y = next_target.target.Y;
+					gcode_current_pos.Y = next_target.target.Y;
 					axisSelected = 1;
 				}
 				if (next_target.seen_Z) {
-					gcode_current_pos.Z = gcode_home_pos.Z = next_target.target.Z;
+					gcode_current_pos.Z = next_target.target.Z;
 					axisSelected = 1;
 				}
 				if (next_target.seen_E) {
-					gcode_current_pos.E = gcode_home_pos.E = next_target.target.E;
+					gcode_current_pos.E = next_target.target.E;
 					axisSelected = 1;
 				}
-
 				if (axisSelected == 0) {
-					gcode_current_pos.X = gcode_home_pos.X = next_target.target.X =
-					gcode_current_pos.Y = gcode_home_pos.Y = next_target.target.Y =
-					gcode_current_pos.Z = gcode_home_pos.Z = next_target.target.Z =
-					gcode_current_pos.E = gcode_home_pos.E = next_target.target.E = 0;
+					gcode_current_pos.X = next_target.target.X = 0;
+					gcode_current_pos.Y = next_target.target.Y = 0;
+					gcode_current_pos.Z = next_target.target.Z = 0;
+					gcode_current_pos.E = next_target.target.E = 0;
 				}
 				break;
 
