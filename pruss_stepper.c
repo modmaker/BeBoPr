@@ -50,7 +50,7 @@ typedef struct {
   unsigned int	stepCycle	: 32;
 } SetAccelStruct;
 
-// CMD_AXIS_ACCEL
+// CMD_AXIS_RAMP_UP
 typedef struct {
   unsigned int			: 24;
   unsigned int	command		:  4;
@@ -60,7 +60,7 @@ typedef struct {
   unsigned int	stepCycle	: 32;
 } AccelStruct;
 
-// CMD_AXIS_DECEL
+// CMD_AXIS_RAMP_DOWN
 typedef struct {
   unsigned int			: 24;
   unsigned int	command		:  4;
@@ -80,7 +80,7 @@ typedef struct {
   unsigned int	stepCycle	: 32;
 } DwellStruct;
 
-// CMD_AXIS_SET_PULSE
+// CMD_AXIS_SET_PULSE_LENGTH
 typedef struct {
   unsigned int	duration	: 24;
   unsigned int	command		:  4;
@@ -278,7 +278,7 @@ int pruss_stepper_dump_state( void)
   int pruss_ena = pruss_dump_state();
 
   /*
-   *  Dump and interpreted contents of shared memory.
+   *  Dump contents of shared memory.
    *  The pruss needn't be halted to do this, but if not, memory could change!
    */
   unsigned int ret = pruss_rd16( PRUSS_DBG_OFFSET + 4 * 2);		// R2.w0
