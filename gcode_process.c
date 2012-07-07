@@ -40,6 +40,13 @@ static channel_tag temp_extruder = NULL;
 static channel_tag temp_bed = NULL;
 
 /*
+ * Store the allowed stroke for each axis.
+ */
+static int32_t x_range;
+static int32_t y_range;
+static int32_t z_range;
+
+/*
  *  public interface to set positions from homing code.
  */
 void gcode_set_axis_pos( axis_e axis, int32_t pos)
@@ -923,6 +930,10 @@ void process_gcode_command() {
 
 int gcode_process_init( void)
 {
+  x_range = (int32_t) (0.5 + MM2POS( config_axis_get_max_pos( x_axis) - config_axis_get_min_pos( x_axis)));
+  y_range = (int32_t) (0.5 + MM2POS( config_axis_get_max_pos( y_axis) - config_axis_get_min_pos( y_axis)));
+  z_range = (int32_t) (0.5 + MM2POS( config_axis_get_max_pos( z_axis) - config_axis_get_min_pos( z_axis)));
+
   int result = mendel_sub_init( "traject", traject_init);
   if (result != 0) {
     return result;
