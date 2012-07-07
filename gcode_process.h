@@ -8,7 +8,7 @@
 // when we have a whole line, feed it to this
 extern void process_gcode_command( void);
 extern void gcode_trace_move( void);
-extern void gcode_set_axis_pos( axis_e axis, uint32_t pos);
+extern void gcode_set_axis_pos( axis_e axis, int32_t pos);
 extern int gcode_process_init( void);
 
 #endif	/* _GCODE_PROCESS_H */

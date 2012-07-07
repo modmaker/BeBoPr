@@ -43,7 +43,7 @@ static channel_tag temp_bed = NULL;
 /*
  *  public interface to set positions from homing code.
  */
-void gcode_set_axis_pos( axis_e axis, uint32_t pos)
+void gcode_set_axis_pos( axis_e axis, int32_t pos)
 {
   switch (axis) {
   case x_axis: gcode_current_pos.X = gcode_home_pos.X = pos; break;
@@ -65,7 +65,7 @@ static void enqueue_pos( TARGET* target)
       printf( "enqueue_pos( TARGET={%d, %d, %d, %d, %u})\n",
 	       target->X, target->Y, target->Z, target->E, target->F);
     }
-    /* integer positions are in nm ! */ 
+    /* integer positions are in nm, convert to SI units ! */ 
     traject5D traj = {
       .dx = (double)1.0E-9 * (target->X - gcode_current_pos.X),
       .dy = (double)1.0E-9 * (target->Y - gcode_current_pos.Y),
@@ -79,7 +79,7 @@ static void enqueue_pos( TARGET* target)
     if (config_e_axis_is_always_relative()) {
       /*
        * For a 3D printer, an E-axis coordinate is often a relative setting,
-       * independant of the absolute or relative mode. (This way it doesn't
+       * independent of the absolute or relative mode. (This way it doesn't
        * overflow because it is mostly moving in one direction.)
        * This requires special handling here.
        */

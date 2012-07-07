@@ -130,34 +130,38 @@ static void home_one_axis( axis_e axis, int reverse, uint32_t feed)
   pthread_setschedparam( self, old_scheduler, &old_param); 
 }
 
-/// find MIN endstop for an axis
-void home_axis_to_min_limit_switch( axis_e axis, double feed) {
+/// Run to MIN endstop for an axis.
+/// At that point, set the current position to MIN axis limit.
+void home_axis_to_min_limit_switch( axis_e axis, double feed)
+{
   if (config_axis_has_min_limit_switch( axis)) {
     double max_feed = config_get_max_feed( axis);
     if (feed > max_feed) {
       feed = max_feed;
     }
     home_one_axis( axis, 1 /* reverse */, feed);
-    // reference 'home' position to current position
-    gcode_set_axis_pos( axis, config_axis_get_min_pos( axis));
+    // set current printhead position as specified by limit switch position
+    gcode_set_axis_pos( axis, MM2POS( config_axis_get_min_limsw_pos( axis)));
   } else {
-    // reference current position as 'home'
-    gcode_set_axis_pos( axis, 0);
+    // set current printhead position as minimum position
+    gcode_set_axis_pos( axis, MM2POS( config_axis_get_min_pos( axis)));
   }
 }
 
-/// find MAX endstop for an axis
-void home_axis_to_max_limit_switch( axis_e axis, double feed) {
+/// Run to MAX endstop for an axis.
+/// At that point, set the current position to MAX axis limit.
+void home_axis_to_max_limit_switch( axis_e axis, double feed)
+{
   if (config_axis_has_max_limit_switch( axis)) {
     double max_feed = config_get_max_feed( axis);
     if (feed > max_feed) {
       feed = max_feed;
     }
     home_one_axis( axis, 0 /* forward */, feed);
-    // reference 'home' position to current position
-    gcode_set_axis_pos( axis, config_axis_get_max_pos( axis));
+    // set current printhead position as specified by limit switch position
+    gcode_set_axis_pos( axis, MM2POS( config_axis_get_max_limsw_pos( axis)));
   } else {
-    // reference current position as 'home'
-    gcode_set_axis_pos( axis, 0);
+    // set current printhead position as maximum position
+    gcode_set_axis_pos( axis, MM2POS( config_axis_get_max_pos( axis)));
   }
 }
