@@ -598,7 +598,7 @@ void pruss_start_pruss( void)
           printf( "PRUSS might have been started, but is now found executing a HALT instruction\n");
         }
       } else {
-        fprintf( stderr, "PRUSS didn't start properly, opcode 0x%08x found at PC=%d!\n", opcode, pc);
+        fprintf( stderr, "PRUSS didn't start properly, opcode 0x%08x found at PC=0x%03x!\n", opcode, pc);
       }
     }
   } while (retries-- > 0 && (pruss_ctrl & PRUSS_PRU_CTRL_CONTROL_RUNSTATE) == 0);
@@ -632,8 +632,5 @@ int pruss_dump_state( void)
       printf( "\n");
     }
   }
-  printf( "Number of PRUSS cycles = %u, stall count = %u\n",
-	  pruss_rd32( PRUSS_PRU_CTRL_CYCLE), pruss_rd32( PRUSS_PRU_CTRL_STALL));
-
   return pruss_ena;
 }
