@@ -49,7 +49,7 @@
 #define PRUSS_PRU_CTRL_CTPPR1           (PRUSS_CTL_OFFSET + 44)
 
 #define PRUSS_PRU_CTRL_CONTROL_RUNSTATE         (1 << 15)
-#define PRUSS_PRU_CTRL_CONTROL_NRESET           (1 <<  1)
+#define PRUSS_PRU_CTRL_CONTROL_NRESET           (1 <<  0)
 #define PRUSS_PRU_CTRL_CONTROL_ENABLE           (1 <<  1)
 #define PRUSS_PRU_CTRL_CONTROL_COUNTER_ENABLE   (1 <<  3)
 
