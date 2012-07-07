@@ -112,51 +112,51 @@ void process_gcode_command() {
 	}
 	// implement axis limits
 	if (config_axis_has_min_limit_switch( x_axis)) {
-		double x_min = config_axis_get_min_pos( x_axis);
-		if (next_target.target.X < MM2POS( x_min)) {
+		int32_t x_min = (int32_t) (MM2POS( config_axis_get_min_pos( x_axis)) + 0.5);
+		if (next_target.target.X < x_min) {
 			printf( "WARNING: Limiting target.X (%d) to X_MIN (%d)\n",
-				next_target.target.X, MM2POS( x_min));
-			next_target.target.X = MM2POS( x_min);
+				next_target.target.X, x_min);
+			next_target.target.X = x_min;
 		}	
 	}
 	if (config_axis_has_max_limit_switch( x_axis)) {
-		double x_max = config_axis_get_max_pos( x_axis);
-		if (next_target.target.X > MM2POS( x_max)) {
+		int32_t x_max = (int32_t) (MM2POS( config_axis_get_max_pos( x_axis)) + 0.5);
+		if (next_target.target.X > x_max) {
 			printf( "WARNING: Limiting target.X (%d) to X_MAX (%d)\n",
-				next_target.target.X, MM2POS( x_max));
-			next_target.target.X = MM2POS( x_max);
+				next_target.target.X, x_max);
+			next_target.target.X = x_max;
 		}
 	}
 	if (config_axis_has_min_limit_switch( y_axis)) {
-		double y_min = config_axis_get_min_pos( y_axis);
-		if (next_target.target.Y < MM2POS( y_min)) {
+		int32_t y_min = (int32_t) (MM2POS( config_axis_get_min_pos( y_axis)) + 0.5);
+		if (next_target.target.Y < y_min) {
 			printf( "WARNING: Limiting target.Y (%d) to Y_MIN (%d)\n",
-				next_target.target.Y, MM2POS( y_min));
-			next_target.target.Y = MM2POS( y_min);
+				next_target.target.Y, y_min);
+			next_target.target.Y = y_min;
 		}
 	}
 	if (config_axis_has_max_limit_switch( y_axis)) {
-		double y_max = config_axis_get_max_pos( y_axis);
-		if (next_target.target.Y > MM2POS( y_max)) {
+		int32_t y_max = (int32_t) (MM2POS( config_axis_get_max_pos( y_axis)) + 0.5);
+		if (next_target.target.Y > y_max) {
 			printf( "WARNING: Limiting target.Y (%d) to Y_MAX (%d)\n",
-				next_target.target.Y, MM2POS( y_max));
-			next_target.target.Y = MM2POS( y_max);
+				next_target.target.Y, y_max);
+			next_target.target.Y = y_max;
 		}
 	}
 	if (config_axis_has_min_limit_switch( z_axis)) {
-		double z_min = config_axis_get_min_pos( z_axis);
-		if (next_target.target.Z < MM2POS( z_min)) {
+		int32_t z_min = (int32_t) (MM2POS( config_axis_get_min_pos( z_axis)) + 0.5);
+		if (next_target.target.Z < z_min) {
 			printf( "WARNING: Limiting target.Z (%d) to Z_MIN (%d)\n",
-				next_target.target.Z, MM2POS( z_min));
-			next_target.target.Z = MM2POS( z_min);
+				next_target.target.Z, z_min);
+			next_target.target.Z = z_min;
 		}
 	}
 	if (config_axis_has_max_limit_switch( z_axis)) {
-		double z_max = config_axis_get_max_pos( z_axis);
-		if (next_target.target.Z > MM2POS( z_max)) {
+		int32_t z_max = (int32_t) (MM2POS( config_axis_get_max_pos( z_axis)) + 0.5);
+		if (next_target.target.Z > z_max) {
 			printf( "WARNING: Limiting target.Z (%d) to Z_MAX (%d)\n",
-				next_target.target.Z, MM2POS( z_max));
-			next_target.target.Z = MM2POS( z_max);
+				next_target.target.Z, z_max);
+			next_target.target.Z = z_max;
 		}
 	}
 	// The GCode documentation was taken from http://reprap.org/wiki/Gcode .
