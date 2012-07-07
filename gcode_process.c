@@ -328,18 +328,22 @@ void process_gcode_command() {
 
 				if (next_target.seen_X) {
 					gcode_current_pos.X = next_target.target.X;
+					printf( "Setting X-axis current position to %d\n", gcode_current_pos.X);
 					axisSelected = 1;
 				}
 				if (next_target.seen_Y) {
 					gcode_current_pos.Y = next_target.target.Y;
+					printf( "Setting Y-axis current position to %d\n", gcode_current_pos.Y);
 					axisSelected = 1;
 				}
 				if (next_target.seen_Z) {
 					gcode_current_pos.Z = next_target.target.Z;
+					printf( "Setting Z-axis current position to %d\n", gcode_current_pos.Z);
 					axisSelected = 1;
 				}
 				if (next_target.seen_E) {
 					gcode_current_pos.E = next_target.target.E;
+					printf( "Setting E-axis current position to %d\n", gcode_current_pos.E);
 					axisSelected = 1;
 				}
 				if (axisSelected == 0) {
@@ -347,6 +351,10 @@ void process_gcode_command() {
 					gcode_current_pos.Y = next_target.target.Y = 0;
 					gcode_current_pos.Z = next_target.target.Z = 0;
 					gcode_current_pos.E = next_target.target.E = 0;
+					printf( "Setting X-axis current position to %d\n", gcode_current_pos.X);
+					printf( "Setting Y-axis current position to %d\n", gcode_current_pos.Y);
+					printf( "Setting Z-axis current position to %d\n", gcode_current_pos.Z);
+					printf( "Setting E-axis current position to %d\n", gcode_current_pos.E);
 				}
 				break;
 
