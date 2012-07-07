@@ -290,6 +290,18 @@ double config_axis_get_min_pos( axis_e axis)
   }
 }
 
+double config_axis_get_min_limsw_pos( axis_e axis)
+{
+  // TODO: Until properly implemented, return min pos.
+  return config_axis_get_min_pos( axis);
+}
+
+double config_axis_get_max_limsw_pos( axis_e axis)
+{
+  // TODO: Until properly implemented, return max pos.
+  return config_axis_get_max_pos( axis);
+}
+
 /*
  *  Specify the feed used during homing operations
  *  to release the home switch.

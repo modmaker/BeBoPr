@@ -33,6 +33,8 @@ extern int config_reverse_axis( axis_e axis);
 // these all return a hardware dimenstion
 extern double config_axis_get_min_pos( axis_e axis);
 extern double config_axis_get_max_pos( axis_e axis);
+extern double config_axis_get_min_limsw_pos( axis_e axis);
+extern double config_axis_get_max_limsw_pos( axis_e axis);
 extern double config_get_step_size( axis_e axis);
 
 // these all return physical limitations
