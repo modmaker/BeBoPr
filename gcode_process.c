@@ -110,6 +110,9 @@ void process_gcode_command() {
 		next_target.target.Z += gcode_current_pos.Z;
 		next_target.target.E += gcode_current_pos.E;
 	}
+
+	if (next_target.seen_G && next_target.G != 92 && next_target.G != 161 && next_target.G != 162) {
+
 	// implement axis limits
 	if (config_axis_has_min_limit_switch( x_axis)) {
 		int32_t x_min = (int32_t) (MM2POS( config_axis_get_min_pos( x_axis)) + 0.5);
@@ -158,6 +161,7 @@ void process_gcode_command() {
 				next_target.target.Z, z_max);
 			next_target.target.Z = z_max;
 		}
+	}
 	}
 	// The GCode documentation was taken from http://reprap.org/wiki/Gcode .
 
