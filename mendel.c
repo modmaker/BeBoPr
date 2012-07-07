@@ -130,6 +130,12 @@ int mendel_sub_init( const char* name, int (*subsys)( void))
   return result;
 }
 
+void mendel_exit( void)
+{
+  fprintf( stderr, "mendel_exit called, waiting for output buffers to be flushed\n");
+  usleep( 2 * 1000000);
+}
+
 /// this is where it all starts, and ends
 ///
 /// just run init() that starts all threads, then run an endless loop where we pass characters from the serial RX buffer to gcode_parse_char()
@@ -141,6 +147,8 @@ int main (void)
     fprintf( stderr, "Initialization failed, terminating.\n");
     exit( EXIT_FAILURE);
   }
+
+  atexit( mendel_exit);
 
   // say hi to host
   printf( "start\nok\n");
