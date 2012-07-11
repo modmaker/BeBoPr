@@ -21,7 +21,7 @@
  */
 #define VIRT_POS_MID_SCALE	0x80000000
 
-#define PRUSS_FIFO_LENGTH	8
+#define PRUSS_FIFO_LENGTH	16
 
 // Generic struct for access to 'command' field for all commands.
 typedef struct {
@@ -133,7 +133,7 @@ typedef struct {
 
 /* TODO: can we mmap an array of this struct directly onto SRAM ? */
 typedef union {
-  uint32_t		gen[ 3];
+  uint32_t		gen[ 4];
   CommandStruct		command;
   SetOriginStruct	set_origin;
   SetAccelStruct	set_accel;
@@ -242,7 +242,7 @@ int pruss_stepper_init( void)
   }
   pruss_wr8( IX_IN, ix_in);		// in
   pruss_wr8( IX_OUT, ix_out);		// out
-  pruss_wr16( IX_OUT + 1, 0xdeaf);	// filler
+//  pruss_wr16( IX_OUT + 1, 0xdeaf);	// filler
 
  /*
   * Now start the code: Enable the PRUSS.
@@ -361,8 +361,8 @@ static inline int pruss_get_nr_of_free_buffers( void)
 {
   int ix_in  = pruss_rd8( IX_IN);
   int ix_out = pruss_rd8( IX_OUT);
-
-  return PRUSS_FIFO_LENGTH - 1 - (PRUSS_FIFO_LENGTH + ix_in - ix_out) % PRUSS_FIFO_LENGTH;
+  // original formula: PRUSS_FIFO_LENGTH - 1 - (PRUSS_FIFO_LENGTH + ix_in - ix_out) % PRUSS_FIFO_LENGTH;
+  return ((ix_out > ix_in) ? 0 : PRUSS_FIFO_LENGTH) + ix_out - ix_in - 1;
 }
 
 int pruss_queue_full( void)
@@ -393,7 +393,7 @@ int pruss_wait_for_queue_space( void)
      * Until an interrupt driven interface is implemented, reduce the
      * cpu load and number of poll cycles by sleeping part of the time.
      */
-    usleep( 200);
+    usleep( 50);
   }
   return 0;
 }
@@ -406,15 +406,16 @@ int pruss_stepper_busy( void)
 // Write command structure to buffer[ ix_in] on PRUSS (must be free)
 int pruss_write_command_struct( int ix_in, PruCommandUnion* data)
 {
-  int i;
-  // TODO: rewrite to generic code: sizeof( PruCommandUnion)...
-  for (i = 0 ; i < NR_ITEMS( data->gen) ; ++i) {
+  uint32_t a = ix_in * sizeof( data->gen);
+  for (int i = 0 ; i < NR_ITEMS( data->gen) ; ++i) {
     uint32_t u = data->gen[ i];
-    uint32_t a = ix_in * 16 + 4 * i;
-    pruss_wr32( PRUSS_RAM_OFFSET + 256 + a, u);
-    //    printf( "pruss_write_command_struct: wrote 0x%08x (%d) to offset %d\n", u, u, a);
+    pruss_wr32( PRUSS_RAM_OFFSET + 1 * 256 + a, u);
+//    printf( "pruss_write_command_struct: wrote 0x%08x (%d) to offset %d\n", u, u, a);
+    a += sizeof( *data->gen);
   }
-  ix_in = (ix_in + 1) % 8;
+  if (++ix_in >= PRUSS_FIFO_LENGTH) {
+    ix_in = 0;
+  }
   pruss_wr8( IX_IN, ix_in);
   return ix_in;
 }
