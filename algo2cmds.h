@@ -12,6 +12,15 @@
 //  PRUSS code and C-code must have the same FW_VERSION to be compatible
 #define FW_VERSION              3
 
+#define NR_CMD_FIFO_ENTRIES	16
+
+//
+// The stepper code uses a 32-bit unsigned integer to keep track of position.
+// This gives a usable range of a little more than 4000 mm.
+// To split this range from -2000 .. +2000, set the virtual origin midscale:
+//
+#define VIRT_POS_MID_SCALE	0x80000000
+
 #define	CMD_AXIS_SET_ORIGIN	0
 #define CMD_AXIS_RAMP_UP	1
 #define CMD_AXIS_DWELL		2

@@ -14,15 +14,6 @@
 #include "debug.h"
 #include "bebopr.h"
 
-/*
- * The stepper code uses a 32-bit unsigned integer to keep track of position.
- * This gives a usable range of a little more than 4000 mm.
- * To split this range from -2000 .. +2000, set the virtual origin midscale:
- */
-#define VIRT_POS_MID_SCALE	0x80000000
-
-#define PRUSS_FIFO_LENGTH	16
-
 // Generic struct for access to 'command' field for all commands.
 typedef struct {
   unsigned int			: 24;
@@ -361,8 +352,8 @@ static inline int pruss_get_nr_of_free_buffers( void)
 {
   int ix_in  = pruss_rd8( IX_IN);
   int ix_out = pruss_rd8( IX_OUT);
-  // original formula: PRUSS_FIFO_LENGTH - 1 - (PRUSS_FIFO_LENGTH + ix_in - ix_out) % PRUSS_FIFO_LENGTH;
-  return ((ix_out > ix_in) ? 0 : PRUSS_FIFO_LENGTH) + ix_out - ix_in - 1;
+  // original formula: NR_CMD_FIFO_ENTRIES - 1 - (NR_CMD_FIFO_ENTRIES + ix_in - ix_out) % NR_CMD_FIFO_ENTRIES;
+  return ((ix_out > ix_in) ? 0 : NR_CMD_FIFO_ENTRIES) + ix_out - ix_in - 1;
 }
 
 int pruss_queue_full( void)
@@ -373,7 +364,7 @@ int pruss_queue_full( void)
 int pruss_queue_empty( void)
 {
   // Note that one buffer cannot be used because of the two indexes scheme!
-  return (pruss_get_nr_of_free_buffers() == PRUSS_FIFO_LENGTH - 1);
+  return (pruss_get_nr_of_free_buffers() == NR_CMD_FIFO_ENTRIES - 1);
 }
 
 // Simple wrapper prevents need for pruss.h inclusion
@@ -413,7 +404,7 @@ int pruss_write_command_struct( int ix_in, PruCommandUnion* data)
 //    printf( "pruss_write_command_struct: wrote 0x%08x (%d) to offset %d\n", u, u, a);
     a += sizeof( *data->gen);
   }
-  if (++ix_in >= PRUSS_FIFO_LENGTH) {
+  if (++ix_in >= NR_CMD_FIFO_ENTRIES) {
     ix_in = 0;
   }
   pruss_wr8( IX_IN, ix_in);
