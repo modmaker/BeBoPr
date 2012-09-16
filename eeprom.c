@@ -53,31 +53,24 @@ int get_step_io_config( const char* eeprom_path)
 {
   uint8_t step_io_config;
   int fd = open( eeprom_path, O_RDONLY);
-  int result;
+  int result = -1;
   if (fd < 0) {
     perror( "Failed to open EEPROM for reading");
-    result = -1;
-    goto done;
+  } else {
+    if (lseek( fd, sizeof( union bone_cape_io_config), SEEK_SET) < 0) {
+      perror( "Failed to lseek EEPROM");
+    } else {
+      int cnt = read( fd, &step_io_config, sizeof( step_io_config));
+      if (cnt < 0) {
+        perror( "Failed to read EEPROM");
+      } else if (cnt != sizeof( step_io_config)) {
+        // short write ?
+      } else {
+        result = step_io_config;
+      }
+    }
+    close( fd);
   }
-  result = lseek( fd, sizeof( union bone_cape_io_config), SEEK_SET);
-  if (result < 0) {
-    perror( "Failed to lseek EEPROM");
-    result = -1;
-    goto done;
-  }
-  int cnt = read( fd, &step_io_config, sizeof( step_io_config));
-  if (cnt < 0) {
-    perror( "Failed to read EEPROM");
-    result = -1;
-    goto done;
-  } else if (cnt != sizeof( step_io_config)) {
-    // short write ?
-    result = -1;
-    goto done;
-  }
-  result = step_io_config;
-done:
-  close( fd);
   return result;
 }
 
@@ -86,37 +79,33 @@ int set_step_io_config( const char* eeprom_path, uint8_t value)
 {
   uint8_t step_io_config = value;
   int fd = open( eeprom_path, O_WRONLY);
-  int result;
+  int result = -1;
   if (fd < 0) {
     perror( "Failed to open EEPROM for writing");
-    result = -1;
-    goto done;
+  } else {
+    if (lseek( fd, sizeof( union bone_cape_io_config), SEEK_SET) < 0) {
+      perror( "Failed to lseek EEPROM");
+    } else {
+      int cnt = write( fd, &step_io_config, sizeof( step_io_config));
+      if (cnt < 0) {
+        perror( "Failed to read EEPROM");
+      } else if (cnt != sizeof( step_io_config)) {
+        // short write ?
+      } else {
+        result = 0;
+      }
+    }
+    close( fd);
   }
-  result = lseek( fd, sizeof( union bone_cape_io_config), SEEK_SET);
-  if (result < 0) {
-    perror( "Failed to lseek EEPROM");
-    result = -1;
-    goto done;
-  }
-  int cnt = write( fd, &step_io_config, sizeof( step_io_config));
-  if (cnt < 0) {
-    perror( "Failed to read EEPROM");
-    result = -1;
-    goto done;
-  } else if (cnt != sizeof( step_io_config)) {
-    // short write ?
-    result = -1;
-    goto done;
-  }
-  result = 0;
-done:
-  close( fd);
   return result;
 }
 
 
 #ifdef STANDALONE
 
+/*
+ *  This code can also be used to alter the io_config setting.
+ */
 int main( int argc, char* argv[])
 {
   int result = get_step_io_config( EEPROM_PATH);
