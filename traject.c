@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <ctype.h>
+#include <time.h>
 
 #include "bebopr.h"
 #include "traject.h"
@@ -66,13 +67,18 @@ static inline int queue_move( const char* axis_name, double ramp, double a, doub
  */
 void traject_delta_on_all_axes( traject5D* traject)
 {
+  static unsigned long int serno = 0;
+  static time_t t0;
   if (traject == NULL) {
     return;
   }
+  if (serno++ == 0) {
+    time( &t0);
+  }
   if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
-    printf( "\ntraject_delta_on_all_axes( traject( %lf, %lf, %lf, %lf, F=%u) [m])\n",
+    printf( "\nMOVE[ #%lu %ds] traject_delta_on_all_axes( traject( %lf, %lf, %lf, %lf, F=%u) [m])\n",
+	    serno, (int)time( NULL)-(int)t0,
 	    traject->dx, traject->dy, traject->dz, traject->de, traject->feed);
-    printf( "Acceleration constant c_acc = %1.6f\n", c_acc);
   }
 
   double dx = traject->dx;
