@@ -339,9 +339,9 @@ int pruss_stepper_dump_state( void)
     DUMP_LINE( "dividend .",         32, 44, "%14u");
   }
   if (pruss_ena) {
-    // Set bit31 of R8 to signal the PRUSS we're resuming from suspend
-    uint32_t reg = pruss_rd32( PRUSS_DBG_OFFSET + 8 * 4);
-    pruss_wr32( PRUSS_DBG_OFFSET + 8 * 4, reg | (1 << 31));
+    // Set bit15 in R6 to signal the PRUSS we're resuming from suspend
+    uint32_t reg = pruss_rd32( PRUSS_DBG_OFFSET + 6 * 4);
+    pruss_wr32( PRUSS_DBG_OFFSET + 6 * 4, reg | (1 << 15));
     pruss_start_pruss();
     printf( "PRUSS is resuming execution (enabled)\n");
   }
