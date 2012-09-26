@@ -72,7 +72,7 @@ static inline void axis_calc( const char* axis_name, double step_size_, double d
     if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
       printf( "%c move : ", aname);
     }
-    if (double_s > d) {
+    if (d < double_s) {
       /*
        * Move length is too short to reach full speed.
        * Recalculate new (lower) top speed and remove the dwell.
@@ -104,7 +104,34 @@ static inline void axis_calc( const char* axis_name, double step_size_, double d
 		SI2MS( RECIPR( *recipr_t_move)));
       }
     }
-    if (*ramp_d < step_size_) {
+    if (d < step_size_) {
+     /*
+      * A move smaller than step_size will not always generate a step,
+      * that depends on the current position and happens inside the PRU.
+      * Moves much smaller than step_size will rarely step, but once
+      * in a while, if a step border is crossed, a step pulse is generated.
+      * This (full) step pulse however then runs at such a low velocity
+      * that it comes late and with a cycle much larger than the complete
+      * move. This manifests itself as a pause in gcode execution (the
+      * single step that is made is very hard to detect).
+      * The solution: If this (single) step is generated, it's best generated
+      * in the center of the complete move. This result can be obtained
+      * by raising the velocity so that the stepcycle takes exactly the
+      * same amount of time as the complete move does.
+      */
+      if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
+        printf( "(changed speed of possible single step) ");
+      }
+      *ramp_d  = 0.0;
+      *dwell_d = d;
+      *v = step_size_ * *recipr_t_move;
+      if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
+        printf( "\n   no ramps, dwell= %3.6lf [mm], velocity= %3.3lf [mm/s], duration= %1.3lf [ms]\n",
+		SI2MM( *dwell_d), SI2MM( *v), SI2MS( RECIPR( *recipr_t_move)));
+      }
+      *cmin = fclk * step_size_ / *v ;
+      *c0   = *cmin;
+    } else if (*ramp_d < step_size_) {
      /*
       * Replace a move with ramps that are too short to execute by
       * a single constant (slightly lower) velocity move.
