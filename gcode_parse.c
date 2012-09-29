@@ -359,9 +359,11 @@ void gcode_parse_char(uint8_t c) {
 		// last_field and read_digit are reset above already
 
 		// assume a G1 by default
-		next_target.seen_G = 1;
+#if 0
+		// TODO: disabling this keeps comments from generation moves. TEST !
+		next_target.seen_G= 1;
 		next_target.G = 1;
-
+#endif
 		if (next_target.option_relative) {
 			next_target.target.X = next_target.target.Y = next_target.target.Z = 0;
 			if (!config_e_axis_is_always_relative()) {
