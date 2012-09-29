@@ -314,6 +314,11 @@ int pruss_stepper_dump_state( void)
 
     DUMP_LINE( "virtPosT .",         16, 18, "%14u");
     DUMP_LINE( "virtPos x",          32, 20, "%14x");
+    printf( "%20s    %14d    %14d    %14d    %14d\n", "virtPos .",
+	    data[ 0] - VIRT_POS_MID_SCALE,
+	    data[ 1] - VIRT_POS_MID_SCALE,
+	    data[ 2] - VIRT_POS_MID_SCALE,
+	    data[ 3] - VIRT_POS_MID_SCALE);
 
     DUMP_LINE( "stepSize .",         32, 24, "%14u");
     DUMP_LINE( "stepSizeT .",        16, 28, "%14u");
