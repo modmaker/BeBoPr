@@ -65,6 +65,20 @@ static void enqueue_pos( TARGET* target)
       printf( "enqueue_pos( TARGET={%d, %d, %d, %d, %u})\n",
 	       target->X, target->Y, target->Z, target->E, target->F);
     }
+#ifdef PRU_ABS_COORDS
+    /* integer positions are in nm ! */ 
+    traject5D traj = {
+      .x0 = (double)1.0E-9 * (gcode_home_pos.X + gcode_current_pos.X),
+      .y0 = (double)1.0E-9 * (gcode_home_pos.Y + gcode_current_pos.Y),
+      .z0 = (double)1.0E-9 * (gcode_home_pos.Z + gcode_current_pos.Z),
+      .e0 = (double)1.0E-9 * (gcode_home_pos.E + gcode_current_pos.E),
+      .x1 = (double)1.0E-9 * (gcode_home_pos.X + target->X),
+      .y1 = (double)1.0E-9 * (gcode_home_pos.Y + target->Y),
+      .z1 = (double)1.0E-9 * (gcode_home_pos.Z + target->Z),
+      .e1 = (double)1.0E-9 * (gcode_home_pos.E + target->E),
+      .feed = target->F,
+    };
+#else
     /* integer positions are in nm ! */ 
     traject5D traj = {
       .dx = (double)1.0E-9 * (target->X - gcode_current_pos.X),
@@ -73,15 +87,16 @@ static void enqueue_pos( TARGET* target)
       .de = (double)1.0E-9 * (target->E - gcode_current_pos.E),
       .feed = target->F,
     };
+#endif
     /* make the move */
     traject_delta_on_all_axes( &traj);
     /* update our sense of position */
     if (config_e_axis_is_always_relative()) {
       /*
        * For a 3D printer, an E-axis coordinate is often a relative setting,
-       * independant of the absolute or relative mode. (This way it doesn't
+       * independent of the absolute or relative mode. (This way it doesn't
        * overflow because it is mostly moving in one direction.)
-       * This requires special handling here.
+       * This requires special handling here and in the traject calculation.
        */
       target->E = gcode_home_pos.E;
     }
@@ -322,6 +337,41 @@ void process_gcode_command() {
 
 				traject_wait_for_completion();
 
+#ifdef PRU_ABS_COORDS
+				if (next_target.seen_X) {
+					gcode_home_pos.X = gcode_current_pos.X;
+					gcode_current_pos.X = next_target.target.X;
+					axisSelected = 1;
+				}
+				if (next_target.seen_Y) {
+					gcode_home_pos.Y = gcode_current_pos.Y;
+					gcode_current_pos.Y = next_target.target.Y;
+					axisSelected = 1;
+				}
+				if (next_target.seen_Z) {
+					gcode_home_pos.Z = gcode_current_pos.Z;
+					gcode_current_pos.Z = next_target.target.Z;
+					axisSelected = 1;
+				}
+				if (next_target.seen_E) {
+					gcode_home_pos.E = gcode_current_pos.E;
+					gcode_current_pos.E = next_target.target.E;
+					axisSelected = 1;
+				}
+
+				if (axisSelected == 0) {
+					gcode_home_pos.X = gcode_current_pos.X;
+					gcode_current_pos.X = next_target.target.X = 0;
+					gcode_home_pos.Y = gcode_current_pos.Y;
+					gcode_current_pos.Y = next_target.target.Y = 0;
+					gcode_home_pos.Z = gcode_current_pos.Z;
+					gcode_current_pos.Z = next_target.target.Z = 0;
+					gcode_home_pos.E = gcode_current_pos.E;
+					gcode_current_pos.E = next_target.target.E = 0;
+				}
+
+#else
+				// TODO: this was the relative coordinates version, but is this right?
 				if (next_target.seen_X) {
 					gcode_current_pos.X = gcode_home_pos.X = next_target.target.X;
 					axisSelected = 1;
@@ -345,6 +395,7 @@ void process_gcode_command() {
 					gcode_current_pos.Z = gcode_home_pos.Z = next_target.target.Z =
 					gcode_current_pos.E = gcode_home_pos.E = next_target.target.E = 0;
 				}
+#endif
 				break;
 
 			// G161 - Home negative

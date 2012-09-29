@@ -35,7 +35,11 @@ static double ve_max;
 static const double fclk = 200000000.0;
 static const double c_acc = 282842712.5;	// = fclk * sqrt( 2.0);
 
+#ifdef PRU_ABS_COORDS
+static inline int queue_move( const char* axis_name, double ramp, double a, double v, double dwell, uint32_t c0, uint32_t cmin, double origin)
+#else
 static inline int queue_move( const char* axis_name, double ramp, double a, double v, double dwell, uint32_t c0, uint32_t cmin)
+#endif
 {
   if (v != 0.0) {
     char aname = *axis_name;
@@ -54,13 +58,21 @@ static inline int queue_move( const char* axis_name, double ramp, double a, doub
 		aname, SI2MM( v), SI2MM( ramp + dwell + ramp), c0, cmin);
       }
     }
+#ifdef PRU_ABS_COORDS
+    pruss_queue_accel( axis, c0, cmin, (int32_t)(1.0E9 * (origin + ramp + dwell)));
+#else
     pruss_queue_accel( axis, c0, cmin, (int32_t)(1.0E9 * (ramp + dwell)));
+#endif
     return 1;
   }
   return 0;
 }
 
+#ifdef PRU_ABS_COORDS
+#define QUEUE_MOVE( axis) queue_move( #axis, ramp_d##axis, a##axis, v##axis, dwell_d##axis, c0##axis, cmin##axis, axis##0)
+#else
 #define QUEUE_MOVE( axis) queue_move( #axis, ramp_d##axis, a##axis, v##axis, dwell_d##axis, c0##axis, cmin##axis)
+#endif
 
 static inline void axis_calc( const char* axis_name, double step_size_, double d, double double_s, double* ramp_d, double a, double* v, double* dwell_d, uint32_t* c0, uint32_t* cmin, double* recipr_t_acc, double* recipr_t_move)
 {
@@ -204,12 +216,17 @@ void traject_delta_on_all_axes( traject5D* traject)
 	    serno, (int)time( NULL)-(int)t0,
 	    traject->dx, traject->dy, traject->dz, traject->de, traject->feed);
   }
-
+#ifdef PRU_ABS_COORDS
+  double dx = traject->x1 - traject->x0;
+  double dy = traject->y1 - traject->y0;
+  double dz = traject->z1 - traject->z0;
+  double de = traject->e1 - traject->e0;
+#else
   double dx = traject->dx;
   double dy = traject->dy;
   double dz = traject->dz;
   double de = traject->de;
-
+#endif
   int reverse_x = 0;
   if (dx < 0.0) {
     dx = -dx;
@@ -230,7 +247,11 @@ void traject_delta_on_all_axes( traject5D* traject)
     de = -de;
     reverse_e = 1;
   }
-  // We're only moving in 3D space, e-axis isn't part of this!
+ /*
+  * The E-axis is not part of the (3D) movement vector. The velocity
+  * of the E-axis is directly determined by the feed of the G1 move,
+  * unless reduced by an axis velocity above its limit.
+  */
   double distance = sqrt( dx * dx + dy * dy + dz * dz);
   if (distance < 2.0E-9) {
     if (de == 0.0) {
@@ -390,6 +411,13 @@ void traject_delta_on_all_axes( traject5D* traject)
   * back to zero speed.
   */
   int any_move = 0;
+
+#ifdef PRU_ABS_COORDS
+  double x0 = traject->x0;
+  double y0 = traject->y0;
+  double z0 = traject->z0;
+  double e0 = traject->e0;
+#endif
 
   any_move += QUEUE_MOVE( x);
   any_move += QUEUE_MOVE( y);

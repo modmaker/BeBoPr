@@ -335,7 +335,7 @@ double config_get_home_max_feed( axis_e axis)
  */
 int config_e_axis_is_always_relative( void)
 {
-  return 0;
+  return 1;
 }
 
 /*

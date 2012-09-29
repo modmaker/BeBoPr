@@ -34,6 +34,7 @@
 ##############################################################################
 
 DEFS ?=
+DEFS += -DPRU_ABS_COORDS
 ARCH ?= arm
 CROSS_COMPILE ?= arm-arago-linux-gnueabi-
 
