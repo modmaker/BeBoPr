@@ -17,26 +17,23 @@
 // Generic struct for access to 'command' field for all commands.
 typedef struct {
   unsigned int			: 24;
-  unsigned int	value		:  4;
+  unsigned int	value		:  5;
   unsigned int	axis		:  3;
-  unsigned int                  :  1;
 } CommandStruct;
 
 // CMD_AXIS_SET_ORIGIN
 typedef struct {
   unsigned int			: 24;
-  unsigned int	command		:  4;
+  unsigned int	command		:  5;
   unsigned int	axis		:  3;
-  unsigned int			:  1;
   unsigned int	position	: 32;
 } SetOriginStruct;
 
 // CMD_AXIS_SET_ACCEL
 typedef struct {
   unsigned int	accelCount	: 24;
-  unsigned int	command		:  4;
+  unsigned int	command		:  5;
   unsigned int	axis		:  3;
-  unsigned int			:  1;
   unsigned int			: 32;
   unsigned int	stepCycle	: 32;
 } SetAccelStruct;
@@ -44,9 +41,8 @@ typedef struct {
 // CMD_AXIS_RAMP_UP
 typedef struct {
   unsigned int			: 24;
-  unsigned int	command		:  4;
+  unsigned int	command		:  5;
   unsigned int	axis		:  3;
-  unsigned int			:  1;
   int		moveDelta	: 32;
   unsigned int	stepCycle	: 32;
 } AccelStruct;
@@ -54,9 +50,8 @@ typedef struct {
 // CMD_AXIS_RAMP_DOWN
 typedef struct {
   unsigned int			: 24;
-  unsigned int	command		:  4;
+  unsigned int	command		:  5;
   unsigned int	axis		:  3;
-  unsigned int			:  1;
   int		moveDelta	: 32;
   unsigned int	stepCycle	: 32;
 } DecelStruct;
@@ -64,9 +59,8 @@ typedef struct {
 // CMD_AXIS_DWELL
 typedef struct {
   unsigned int			: 24;
-  unsigned int	command		:  4;
+  unsigned int	command		:  5;
   unsigned int	axis		:  3;
-  unsigned int			:  1;
   int		moveDelta	: 32;
   unsigned int	stepCycle	: 32;
 } DwellStruct;
@@ -74,7 +68,7 @@ typedef struct {
 // CMD_AXIS_SET_PULSE_LENGTH
 typedef struct {
   unsigned int	duration	: 24;
-  unsigned int	command		:  4;
+  unsigned int	command		:  5;
   unsigned int	axis		:  3;
 } SetPulseStruct;
 
@@ -82,23 +76,22 @@ typedef struct {
 typedef struct {
   unsigned int	timeout		:  8;
   unsigned int			: 16;
-  unsigned int	command		:  4;
+  unsigned int	command		:  5;
 } SetIdleTimeoutStruct;
 
 // CMD_SET_ENABLE
 typedef struct {
   unsigned int	mode		:  8;
   unsigned int			: 16;
-  unsigned int	command		:  4;
+  unsigned int	command		:  5;
 } SetEnableStruct;
 
 // CMD_AXIS_CONFIG_AXIS
 typedef struct {
   unsigned int	reverse		:  1;
   unsigned int			: 23;
-  unsigned int	command		:  4;
+  unsigned int	command		:  5;
   unsigned int	axis		:  3;
-  unsigned int			:  1;
   unsigned int	stepSizeT	: 16;
   unsigned int	stepSizeN	: 16;
   unsigned int	stepSize	: 32;
@@ -107,18 +100,16 @@ typedef struct {
 // CMD_AXIS_ADJUST_ORIGIN
 typedef struct {
   unsigned int			: 24;
-  unsigned int	command		:  4;
+  unsigned int	command		:  5;
   unsigned int	axis		:  3;
-  unsigned int			:  1;
   unsigned int	position	: 32;
 } AdjustOriginStruct;
 
 // CMD_AXIS_ADJUST_FOR_RAMP
 typedef struct {
   unsigned int			: 24;
-  unsigned int	command		:  4;
+  unsigned int	command		:  5;
   unsigned int	axis		:  3;
-  unsigned int			:  1;
   int		delta		: 32;
 } AdjustForRampStruct;
 

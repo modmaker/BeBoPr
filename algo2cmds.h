@@ -10,7 +10,7 @@
 #define UCODE_MAGIC             0xba512191
 
 //  PRUSS code and C-code must have the same FW_VERSION to be compatible
-#define FW_VERSION              3
+#define FW_VERSION              4
 
 #define NR_CMD_FIFO_ENTRIES	16
 
@@ -31,6 +31,8 @@
 #define	CMD_AXIS_CONFIG_AXIS	7
 #define	CMD_AXIS_ADJUST_ORIGIN	8
 #define CMD_AXIS_ADJUST_FOR_RAMP 9
+
+#define CMD_AXIS_RAMP_DWELL	10
 
 #define CMD_SET_IDLE_TIMEOUT	11
 #define CMD_SET_ENABLE		12
