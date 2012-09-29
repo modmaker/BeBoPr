@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <ctype.h>
-#include <time.h>
+#include <sys/time.h>
 
 #include "bebopr.h"
 #include "traject.h"
@@ -204,17 +204,19 @@ static inline void axis_calc( const char* axis_name, double step_size_, double d
 void traject_delta_on_all_axes( traject5D* traject)
 {
   static unsigned long int serno = 0;
-  static time_t t0;
+  static struct timespec t0;
+  struct timespec time;
+
   if (traject == NULL) {
     return;
   }
+#ifdef _POSIX_MONOTONIC_CLOCK
+  clockid_t clock = CLOCK_MONOTONIC;
+#else
+# error NO SUITING CLOCK SOURCE AVAILABLE
+#endif
   if (serno++ == 0) {
-    time( &t0);
-  }
-  if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
-    printf( "\nMOVE[ #%lu %ds] traject_delta_on_all_axes( traject( %0.9lf, %1.9lf, %1.9lf, %1.9lf, F=%u) [m])\n",
-	    serno, (int)time( NULL)-(int)t0,
-	    traject->dx, traject->dy, traject->dz, traject->de, traject->feed);
+    clock_gettime( clock, &t0);
   }
 #ifdef PRU_ABS_COORDS
   double dx = traject->x1 - traject->x0;
@@ -227,6 +229,20 @@ void traject_delta_on_all_axes( traject5D* traject)
   double dz = traject->dz;
   double de = traject->de;
 #endif
+
+  clock_gettime( CLOCK_MONOTONIC, &time);
+  int nsecs = time.tv_nsec - t0.tv_nsec;
+  int secs  = time.tv_sec  - t0.tv_sec;
+  if (nsecs < 0) {
+    --secs;
+    nsecs += 1000000000;
+  }
+  int msecs = (nsecs + 500000) / 1000000;
+  if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
+    printf( "\nMOVE[ #%lu %d.%03ds] traject_delta_on_all_axes( traject( %0.9lf, %1.9lf, %1.9lf, %1.9lf, F=%u) [m])\n",
+	    serno, secs, msecs, dx, dy, dz, de, traject->feed);
+  }
+
   int reverse_x = 0;
   if (dx < 0.0) {
     dx = -dx;
