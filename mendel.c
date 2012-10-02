@@ -17,6 +17,7 @@
 #include "limit_switches.h"
 #include "pruss_stepper.h"
 #include "comm.h"
+#include "debug.h"
 
 
 static int arm_init( void)
@@ -148,6 +149,10 @@ int main ( int argc, const char* argv[])
   extern const int   mendel_build;
   fprintf( stderr, "Starting '%s' version %d.%d.%d (%s).\n",
 	  argv[ 0], mendel_version, FW_VERSION, mendel_build, mendel_date);
+  if (debug_flags) {
+    fprintf( stderr, "Starting with debug flags set to 0x%04x (%u)\n",
+	    debug_flags, debug_flags);
+  }
   if (init() != 0) {
     fprintf( stderr, "Initialization failed, terminating.\n");
     exit( EXIT_FAILURE);
