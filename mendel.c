@@ -141,8 +141,13 @@ void mendel_exit( void)
 /// just run init() that starts all threads, then run an endless loop where we pass characters from the serial RX buffer to gcode_parse_char()
 // FIXME: This can now also be programmed as a (blocking) thread?
 // FIXME: Implement proper program termination and un-init functions.
-int main (void)
+int main ( int argc, const char* argv[])
 {
+  extern const char* mendel_date;
+  extern const int   mendel_version;
+  extern const int   mendel_build;
+  fprintf( stderr, "Starting '%s' version %d.%d.%d (%s).\n",
+	  argv[ 0], mendel_version, FW_VERSION, mendel_build, mendel_date);
   if (init() != 0) {
     fprintf( stderr, "Initialization failed, terminating.\n");
     exit( EXIT_FAILURE);

@@ -89,6 +89,13 @@ all: $(PROGRAM).elf
 
 $(PROGRAM).elf: $(LIBDEPS)
 
+version.h:	$(OBJ)
+	@echo "  Updating version information"
+	@./version.sh <version.h >_version.h
+	@mv _version.h version.h
+
+version.o:	version.h version.c
+
 subdirs:
 	@for dir in $(SUBDIRS); do \
 	  $(MAKE) -C $$dir; \
@@ -109,7 +116,7 @@ doc: Doxyfile *.c *.h
 	@echo "  CC        $@"
 	@$(CC) -c $(CFLAGS) -Wa,-adhlns=$(<:.c=.al) -o $@ $(subst .o,.c,$@)
 
-%.elf: $(OBJ)
+%.elf: $(OBJ) version.o
 	@echo "  LINK      $@"
 	@$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(LIBS)
 
