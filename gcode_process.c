@@ -332,65 +332,37 @@ void process_gcode_command() {
 
 				traject_wait_for_completion();
 
-#ifdef PRU_ABS_COORDS
 				if (next_target.seen_X) {
-					gcode_home_pos.X = gcode_current_pos.X;
+					gcode_home_pos.X += gcode_current_pos.X - next_target.target.X;
 					gcode_current_pos.X = next_target.target.X;
 					axisSelected = 1;
 				}
 				if (next_target.seen_Y) {
-					gcode_home_pos.Y = gcode_current_pos.Y;
+					gcode_home_pos.Y += gcode_current_pos.Y - next_target.target.Y;
 					gcode_current_pos.Y = next_target.target.Y;
 					axisSelected = 1;
 				}
 				if (next_target.seen_Z) {
-					gcode_home_pos.Z = gcode_current_pos.Z;
+					gcode_home_pos.Z += gcode_current_pos.Z - next_target.target.Z;
 					gcode_current_pos.Z = next_target.target.Z;
 					axisSelected = 1;
 				}
 				if (next_target.seen_E) {
-					gcode_home_pos.E = gcode_current_pos.E;
+					gcode_home_pos.E += gcode_current_pos.E - next_target.target.E;
 					gcode_current_pos.E = next_target.target.E;
 					axisSelected = 1;
 				}
 
 				if (axisSelected == 0) {
-					gcode_home_pos.X = gcode_current_pos.X;
+					gcode_home_pos.X += gcode_current_pos.X;
 					gcode_current_pos.X = next_target.target.X = 0;
-					gcode_home_pos.Y = gcode_current_pos.Y;
+					gcode_home_pos.Y += gcode_current_pos.Y;
 					gcode_current_pos.Y = next_target.target.Y = 0;
-					gcode_home_pos.Z = gcode_current_pos.Z;
+					gcode_home_pos.Z += gcode_current_pos.Z;
 					gcode_current_pos.Z = next_target.target.Z = 0;
-					gcode_home_pos.E = gcode_current_pos.E;
+					gcode_home_pos.E += gcode_current_pos.E;
 					gcode_current_pos.E = next_target.target.E = 0;
 				}
-
-#else
-				// TODO: this was the relative coordinates version, but is this right?
-				if (next_target.seen_X) {
-					gcode_current_pos.X = gcode_home_pos.X = next_target.target.X;
-					axisSelected = 1;
-				}
-				if (next_target.seen_Y) {
-					gcode_current_pos.Y = gcode_home_pos.Y = next_target.target.Y;
-					axisSelected = 1;
-				}
-				if (next_target.seen_Z) {
-					gcode_current_pos.Z = gcode_home_pos.Z = next_target.target.Z;
-					axisSelected = 1;
-				}
-				if (next_target.seen_E) {
-					gcode_current_pos.E = gcode_home_pos.E = next_target.target.E;
-					axisSelected = 1;
-				}
-
-				if (axisSelected == 0) {
-					gcode_current_pos.X = gcode_home_pos.X = next_target.target.X =
-					gcode_current_pos.Y = gcode_home_pos.Y = next_target.target.Y =
-					gcode_current_pos.Z = gcode_home_pos.Z = next_target.target.Z =
-					gcode_current_pos.E = gcode_home_pos.E = next_target.target.E = 0;
-				}
-#endif
 				break;
 
 			// G161 - Home negative
@@ -975,5 +947,9 @@ int gcode_process_init( void)
   if (heater_extruder == NULL || temp_extruder == NULL) {
     return -1;
   }
+  gcode_current_pos.X = gcode_home_pos.X = 0;
+  gcode_current_pos.Y = gcode_home_pos.Y = 0;
+  gcode_current_pos.Z = gcode_home_pos.Z = 0;
+  gcode_current_pos.E = gcode_home_pos.E = 0;
   return 0;
 }
