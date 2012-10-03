@@ -293,28 +293,26 @@ int config_max_soft_limit( axis_e axis, double* pos)
 }
 
 /*
- *  Specify minimum axis position
+ *  Specify the positions of the homing (calibration) switches.
+ *  Return true if a position is defined, false otherwise.
+ *  For a consistent coordinate space, only one switch on each
+ *  axis may be a reference!
  */
-double config_axis_get_min_pos( axis_e axis)
+int config_min_switch_pos( axis_e axis, double* pos)
 {
   switch (axis) {
-  case x_axis:	return 0.0;
-  case y_axis:	return 0.0;
-  case z_axis:	return 0.0;
-  default:	return 0.0;
+  case x_axis:	*pos = 0.0;     return 1;
+  case y_axis:	*pos = 0.0;     return 1;
+  case z_axis:	*pos = -2.9E-3; return 1;
+  default:	return 0;
   }
 }
 
-double config_axis_get_min_limsw_pos( axis_e axis)
+int config_max_switch_pos( axis_e axis, double* pos)
 {
-  // TODO: Until properly implemented, return min pos.
-  return config_axis_get_min_pos( axis);
-}
-
-double config_axis_get_max_limsw_pos( axis_e axis)
-{
-  // TODO: Until properly implemented, return max pos.
-  return config_axis_get_max_pos( axis);
+  switch (axis) {
+  default:	return 0;
+  }
 }
 
 /*

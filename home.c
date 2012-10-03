@@ -58,9 +58,11 @@ static void run_home_one_axis( axis_e axis, int reverse, uint32_t feed)
       printf( "  %c: limiting home speed to %d\n", axisNames[ pruss_axis], feed);
     }
   }
+  const double c_acc = 282842712.5;	// = fclk * sqrt( 2.0);
   double speed = feed / 60000.0;
   uint32_t cmin = fclk * step_size / speed ;
-  uint32_t c0 = cmin;
+  uint32_t c0 = (uint32_t) (c_acc * sqrt( step_size / config_get_max_accel( axis)));
+
   pruss_queue_set_origin( pruss_axis);
   /*
    * Run towards the switch
@@ -93,6 +95,7 @@ static void run_home_one_axis( axis_e axis, int reverse, uint32_t feed)
   /*
    * Run away from the switch
    */
+  pruss_queue_set_origin( pruss_axis);
   pruss_queue_set_accel( pruss_axis, c0);
   steps = 0;
   while (limsw_axis( axis, reverse) != 0) {
@@ -130,34 +133,29 @@ static void home_one_axis( axis_e axis, int reverse, uint32_t feed)
   pthread_setschedparam( self, old_scheduler, &old_param); 
 }
 
-/// find MIN endstop for an axis
-void home_axis_to_min_limit_switch( axis_e axis, double feed) {
+/// Position at a switch or sensor, if that switch is present. If not, keep
+/// the current position and do not move. This can be used for manually
+/// assigning a home position.
+/// If the switch is configured as home / reference, set the current position
+/// from the reference value. Otherwise the current position is not changed.
+void home_axis_to_min_limit_switch( axis_e axis, double feed)
+{
   if (config_axis_has_min_limit_switch( axis)) {
     double max_feed = config_get_max_feed( axis);
     if (feed > max_feed) {
       feed = max_feed;
     }
     home_one_axis( axis, 1 /* reverse */, feed);
-    // reference 'home' position to current position
-    gcode_set_axis_pos( axis, config_axis_get_min_pos( axis));
-  } else {
-    // reference current position as 'home'
-    gcode_set_axis_pos( axis, 0);
   }
 }
 
-/// find MAX endstop for an axis
-void home_axis_to_max_limit_switch( axis_e axis, double feed) {
+void home_axis_to_max_limit_switch( axis_e axis, double feed)
+{
   if (config_axis_has_max_limit_switch( axis)) {
     double max_feed = config_get_max_feed( axis);
     if (feed > max_feed) {
       feed = max_feed;
     }
     home_one_axis( axis, 0 /* forward */, feed);
-    // reference 'home' position to current position
-    gcode_set_axis_pos( axis, config_axis_get_max_pos( axis));
-  } else {
-    // reference current position as 'home'
-    gcode_set_axis_pos( axis, 0);
   }
 }

@@ -41,20 +41,6 @@ static channel_tag temp_extruder = NULL;
 static channel_tag temp_bed = NULL;
 
 /*
- *  public interface to set positions from homing code.
- */
-void gcode_set_axis_pos( axis_e axis, uint32_t pos)
-{
-  switch (axis) {
-  case x_axis: gcode_current_pos.X = gcode_home_pos.X = pos; break;
-  case y_axis: gcode_current_pos.Y = gcode_home_pos.Y = pos; break;
-  case z_axis: gcode_current_pos.Z = gcode_home_pos.Z = pos; break;
-  case e_axis: gcode_current_pos.E = gcode_home_pos.E = pos; break;
-  default: break;
-  }
-}
-
-/*
 	private functions
 */
 
@@ -367,30 +353,66 @@ void process_gcode_command() {
 
 			// G161 - Home negative
 			case 161:
+			{
 				//? ==== G161: Home negative ====
 				//?
 				//? Find the minimum limit of the specified axes by searching for the limit switch.
-				if (next_target.seen_X)
+				// reference 'home' position to (then) current position
+				double pos;
+				if (next_target.seen_X) {
 					home_axis_to_min_limit_switch( x_axis, next_target.target.F);
-				if (next_target.seen_Y)
+					if (config_min_switch_pos( x_axis, &pos)) {
+						gcode_current_pos.X =
+							gcode_home_pos.X = pos;
+					}
+				}
+				if (next_target.seen_Y) {
 					home_axis_to_min_limit_switch( y_axis, next_target.target.F);
-				if (next_target.seen_Z)
+					if (config_min_switch_pos( y_axis, &pos)) {
+						gcode_current_pos.Y =
+							gcode_home_pos.Y = pos;
+					}
+				}
+				if (next_target.seen_Z) {
 					home_axis_to_min_limit_switch( z_axis, next_target.target.F);
+					if (config_min_switch_pos( z_axis, &pos)) {
+						gcode_current_pos.Z =
+							gcode_home_pos.Z = pos;
+					}
+				}
 				break;
+			}
 			// G162 - Home positive
 			case 162:
+			{
 				//? ==== G162: Home positive ====
 				//?
 				//? Find the maximum limit of the specified axes by searching for the limit switch.
-				if (next_target.seen_X)
+				// reference 'home' position to (then) current position
+				double pos;
+				if (next_target.seen_X) {
 					home_axis_to_max_limit_switch( x_axis, next_target.target.F);
-				if (next_target.seen_Y)
+					if (config_max_switch_pos( x_axis, &pos)) {
+						gcode_current_pos.X =
+							gcode_home_pos.X = pos;
+					}
+				}
+				if (next_target.seen_Y) {
 					home_axis_to_max_limit_switch( y_axis, next_target.target.F);
-				if (next_target.seen_Z)
+					if (config_max_switch_pos( y_axis, &pos)) {
+						gcode_current_pos.Y =
+							gcode_home_pos.Y = pos;
+					}
+				}
+				if (next_target.seen_Z) {
 					home_axis_to_max_limit_switch( z_axis, next_target.target.F);
+					if (config_max_switch_pos( z_axis, &pos)) {
+						gcode_current_pos.Z =
+							gcode_home_pos.Z = pos;
+					}
+				}
 				break;
-
-
+			}
 			// G255 - Dump PRUSS state
 			case 255:
 				// === G255: Dump PRUSS state ====
