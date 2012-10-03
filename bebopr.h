@@ -30,9 +30,9 @@ extern int config_min_limit_switch_is_active_low( axis_e axis);
 extern int config_max_limit_switch_is_active_low( axis_e axis);
 extern int config_reverse_axis( axis_e axis);
 
-// these all return a hardware dimenstion
-extern double config_axis_get_min_pos( axis_e axis);
-extern double config_axis_get_max_pos( axis_e axis);
+// these all return a hardware dimension
+extern int config_min_soft_limit( axis_e axis, double* pos);
+extern int config_max_soft_limit( axis_e axis, double* pos);
 extern double config_axis_get_min_limsw_pos( axis_e axis);
 extern double config_axis_get_max_limsw_pos( axis_e axis);
 extern double config_get_step_size( axis_e axis);

@@ -265,15 +265,30 @@ int config_reverse_axis( axis_e axis)
 }
 
 /*
- *  Specify maximum axis position
+ *  Specify the values that will be used as soft limits.
+ *  During normal operation the machine will not move outside
+ *  the space defined by the soft limits.
+ *  Behaviour depends on implementation: Faulting or clipping
+ *  are two of the options.
+ *  Return true if a position is defined, false otherwise.
  */
-double config_axis_get_max_pos( axis_e axis)
+int config_min_soft_limit( axis_e axis, double* pos)
 {
   switch (axis) {
-  case x_axis:	return 215.0;
-  case y_axis:	return 200.0;
-  case z_axis:	return  80.0;
-  default:	return   0.0;
+  case x_axis:	*pos = 0.0; return 1;
+  case y_axis:	*pos = 0.0; return 1;
+  case z_axis:	*pos = 0.0; return 1;
+  default:	return 0;
+  }
+}
+
+int config_max_soft_limit( axis_e axis, double* pos)
+{
+  switch (axis) {
+  case x_axis:	*pos = 215.0; return 1;
+  case y_axis:	*pos = 200.0; return 1;
+  case z_axis:	*pos =  80.0; return 1;
+  default:	return 0;
   }
 }
 

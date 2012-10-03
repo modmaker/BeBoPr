@@ -126,53 +126,48 @@ void process_gcode_command() {
 		next_target.target.E += gcode_current_pos.E;
 	}
 	// implement axis limits
-	if (config_axis_has_min_limit_switch( x_axis)) {
-		double x_min = config_axis_get_min_pos( x_axis);
-		if (next_target.target.X < MM2POS( x_min)) {
-			printf( "WARNING: Limiting target.X (%d) to X_MIN (%d)\n",
-				next_target.target.X, MM2POS( x_min));
-			next_target.target.X = MM2POS( x_min);
+	double limit;
+	if (config_min_soft_limit( x_axis, &limit)) {
+		if (gcode_home_pos.X + next_target.target.X < MM2POS( limit)) {
+			printf( "WARNING: Clipping target.X (%d) to %d due to lower soft limit= %d and home= %d\n",
+				next_target.target.X, MM2POS( limit) - gcode_home_pos.X, MM2POS( limit), gcode_home_pos.X);
+			next_target.target.X = MM2POS( limit) - gcode_home_pos.X;
 		}	
 	}
-	if (config_axis_has_max_limit_switch( x_axis)) {
-		double x_max = config_axis_get_max_pos( x_axis);
-		if (next_target.target.X > MM2POS( x_max)) {
-			printf( "WARNING: Limiting target.X (%d) to X_MAX (%d)\n",
-				next_target.target.X, MM2POS( x_max));
-			next_target.target.X = MM2POS( x_max);
-		}
+	if (config_max_soft_limit( x_axis, &limit)) {
+		if (gcode_home_pos.X + next_target.target.X > MM2POS( limit)) {
+			printf( "WARNING: Clipping target.X (%d) to %d due to upper soft limit= %d and home= %d\n",
+				next_target.target.X, MM2POS( limit) - gcode_home_pos.X, MM2POS( limit), gcode_home_pos.X);
+			next_target.target.X = MM2POS( limit) - gcode_home_pos.X;
+		}	
 	}
-	if (config_axis_has_min_limit_switch( y_axis)) {
-		double y_min = config_axis_get_min_pos( y_axis);
-		if (next_target.target.Y < MM2POS( y_min)) {
-			printf( "WARNING: Limiting target.Y (%d) to Y_MIN (%d)\n",
-				next_target.target.Y, MM2POS( y_min));
-			next_target.target.Y = MM2POS( y_min);
-		}
+	if (config_min_soft_limit( y_axis, &limit)) {
+		if (gcode_home_pos.Y + next_target.target.Y < MM2POS( limit)) {
+			printf( "WARNING: Clipping target.Y (%d) to %d due to lower soft limit= %d and home= %d\n",
+				next_target.target.Y, MM2POS( limit) - gcode_home_pos.Y, MM2POS( limit), gcode_home_pos.Y);
+			next_target.target.Y = MM2POS( limit) - gcode_home_pos.Y;
+		}	
 	}
-	if (config_axis_has_max_limit_switch( y_axis)) {
-		double y_max = config_axis_get_max_pos( y_axis);
-		if (next_target.target.Y > MM2POS( y_max)) {
-			printf( "WARNING: Limiting target.Y (%d) to Y_MAX (%d)\n",
-				next_target.target.Y, MM2POS( y_max));
-			next_target.target.Y = MM2POS( y_max);
-		}
+	if (config_max_soft_limit( y_axis, &limit)) {
+		if (gcode_home_pos.Y + next_target.target.Y > MM2POS( limit)) {
+			printf( "WARNING: Clipping target.Y (%d) to %d due to upper soft limit= %d and home= %d\n",
+				next_target.target.Y, MM2POS( limit) - gcode_home_pos.Y, MM2POS( limit), gcode_home_pos.Y);
+			next_target.target.Y = MM2POS( limit) - gcode_home_pos.Y;
+		}	
 	}
-	if (config_axis_has_min_limit_switch( z_axis)) {
-		double z_min = config_axis_get_min_pos( z_axis);
-		if (next_target.target.Z < MM2POS( z_min)) {
-			printf( "WARNING: Limiting target.Z (%d) to Z_MIN (%d)\n",
-				next_target.target.Z, MM2POS( z_min));
-			next_target.target.Z = MM2POS( z_min);
-		}
+	if (config_min_soft_limit( z_axis, &limit)) {
+		if (gcode_home_pos.Z + next_target.target.Z < MM2POS( limit)) {
+			printf( "WARNING: Clipping target.Z (%d) to %d due to lower soft limit= %d and home= %d\n",
+				next_target.target.Z, MM2POS( limit) - gcode_home_pos.Z, MM2POS( limit), gcode_home_pos.Z);
+			next_target.target.Z = MM2POS( limit) - gcode_home_pos.Z;
+		}	
 	}
-	if (config_axis_has_max_limit_switch( z_axis)) {
-		double z_max = config_axis_get_max_pos( z_axis);
-		if (next_target.target.Z > MM2POS( z_max)) {
-			printf( "WARNING: Limiting target.Z (%d) to Z_MAX (%d)\n",
-				next_target.target.Z, MM2POS( z_max));
-			next_target.target.Z = MM2POS( z_max);
-		}
+	if (config_max_soft_limit( z_axis, &limit)) {
+		if (gcode_home_pos.Z + next_target.target.Z > MM2POS( limit)) {
+			printf( "WARNING: Clipping target.Z (%d) to %d due to upper soft limit= %d and home= %d\n",
+				next_target.target.Z, MM2POS( limit) - gcode_home_pos.Z, MM2POS( limit), gcode_home_pos.Z);
+			next_target.target.Z = MM2POS( limit) - gcode_home_pos.Z;
+		}	
 	}
 	// The GCode documentation was taken from http://reprap.org/wiki/Gcode .
 
