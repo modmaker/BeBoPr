@@ -51,8 +51,10 @@
 /* convert SI unit [m] into [nm] */
 #define SI2NM( x) (1.0E9 * (x))
 
-#define MM2POS( x) (int32_t)(1.0E6 * x)
-#define POS2MM( x) (double)(1.0E-6 * x)
+#define MM2POS( x) (int32_t)(1.0E6 * (x))
+#define POS2MM( x) (double)(1.0E-6 * (x))
+#define SI2POS( x) (int32_t)(1.0E9 * (x))
+#define POS2SI( x) (double)(1.0E-9 * (x))
 
 typedef const char* channel_tag;
 static inline const char* tag_name( channel_tag tag) { return (char*)tag; }

@@ -20,6 +20,7 @@
 
 
 static const double fclk = TIMER_CLOCK;
+static const char axisNames[] = { '?', 'X', 'Y', 'Z' };
 
 /*
  * Determine the state of the limit switch that's in the direction we're moving to.
@@ -34,16 +35,57 @@ static int limsw_axis( axis_e axis, int reverse)
   }
 }
 
+static inline void update_position( int32_t* position, int direction, int count, double step_size)
+{
+  *position += SI2POS( (direction * count) * step_size);
+}
+
+static inline int step_until_switch_change( axis_e axis, int reverse, int new_state, double si_iter_size,
+					int pruss_axis, int32_t cmin, int direction,
+					int32_t* position, int32_t pos_delta, const char* dir)
+{
+  int iter = 0;			/* count interations for exact position */
+  uint32_t pos_move_len = 0.0;	/* for soft limit */
+  uint32_t pos_max_move = 0;
+  while (limsw_axis( axis, reverse) != new_state) {
+    /* Clear internal position information */
+    pruss_queue_set_origin( pruss_axis);
+    pruss_queue_accel( pruss_axis, cmin, cmin, (int32_t)(1.0E9 * (direction * si_iter_size)));
+    /* Do not queue moves to prevent stepping after reaching position */
+    while (!pruss_queue_empty()) {
+      sched_yield();
+    }
+    pruss_queue_execute();
+    ++iter;
+    pos_move_len += pos_delta;
+    if (pos_max_move > 0.0 && pos_move_len > pos_max_move) {
+      iter *= 2; // Workaround for double stepping
+      printf( "  ERROR: %c - aborting home%s after %d iterations / %1.6lf [mm].\n",
+	      axisNames[ pruss_axis], dir, iter, POS2MM( direction * pos_move_len));
+      update_position( position, direction, iter, si_iter_size);
+      return 0;
+    }
+    sched_yield();
+  }
+  iter *= 2; // Workaround for double stepping
+  pruss_queue_set_origin( pruss_axis);
+  update_position( position, direction, iter, si_iter_size);
+  if (debug_flags & DEBUG_HOME) {
+    printf( "  %c: limit switch state change detected after %d iterations, %1.6lf [mm]\n",
+	    axisNames[ pruss_axis], iter, (double)(direction * iter) * SI2MM( si_iter_size));
+  }
+  return 1;
+}
+
 // Execute the actual homing operation. The hardware selected with the 'axis'
 // variable must exist or we'll fail miserably, so filter before calling here!
-static void run_home_one_axis( axis_e axis, int reverse, uint32_t feed)
+static int run_home_one_axis( axis_e axis, int reverse, int32_t* position, uint32_t feed)
 {
   int direction = (reverse) ? -1 : 1;
-  int steps;
-  const char axisNames[] = { '?', 'X', 'Y', 'Z' };
-
   int pruss_axis = 0;
-  double step_size = config_get_step_size( axis);
+  double si_step_size = config_get_step_size( axis);
+  double si_iter_size = si_step_size;
+
   switch (axis) {
   case x_axis: pruss_axis = 1; break;
   case y_axis: pruss_axis = 2; break;
@@ -58,63 +100,45 @@ static void run_home_one_axis( axis_e axis, int reverse, uint32_t feed)
       printf( "  %c: limiting home speed to %d\n", axisNames[ pruss_axis], feed);
     }
   }
-  const double c_acc = 282842712.5;	// = fclk * sqrt( 2.0);
   double speed = feed / 60000.0;
-  uint32_t cmin = fclk * step_size / speed ;
-  uint32_t c0 = (uint32_t) (c_acc * sqrt( step_size / config_get_max_accel( axis)));
-
-  pruss_queue_set_origin( pruss_axis);
+  /*
+   * Note: we're running at fixed speed, no acceleration is done
+   * We assume that the homing feed is low enough so that we can
+   * start stepping at that speed without acceleration.
+   */
+  uint32_t cmin = fclk * si_step_size / speed ;
   /*
    * Run towards the switch
    */
-  pruss_queue_set_accel( pruss_axis, c0);
-  steps = 0;
-  while (limsw_axis( axis, reverse) == 0) {
-    pruss_queue_dwell( pruss_axis, cmin, (int32_t)(direction * 1.0E9 * step_size));
-    pruss_queue_execute();
-    sched_yield();
-    ++steps;
+  int32_t pos_delta = (int32_t)(direction * SI2POS( si_iter_size));
+  if (!step_until_switch_change( axis, reverse, 1, si_iter_size, pruss_axis,
+				  cmin, direction, position, pos_delta, " move")) {
+    return 0;
+  }
+  if (debug_flags & DEBUG_HOME) {
+    printf( "  %c: pausing for switch debounce\n", axisNames[ pruss_axis]);
   }
   /*
    * Debounce and reverse direction
    */
-  if (debug_flags & DEBUG_HOME) {
-    printf( "  %c: limit switch reached in %d iterations\n",
-	    axisNames[ pruss_axis], steps);
-    printf( "  %c: pausing for switch debounce\n", axisNames[ pruss_axis]);
-  }
   sleep( 1);
-  if (debug_flags & DEBUG_HOME) {
-    pruss_dump_position( pruss_axis);
-  }
-  feed = config_get_home_release_feed( axis);
-  speed = feed / 60000.0;
-  cmin = fclk * step_size / speed ;
-  c0 = cmin;
+  speed = config_get_home_release_feed( axis) / 60000.0;
+  cmin = fclk * si_iter_size / speed ;
   direction = -direction;
+  pos_delta = (int32_t)(direction * SI2POS( si_iter_size));
   /*
    * Run away from the switch
    */
-  pruss_queue_set_origin( pruss_axis);
-  pruss_queue_set_accel( pruss_axis, c0);
-  steps = 0;
-  while (limsw_axis( axis, reverse) != 0) {
-    pruss_queue_dwell( pruss_axis, cmin, (int32_t)(direction * 1.0E9 * step_size));
-    pruss_queue_execute();
-    sched_yield();
-    ++steps;
+  if (!step_until_switch_change( axis, reverse, 0, si_iter_size, pruss_axis,
+				  cmin, direction, position, pos_delta, " release")) {
+    return 0;
   }
-  if (debug_flags & DEBUG_HOME) {
-    printf( "  %c: limit switch was released after %d iterations\n",
-	    axisNames[ pruss_axis], steps);
-    pruss_dump_position( pruss_axis);
-  }
-  pruss_queue_set_origin( pruss_axis);
+  return 1;
 }
 
 /// home the selected axis to the selected limit switch.
 // keep all preprocessor configuration stuff at or below this level.
-static void home_one_axis( axis_e axis, int reverse, uint32_t feed)
+static void home_one_axis( axis_e axis, int reverse, int32_t* position, uint32_t feed)
 {
   traject_wait_for_completion();
 
@@ -128,7 +152,7 @@ static void home_one_axis( axis_e axis, int reverse, uint32_t feed)
   // elevate priority for undisturbed operation
   pthread_setschedparam( self, HOME_SCHED, &new_param); 
   // move to a limit switch or sensor
-  run_home_one_axis( axis, reverse, feed);
+  run_home_one_axis( axis, reverse, position, feed);
   // return to normal scheduling
   pthread_setschedparam( self, old_scheduler, &old_param); 
 }
@@ -138,24 +162,24 @@ static void home_one_axis( axis_e axis, int reverse, uint32_t feed)
 /// assigning a home position.
 /// If the switch is configured as home / reference, set the current position
 /// from the reference value. Otherwise the current position is not changed.
-void home_axis_to_min_limit_switch( axis_e axis, double feed)
+void home_axis_to_min_limit_switch( axis_e axis, int32_t* position, double feed)
 {
   if (config_axis_has_min_limit_switch( axis)) {
     double max_feed = config_get_max_feed( axis);
     if (feed > max_feed) {
       feed = max_feed;
     }
-    home_one_axis( axis, 1 /* reverse */, feed);
+    home_one_axis( axis, 1 /* reverse */, position, feed);
   }
 }
 
-void home_axis_to_max_limit_switch( axis_e axis, double feed)
+void home_axis_to_max_limit_switch( axis_e axis, int32_t* position, double feed)
 {
   if (config_axis_has_max_limit_switch( axis)) {
     double max_feed = config_get_max_feed( axis);
     if (feed > max_feed) {
       feed = max_feed;
     }
-    home_one_axis( axis, 0 /* forward */, feed);
+    home_one_axis( axis, 0 /* forward */, position, feed);
   }
 }

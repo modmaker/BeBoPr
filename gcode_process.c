@@ -360,24 +360,30 @@ void process_gcode_command() {
 				// reference 'home' position to (then) current position
 				double pos;
 				if (next_target.seen_X) {
-					home_axis_to_min_limit_switch( x_axis, next_target.target.F);
+					home_axis_to_min_limit_switch( x_axis, &gcode_current_pos.X, next_target.target.F);
 					if (config_min_switch_pos( x_axis, &pos)) {
 						gcode_current_pos.X =
-							gcode_home_pos.X = pos;
+							gcode_home_pos.X = SI2POS( pos);
+						pruss_queue_set_origin( 1);
+						pruss_queue_adjust_for_ramp( 1, gcode_home_pos.X);
 					}
 				}
 				if (next_target.seen_Y) {
-					home_axis_to_min_limit_switch( y_axis, next_target.target.F);
+					home_axis_to_min_limit_switch( y_axis, &gcode_current_pos.Y, next_target.target.F);
 					if (config_min_switch_pos( y_axis, &pos)) {
 						gcode_current_pos.Y =
-							gcode_home_pos.Y = pos;
+							gcode_home_pos.Y = SI2POS( pos);
+						pruss_queue_set_origin( 2);
+						pruss_queue_adjust_for_ramp( 2, gcode_home_pos.Y);
 					}
 				}
 				if (next_target.seen_Z) {
-					home_axis_to_min_limit_switch( z_axis, next_target.target.F);
+					home_axis_to_min_limit_switch( z_axis, &gcode_current_pos.Z, next_target.target.F);
 					if (config_min_switch_pos( z_axis, &pos)) {
 						gcode_current_pos.Z =
-							gcode_home_pos.Z = pos;
+							gcode_home_pos.Z = SI2POS( pos);
+						pruss_queue_set_origin( 3);
+						pruss_queue_adjust_for_ramp( 3, gcode_home_pos.Z);
 					}
 				}
 				break;
@@ -391,24 +397,30 @@ void process_gcode_command() {
 				// reference 'home' position to (then) current position
 				double pos;
 				if (next_target.seen_X) {
-					home_axis_to_max_limit_switch( x_axis, next_target.target.F);
+					home_axis_to_max_limit_switch( x_axis, &gcode_current_pos.X, next_target.target.F);
 					if (config_max_switch_pos( x_axis, &pos)) {
 						gcode_current_pos.X =
-							gcode_home_pos.X = pos;
+							gcode_home_pos.X = SI2POS( pos);
+						pruss_queue_set_origin( 1);
+						pruss_queue_adjust_for_ramp( 1, gcode_home_pos.X);
 					}
 				}
 				if (next_target.seen_Y) {
-					home_axis_to_max_limit_switch( y_axis, next_target.target.F);
+					home_axis_to_max_limit_switch( y_axis, &gcode_current_pos.Y, next_target.target.F);
 					if (config_max_switch_pos( y_axis, &pos)) {
 						gcode_current_pos.Y =
-							gcode_home_pos.Y = pos;
+							gcode_home_pos.Y = SI2POS( pos);
+						pruss_queue_set_origin( 2);
+						pruss_queue_adjust_for_ramp( 2, gcode_home_pos.Y);
 					}
 				}
 				if (next_target.seen_Z) {
-					home_axis_to_max_limit_switch( z_axis, next_target.target.F);
+					home_axis_to_max_limit_switch( z_axis, &gcode_current_pos.Z, next_target.target.F);
 					if (config_max_switch_pos( z_axis, &pos)) {
 						gcode_current_pos.Z =
-							gcode_home_pos.Z = pos;
+							gcode_home_pos.Z = SI2POS( pos);
+						pruss_queue_set_origin( 3);
+						pruss_queue_adjust_for_ramp( 3, gcode_home_pos.Z);
 					}
 				}
 				break;
