@@ -40,39 +40,36 @@ static inline void update_position( int32_t* position, int direction, int count,
   *position += SI2POS( (direction * count) * step_size);
 }
 
-static inline int step_until_switch_change( axis_e axis, int reverse, int new_state, double si_iter_size,
+static inline int step_until_switch_change( axis_e axis, int reverse, int new_state, double si_delta,
 					int pruss_axis, int32_t cmin, int direction,
-					int32_t* position, int32_t pos_delta, const char* dir)
+					int32_t* position, int32_t pos_delta, const char* dir_txt)
 {
   int iter = 0;			/* count interations for exact position */
   uint32_t pos_move_len = 0.0;	/* for soft limit */
-  uint32_t pos_max_move = 0;
+  uint32_t pos_max_move = 0;	// FIXME: needs proper initialization to work !
+
   while (limsw_axis( axis, reverse) != new_state) {
     /* Clear internal position information */
-    pruss_queue_set_origin( pruss_axis);
-    pruss_queue_accel( pruss_axis, cmin, cmin, (int32_t)(1.0E9 * (direction * si_iter_size)));
+    pruss_queue_accel( pruss_axis, cmin, cmin, *position + pos_delta);
+    *position += 2 * pos_delta;		// workaround for double stepping!
+    pos_move_len += 2 * pos_delta; // workaround for double stepping !
     /* Do not queue moves to prevent stepping after reaching position */
     while (!pruss_queue_empty()) {
       sched_yield();
     }
     pruss_queue_execute();
     ++iter;
-    pos_move_len += pos_delta;
     if (pos_max_move > 0.0 && pos_move_len > pos_max_move) {
-      iter *= 2; // Workaround for double stepping
       printf( "  ERROR: %c - aborting home%s after %d iterations / %1.6lf [mm].\n",
-	      axisNames[ pruss_axis], dir, iter, POS2MM( direction * pos_move_len));
-      update_position( position, direction, iter, si_iter_size);
+	      axisNames[ pruss_axis], dir_txt, iter, POS2MM( pos_move_len));
       return 0;
     }
     sched_yield();
   }
-  iter *= 2; // Workaround for double stepping
-  pruss_queue_set_origin( pruss_axis);
-  update_position( position, direction, iter, si_iter_size);
+  si_delta *= 2.0;
   if (debug_flags & DEBUG_HOME) {
     printf( "  %c: limit switch state change detected after %d iterations, %1.6lf [mm]\n",
-	    axisNames[ pruss_axis], iter, (double)(direction * iter) * SI2MM( si_iter_size));
+	    axisNames[ pruss_axis], iter, (double)(direction * iter) * SI2MM( si_delta));
   }
   return 1;
 }
@@ -162,10 +159,10 @@ static void home_one_axis( axis_e axis, int reverse, int32_t* position, uint32_t
 /// assigning a home position.
 /// If the switch is configured as home / reference, set the current position
 /// from the reference value. Otherwise the current position is not changed.
-void home_axis_to_min_limit_switch( axis_e axis, int32_t* position, double feed)
+void home_axis_to_min_limit_switch( axis_e axis, int32_t* position, uint32_t feed)
 {
   if (config_axis_has_min_limit_switch( axis)) {
-    double max_feed = config_get_max_feed( axis);
+    uint32_t max_feed = (uint32_t) config_get_max_feed( axis);
     if (feed > max_feed) {
       feed = max_feed;
     }
@@ -173,10 +170,10 @@ void home_axis_to_min_limit_switch( axis_e axis, int32_t* position, double feed)
   }
 }
 
-void home_axis_to_max_limit_switch( axis_e axis, int32_t* position, double feed)
+void home_axis_to_max_limit_switch( axis_e axis, int32_t* position, uint32_t feed)
 {
   if (config_axis_has_max_limit_switch( axis)) {
-    double max_feed = config_get_max_feed( axis);
+    uint32_t max_feed = (uint32_t) config_get_max_feed( axis);
     if (feed > max_feed) {
       feed = max_feed;
     }

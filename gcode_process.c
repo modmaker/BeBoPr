@@ -31,7 +31,7 @@ static uint8_t next_tool;
 /// the actual machine position will probably lag!
 static TARGET gcode_current_pos;
 static TARGET gcode_home_pos;
-
+static double gcode_initial_feed;
 /*
  * Local copy of channel tags to prevent a lookup with each access.
  */
@@ -86,7 +86,6 @@ static void enqueue_pos( TARGET* target)
        */
       target->E = gcode_home_pos.E;
     }
-    memcpy( &gcode_current_pos, target, sizeof( TARGET));
   }
 }
 
@@ -95,65 +94,60 @@ static void enqueue_pos( TARGET* target)
 
   \brief Processes command stored in global \ref next_target.
   This is where we work out what to actually do with each command we
-    receive. All data has already been scaled to integers in gcode_process.
+    receive. All data has already been scaled to integers in gcode_parse.
     If you want to add support for a new G or M code, this is the place.
 
 
 *//*************************************************************************/
 
+
+void clip_move( axis_e axis, int32_t* pnext_target, int32_t current_pos, int32_t home_pos)
+{
+	static const char axisNames[] = { 'X', 'Y', 'Z', 'E' };	// FIXME: this uses knowledge of axis_e
+	double limit;
+	if (*pnext_target >= current_pos) {
+		// forward move or no move
+		if (config_max_soft_limit( axis, &limit)) {
+			int32_t pos_limit = MM2POS( limit);
+			if (home_pos + current_pos > pos_limit) {
+				pos_limit = home_pos + current_pos;
+			}
+			if (home_pos + *pnext_target > pos_limit) {
+				printf( "WARNING: Clipping target.%c (%d) to %d due to upper soft limit= %d (home= %d)\n",
+					axisNames[ axis], *pnext_target, pos_limit, MM2POS( limit), home_pos);
+				*pnext_target = pos_limit - home_pos;
+			}
+		}	
+	} else {
+		// backward move
+		if (config_min_soft_limit( axis, &limit)) {
+			int32_t pos_limit = MM2POS( limit);
+			if (home_pos + current_pos < pos_limit) {
+				pos_limit = home_pos + current_pos;
+			}
+			if (home_pos + *pnext_target < pos_limit) {
+				printf( "WARNING: Clipping target.%c (%d) to %d due to lower soft limit= %d (home= %d)\n",
+					axisNames[ axis], *pnext_target, pos_limit, MM2POS( limit), home_pos);
+				*pnext_target = pos_limit - home_pos;
+			}
+		}	
+	}
+}
+
 void process_gcode_command() {
 	uint32_t	backup_f;
 
+	if (next_target.seen_F) {
+		gcode_initial_feed = next_target.target.F;
+	} else {
+		next_target.target.F = gcode_initial_feed;
+	}
 	// convert relative to absolute
 	if (next_target.option_relative) {
 		next_target.target.X += gcode_current_pos.X;
 		next_target.target.Y += gcode_current_pos.Y;
 		next_target.target.Z += gcode_current_pos.Z;
 		next_target.target.E += gcode_current_pos.E;
-	}
-	// implement axis limits
-	double limit;
-	if (config_min_soft_limit( x_axis, &limit)) {
-		if (gcode_home_pos.X + next_target.target.X < MM2POS( limit)) {
-			printf( "WARNING: Clipping target.X (%d) to %d due to lower soft limit= %d and home= %d\n",
-				next_target.target.X, MM2POS( limit) - gcode_home_pos.X, MM2POS( limit), gcode_home_pos.X);
-			next_target.target.X = MM2POS( limit) - gcode_home_pos.X;
-		}	
-	}
-	if (config_max_soft_limit( x_axis, &limit)) {
-		if (gcode_home_pos.X + next_target.target.X > MM2POS( limit)) {
-			printf( "WARNING: Clipping target.X (%d) to %d due to upper soft limit= %d and home= %d\n",
-				next_target.target.X, MM2POS( limit) - gcode_home_pos.X, MM2POS( limit), gcode_home_pos.X);
-			next_target.target.X = MM2POS( limit) - gcode_home_pos.X;
-		}	
-	}
-	if (config_min_soft_limit( y_axis, &limit)) {
-		if (gcode_home_pos.Y + next_target.target.Y < MM2POS( limit)) {
-			printf( "WARNING: Clipping target.Y (%d) to %d due to lower soft limit= %d and home= %d\n",
-				next_target.target.Y, MM2POS( limit) - gcode_home_pos.Y, MM2POS( limit), gcode_home_pos.Y);
-			next_target.target.Y = MM2POS( limit) - gcode_home_pos.Y;
-		}	
-	}
-	if (config_max_soft_limit( y_axis, &limit)) {
-		if (gcode_home_pos.Y + next_target.target.Y > MM2POS( limit)) {
-			printf( "WARNING: Clipping target.Y (%d) to %d due to upper soft limit= %d and home= %d\n",
-				next_target.target.Y, MM2POS( limit) - gcode_home_pos.Y, MM2POS( limit), gcode_home_pos.Y);
-			next_target.target.Y = MM2POS( limit) - gcode_home_pos.Y;
-		}	
-	}
-	if (config_min_soft_limit( z_axis, &limit)) {
-		if (gcode_home_pos.Z + next_target.target.Z < MM2POS( limit)) {
-			printf( "WARNING: Clipping target.Z (%d) to %d due to lower soft limit= %d and home= %d\n",
-				next_target.target.Z, MM2POS( limit) - gcode_home_pos.Z, MM2POS( limit), gcode_home_pos.Z);
-			next_target.target.Z = MM2POS( limit) - gcode_home_pos.Z;
-		}	
-	}
-	if (config_max_soft_limit( z_axis, &limit)) {
-		if (gcode_home_pos.Z + next_target.target.Z > MM2POS( limit)) {
-			printf( "WARNING: Clipping target.Z (%d) to %d due to upper soft limit= %d and home= %d\n",
-				next_target.target.Z, MM2POS( limit) - gcode_home_pos.Z, MM2POS( limit), gcode_home_pos.Z);
-			next_target.target.Z = MM2POS( limit) - gcode_home_pos.Z;
-		}	
 	}
 	// The GCode documentation was taken from http://reprap.org/wiki/Gcode .
 
@@ -168,6 +162,7 @@ void process_gcode_command() {
 	}
 
 	// if we didn't see an axis word, set it to gcode_current_pos. this fixes incorrect moves after homing TODO: fix homing ???
+//TODO: fix this ???
 	if (next_target.seen_X == 0)
 		next_target.target.X = gcode_current_pos.X;
 	if (next_target.seen_Y == 0)
@@ -188,23 +183,47 @@ void process_gcode_command() {
 				//? Example: G0 X12
 				//?
 				//? In this case move rapidly to X = 12 mm.  In fact, the RepRap firmware uses exactly the same code for rapid as it uses for controlled moves (see G1 below), as - for the RepRap machine - this is just as efficient as not doing so.  (The distinction comes from some old machine tools that used to move faster if the axes were not driven in a straight line.  For them G0 allowed any movement in space to get to the destination as fast as possible.)
-
-				backup_f = next_target.target.F;
-				next_target.target.F = 100000;	// will be limited by the limitations of the individual axes
-				enqueue_pos( &next_target.target);
-				next_target.target.F = backup_f;
-				break;
-
-				//	G1 - synchronised motion
 			case 1:
+			{
 				//? ==== G1: Controlled move ====
 				//?
 				//? Example: G1 X90.6 Y13.8 E22.4
 				//?
 				//? Go in a straight line from the current (X, Y) point to the point (90.6, 13.8), extruding material as the move happens from the current extruded length to a length of 22.4 mm.
-				enqueue_pos( &next_target.target);
-				break;
+				/*
+				 *  Implement soft axis limits:
+				 *
+				 *  The soft axis limits define a safe operating zone.
+				 *  Coordinates are clipped in such a way that no moves are generate that would move
+				 *  from the inside to the outside of the safe operating zone. All moves from outside
+				 *  the safe operating zone directed towards the inside of the zone are allowed!
+				 */
+				if (next_target.seen_X) {
+					clip_move( x_axis, &next_target.target.X, gcode_current_pos.X, gcode_home_pos.X);
+				}
+				if (next_target.seen_Y) {
+					clip_move( y_axis, &next_target.target.Y, gcode_current_pos.Y, gcode_home_pos.Y);
+				}
+				if (next_target.seen_Z) {
+					clip_move( z_axis, &next_target.target.Z, gcode_current_pos.Z, gcode_home_pos.Z);
+				}
 
+				if (next_target.G == 0) {
+					backup_f = next_target.target.F;
+					next_target.target.F = 100000;	// will be limited by the limitations of the individual axes
+					enqueue_pos( &next_target.target);
+					next_target.target.F = backup_f;
+				} else {
+					// synchronised motion
+					enqueue_pos( &next_target.target);
+				}
+				gcode_current_pos.X = next_target.target.X;
+				gcode_current_pos.Y = next_target.target.Y;
+				gcode_current_pos.Z = next_target.target.Z;
+				gcode_current_pos.E = next_target.target.E;
+				gcode_current_pos.F = next_target.target.F;
+				break;
+			}
 				//	G2 - Arc Clockwise
 				// unimplemented
 
@@ -351,6 +370,32 @@ void process_gcode_command() {
 				}
 				break;
 
+#define FOR_ONE_AXIS( axis_lc, axis_uc, axis_i, code) \
+	do {								\
+		axis_xyz = axis_lc##_axis;				\
+		pruss_axis_xyz = axis_i;				\
+		next_target_seen_xyz = next_target.seen_##axis_uc;	\
+		current_pos_xyz = gcode_current_pos.axis_uc;		\
+		home_pos_xyz = gcode_home_pos.axis_uc;			\
+		code							\
+		gcode_current_pos.axis_uc = current_pos_xyz;		\
+		gcode_home_pos.axis_uc = home_pos_xyz;			\
+	} while (0)
+
+#define FOR_EACH_AXIS_IN_XYZ( code) \
+	do {								\
+		uint32_t feed = next_target.target.F;			\
+		axis_e axis_xyz;					\
+		int pruss_axis_xyz;		   			\
+		int next_target_seen_xyz;				\
+		int32_t current_pos_xyz;				\
+		int32_t home_pos_xyz;					\
+		/* X */							\
+		FOR_ONE_AXIS( x, X, 1, code);				\
+		FOR_ONE_AXIS( y, Y, 2, code);				\
+		FOR_ONE_AXIS( z, Z, 3, code);				\
+	} while (0)
+
 			// G161 - Home negative
 			case 161:
 			{
@@ -358,34 +403,27 @@ void process_gcode_command() {
 				//?
 				//? Find the minimum limit of the specified axes by searching for the limit switch.
 				// reference 'home' position to (then) current position
+
+				// NOTE: G161/G162 clears any G92 offset !
 				double pos;
-				if (next_target.seen_X) {
-					home_axis_to_min_limit_switch( x_axis, &gcode_current_pos.X, next_target.target.F);
-					if (config_min_switch_pos( x_axis, &pos)) {
-						gcode_current_pos.X =
-							gcode_home_pos.X = SI2POS( pos);
-						pruss_queue_set_origin( 1);
-						pruss_queue_adjust_for_ramp( 1, gcode_home_pos.X);
-					}
+				if (DEBUG_GCODE_PROCESS && (debug_flags & DEBUG_GCODE_PROCESS)) {
+					fprintf( stderr, "G161: X(%d)=%d, Y(%d)=%d, Z(%d)=%d, E(%d)=%d, F(%d)=%d\n",
+						next_target.seen_X, next_target.target.X,
+						next_target.seen_Y, next_target.target.Y,
+						next_target.seen_Z, next_target.target.Z,
+						next_target.seen_E, next_target.target.E,
+						next_target.seen_F, next_target.target.F );
 				}
-				if (next_target.seen_Y) {
-					home_axis_to_min_limit_switch( y_axis, &gcode_current_pos.Y, next_target.target.F);
-					if (config_min_switch_pos( y_axis, &pos)) {
-						gcode_current_pos.Y =
-							gcode_home_pos.Y = SI2POS( pos);
-						pruss_queue_set_origin( 2);
-						pruss_queue_adjust_for_ramp( 2, gcode_home_pos.Y);
-					}
-				}
-				if (next_target.seen_Z) {
-					home_axis_to_min_limit_switch( z_axis, &gcode_current_pos.Z, next_target.target.F);
-					if (config_min_switch_pos( z_axis, &pos)) {
-						gcode_current_pos.Z =
-							gcode_home_pos.Z = SI2POS( pos);
-						pruss_queue_set_origin( 3);
-						pruss_queue_adjust_for_ramp( 3, gcode_home_pos.Z);
-					}
-				}
+				FOR_EACH_AXIS_IN_XYZ(
+					if (next_target_seen_xyz) {
+						home_axis_to_min_limit_switch( axis_xyz, &current_pos_xyz, feed);
+						if (config_min_switch_pos( axis_xyz, &pos)) {
+							home_pos_xyz = 0;
+							current_pos_xyz = SI2POS( pos);
+							pruss_set_position( pruss_axis_xyz, home_pos_xyz + current_pos_xyz);
+						}
+					} );
+
 				break;
 			}
 			// G162 - Home positive
@@ -396,33 +434,23 @@ void process_gcode_command() {
 				//? Find the maximum limit of the specified axes by searching for the limit switch.
 				// reference 'home' position to (then) current position
 				double pos;
-				if (next_target.seen_X) {
-					home_axis_to_max_limit_switch( x_axis, &gcode_current_pos.X, next_target.target.F);
-					if (config_max_switch_pos( x_axis, &pos)) {
-						gcode_current_pos.X =
-							gcode_home_pos.X = SI2POS( pos);
-						pruss_queue_set_origin( 1);
-						pruss_queue_adjust_for_ramp( 1, gcode_home_pos.X);
-					}
+				if (DEBUG_GCODE_PROCESS && (debug_flags & DEBUG_GCODE_PROCESS)) {
+					fprintf( stderr, "G162: X(%d)=%d, Y(%d)=%d, Z(%d)=%d, E(%d)=%d, F(%d)=%d\n",
+						next_target.seen_X, next_target.target.X,
+						next_target.seen_Y, next_target.target.Y,
+						next_target.seen_Z, next_target.target.Z,
+						next_target.seen_E, next_target.target.E,
+						next_target.seen_F, next_target.target.F );
 				}
-				if (next_target.seen_Y) {
-					home_axis_to_max_limit_switch( y_axis, &gcode_current_pos.Y, next_target.target.F);
-					if (config_max_switch_pos( y_axis, &pos)) {
-						gcode_current_pos.Y =
-							gcode_home_pos.Y = SI2POS( pos);
-						pruss_queue_set_origin( 2);
-						pruss_queue_adjust_for_ramp( 2, gcode_home_pos.Y);
-					}
-				}
-				if (next_target.seen_Z) {
-					home_axis_to_max_limit_switch( z_axis, &gcode_current_pos.Z, next_target.target.F);
-					if (config_max_switch_pos( z_axis, &pos)) {
-						gcode_current_pos.Z =
-							gcode_home_pos.Z = SI2POS( pos);
-						pruss_queue_set_origin( 3);
-						pruss_queue_adjust_for_ramp( 3, gcode_home_pos.Z);
-					}
-				}
+				FOR_EACH_AXIS_IN_XYZ(
+					if (next_target_seen_xyz) {
+						home_axis_to_max_limit_switch( axis_xyz, &current_pos_xyz, feed);
+						if (config_max_switch_pos( axis_xyz, &pos)) {
+							home_pos_xyz = 0;
+							current_pos_xyz = SI2POS( pos);
+							pruss_set_position( pruss_axis_xyz, home_pos_xyz + current_pos_xyz);
+						}
+					} );
 				break;
 			}
 			// G255 - Dump PRUSS state
@@ -696,9 +724,10 @@ void process_gcode_command() {
 					// wait for all moves to complete
 					traject_wait_for_completion();
 #				endif
-				pruss_dump_position( 0);
-				printf(  "X:%d,Y:%d,Z:%d,E:%d,F:%d",
-					gcode_current_pos.X, gcode_current_pos.Y, gcode_current_pos.Z, gcode_current_pos.E, gcode_current_pos.F);
+				printf(  "current: X=%1.6lf, Y=%1.6lf, Z=%1.6lf, E=%1.6lf, F=%d\n",
+					POS2MM( gcode_current_pos.X), POS2MM( gcode_current_pos.Y),
+					POS2MM( gcode_current_pos.Z), POS2MM( gcode_current_pos.E),
+					gcode_current_pos.F);
 				// newline is sent from gcode_parse after we return
 
 				break;
@@ -908,33 +937,19 @@ void process_gcode_command() {
 				break;
 
 			// DEBUG: return current position, end position, queue
-			case 250: {
+			case 250:
 				//? ==== M250: return current position, end position, queue ====
 				//? Undocumented
 				//? This command is only available in DEBUG builds.
-#if 0
-				unsigned mb_tail = dda_queue_get_mb_tail();
-				printf(  "um{X:%d,Y:%d,Z:%d,E:%d,F:%u},steps{X:%d,Y:%d,Z:%d,E:%d,F:%u,c:%u}\t",
-					gcode_current_pos.X,
-					gcode_current_pos.Y,
-					gcode_current_pos.Z,
-					gcode_current_pos.E,
-					gcode_current_pos.F,
-					movebuffer[ mb_tail].endpoint.X,
-					movebuffer[ mb_tail].endpoint.Y,
-					movebuffer[ mb_tail].endpoint.Z,
-					movebuffer[ mb_tail].endpoint.E,
-					movebuffer[ mb_tail].endpoint.F,
-					#ifdef ACCELERATION_REPRAP
-						movebuffer[ mb_tail].end_c
-					#else
-						movebuffer[ mb_tail].c
-					#endif
-					);
-				dda_queue_print();
-#endif
+				printf(  "current: X=%1.6lf, Y=%1.6lf, Z=%1.6lf, E=%1.6lf, F=%d\n",
+					POS2MM( gcode_current_pos.X), POS2MM( gcode_current_pos.Y),
+					POS2MM( gcode_current_pos.Z), POS2MM( gcode_current_pos.E),
+					gcode_current_pos.F);
+				printf(  "origin: X=%1.6lf, Y=%1.6lf, Z=%1.6lf, E=%1.6lf\n",
+					POS2MM( gcode_home_pos.X), POS2MM( gcode_home_pos.Y),
+					POS2MM( gcode_home_pos.Z), POS2MM( gcode_home_pos.E));
+				pruss_dump_position();
 				break;
-			}
 
 			// DEBUG: read arbitrary memory location
 			case 253:
@@ -985,5 +1000,6 @@ int gcode_process_init( void)
   gcode_current_pos.Y = gcode_home_pos.Y = 0;
   gcode_current_pos.Z = gcode_home_pos.Z = 0;
   gcode_current_pos.E = gcode_home_pos.E = 0;
+  gcode_initial_feed  = 3000;
   return 0;
 }

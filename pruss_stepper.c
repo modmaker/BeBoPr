@@ -612,12 +612,11 @@ int pruss_queue_set_enable( int on)
   return 0;
 }
 
-int pruss_dump_position( int axis)
+int pruss_dump_position( void)
 {
   const char axes[] = { '?', 'X', 'Y', 'Z', 'E' };
+  int axis;
 
-  //  if (axis >= 1 && axis <= 4) {
-  printf( "\n");
   for (axis = 1 ; axis <= 4 ; ++axis) {
     uint32_t base = PRUSS_RAM_OFFSET + (axis - 1) * FullADSize;
     int32_t virtPosI = pruss_rd32( base + 20) - VIRT_POS_MID_SCALE;
@@ -631,6 +630,21 @@ int pruss_dump_position( int axis)
     }
   }
   printf( "\n");
+  for (axis = 1 ; axis <= 4 ; ++axis) {
+    uint32_t base = PRUSS_RAM_OFFSET + (axis - 1) * FullADSize;
+    int32_t requestedPos = pruss_rd32( base + 32) - VIRT_POS_MID_SCALE;
+    printf( "  %c-requestedPos = %d", axes[ axis], requestedPos);
+  }
+  printf( "\n");
+  return 0;
+}
+
+int pruss_set_position( int axis, int32_t pos)
+{
+  uint32_t base = PRUSS_RAM_OFFSET + (axis - 1) * FullADSize;
+  pruss_wr32( base + 32, pos + VIRT_POS_MID_SCALE);	// requestedPos := pos
+  pruss_wr32( base + 20, pos + VIRT_POS_MID_SCALE);	// virtPosI := pos
+  pruss_wr16( base + 18, 0);	// virtPosT := 0
   return 0;
 }
 

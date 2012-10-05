@@ -20,7 +20,7 @@ export TARGET_DIR=/home/bas/ti-sdk-am335x-evm-05.03.02.00/targetNFS/home/root
 # If you want debug output, -DDEBUG must be set in DEFS above. If you
 # want debug output at startup, set INIT_DEBUG_FLAGS (see debug.h).
 #
-INIT_DEBUG_FLAGS="DEBUG_TRAJECT + DEBUG_GCODE_PROCESS + DEBUG_PRUSS + DEBUG_COMM"
+INIT_DEBUG_FLAGS="DEBUG_TRAJECT + DEBUG_GCODE_PROCESS + DEBUG_PRUSS + DEBUG_COMM + DEBUG_HOME + DEBUG_LIMSW"
 
 #
 # Define 'CROSS_PATH' to point to the cross-compiler toolchain or set
