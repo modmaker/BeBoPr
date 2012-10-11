@@ -40,6 +40,8 @@ static channel_tag heater_bed = NULL;
 static channel_tag temp_extruder = NULL;
 static channel_tag temp_bed = NULL;
 
+static int dont_move_until_temp_reached = 0;
+
 /*
 	private functions
 */
@@ -47,6 +49,14 @@ static channel_tag temp_bed = NULL;
 static void enqueue_pos( TARGET* target)
 {
   if (target != NULL) {
+    if (dont_move_until_temp_reached) {
+      printf( "may not move until temperature stabilized!\n");
+      while (!heater_temp_reached( heater_extruder)) {
+        usleep( 100000);
+      }
+      dont_move_until_temp_reached = 0;
+      printf( "continue move because temperature stabilized!\n");
+    }
     if (DEBUG_GCODE_PROCESS && (debug_flags & DEBUG_GCODE_PROCESS)) {
       printf( "enqueue_pos( TARGET={%d, %d, %d, %d, %u})\n",
 	       target->X, target->Y, target->Z, target->E, target->F);
@@ -676,6 +686,7 @@ void process_gcode_command() {
 				} else {
 					heater_enable( heater_extruder, 0);
 				}
+				dont_move_until_temp_reached = 1;
 				break;
 
 			// M110- set line number
