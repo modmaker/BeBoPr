@@ -434,7 +434,11 @@ void process_gcode_command() {
 				}
 				FOR_EACH_AXIS_IN_XYZ(
 					if (next_target_seen_xyz) {
+						// use machine coordinates during homing
+						current_pos_xyz += home_pos_xyz;
 						home_axis_to_min_limit_switch( axis_xyz, &current_pos_xyz, feed);
+						// restore gcode coordinates
+						current_pos_xyz -= home_pos_xyz;
 						if (config_min_switch_pos( axis_xyz, &pos)) {
 							home_pos_xyz = 0;
 							current_pos_xyz = SI2POS( pos);
@@ -462,7 +466,11 @@ void process_gcode_command() {
 				}
 				FOR_EACH_AXIS_IN_XYZ(
 					if (next_target_seen_xyz) {
+						// use machine coordinates during homing
+						current_pos_xyz += home_pos_xyz;
 						home_axis_to_max_limit_switch( axis_xyz, &current_pos_xyz, feed);
+						// restore gcode coordinates
+						current_pos_xyz -= home_pos_xyz;
 						if (config_max_switch_pos( axis_xyz, &pos)) {
 							home_pos_xyz = 0;
 							current_pos_xyz = SI2POS( pos);
