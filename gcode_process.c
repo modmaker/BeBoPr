@@ -40,7 +40,8 @@ static channel_tag heater_bed = NULL;
 static channel_tag temp_extruder = NULL;
 static channel_tag temp_bed = NULL;
 
-static int dont_move_until_temp_reached = 0;
+static int extruder_temp_wait = 0;
+static int bed_temp_wait = 0;
 
 /*
 	private functions
@@ -49,13 +50,20 @@ static int dont_move_until_temp_reached = 0;
 static void enqueue_pos( TARGET* target)
 {
   if (target != NULL) {
-    if (dont_move_until_temp_reached) {
-      printf( "may not move until temperature stabilized!\n");
-      while (!heater_temp_reached( heater_extruder)) {
+    if (extruder_temp_wait || bed_temp_wait) {
+      if (DEBUG_GCODE_PROCESS && (debug_flags & DEBUG_GCODE_PROCESS)) {
+        printf( "defer move until temperature is stable!\n");
+      }
+      while ( (extruder_temp_wait && !heater_temp_reached( heater_extruder)) ||
+	      (bed_temp_wait && !heater_temp_reached( heater_bed)) )
+      {
         usleep( 100000);
       }
-      dont_move_until_temp_reached = 0;
-      printf( "continue move because temperature stabilized!\n");
+      extruder_temp_wait = 0;
+      bed_temp_wait = 0;
+      if (DEBUG_GCODE_PROCESS && (debug_flags & DEBUG_GCODE_PROCESS)) {
+        printf( "resume with move because temperature is stable!\n");
+      }
     }
     if (DEBUG_GCODE_PROCESS && (debug_flags & DEBUG_GCODE_PROCESS)) {
       printf( "enqueue_pos( TARGET={%d, %d, %d, %d, %u})\n",
@@ -573,27 +581,41 @@ void process_gcode_command() {
 				break;
 
 			// M104- set temperature
-			case 104: {
+			case 104:
 				//? ==== M104: Set Extruder Temperature (Fast) ====
-				//?
-				//? Example: M104 S190
-				//?
-				//? Set the temperature of the current extruder to 190<sup>o</sup>C and return control to the host immediately (''i.e.'' before that temperature has been reached by the extruder).  See also M109.
-				//? Teacup supports an optional P parameter as a sensor index to address (eg M104 P1 S100 will set the bed temperature rather than the extruder temperature).
+			case 140:
+				//? ==== M140: Set heated bed temperature (Fast) ====
+			case 109:
+				//? ==== M109: Set Extruder Temperature (Wait) ====
+			case 190:
+				//? ==== M190: Set Bed Temperature (Wait)  ====
+			{
 				channel_tag heater;
-				if (next_target.seen_P) {
-					switch (next_target.P) {
-					case 0:  heater = heater_extruder; break;
-					case 1:  heater = heater_bed; break;
-					default: heater = NULL;
-					}
+				if (next_target.M == 140 || next_target.M == 190) {
+					heater = heater_bed;
 				} else {
-					heater = heater_extruder;
+					if (next_target.seen_P && next_target.P == 1) {
+						heater = heater_bed;
+					} else {
+						heater = heater_extruder;
+					}
 				}
-				heater_set_setpoint( heater, next_target.S);
-				if (next_target.S) {
+				if (next_target.seen_S) {
+					heater_set_setpoint( heater, next_target.S);
 					// if setpoint is not null, turn power on
-					power_on();
+					if (next_target.S > 0) {
+						power_on();
+						heater_enable( heater_extruder, 1);
+					} else {
+						heater_enable( heater_extruder, 0);
+					}
+				}
+				if (next_target.M == 109 || next_target.M == 190) {
+					if (heater == heater_bed) {
+						bed_temp_wait = 1;
+					} else {
+						extruder_temp_wait = 1;
+					}
 				}
 				break;
 			}
@@ -666,27 +688,6 @@ void process_gcode_command() {
 				#ifdef HEATER_FAN
 					heater_set(HEATER_FAN, 0);
 				#endif
-				break;
-
-			// M109- set temp and wait
-			case 109:
-				//? ==== M109: Set Extruder Temperature ====
-				//?
-				//? Example: M109 S190
-				//?
-				//? Set the temperature of the current extruder to 190<sup>o</sup>C and wait for it to reach that value before sending an acknowledgment to the host.  In fact the RepRap firmware waits a while after the temperature has been reached for the extruder to stabilise - typically about 40 seconds.  This can be changed by a parameter in the firmware configuration file when the firmware is compiled.  See also M104 and M116.
-				//?
-				//? Teacup supports an optional P parameter as a sensor index to address.
-				if (next_target.seen_S) {
-					heater_set_setpoint( heater_extruder, next_target.S);
-					power_on();
-				}
-				if (next_target.S) {
-					heater_enable( heater_extruder, 1);
-				} else {
-					heater_enable( heater_extruder, 0);
-				}
-				dont_move_until_temp_reached = 1;
 				break;
 
 			// M110- set line number
@@ -858,25 +859,6 @@ void process_gcode_command() {
 			}
 			#endif
 
-			case 140: //Set heated bed temperature
-				//? ==== M140: Set heated bed temperature ====
-				//? Undocumented.
-				heater_set_setpoint( heater_bed, next_target.S);
-				if (next_target.S) {
-					power_on();
-				}
-				break;
-
-			// M190- power on
-			case 190:
-				//? ==== M190: Power On ====
-				//? Undocumented.
-				power_on();
-				x_enable();
-				y_enable();
-				z_enable();
-				e_enable();
-				break;
 			// M191- power off
 			case 191:
 				//? ==== M191: Power Off ====
