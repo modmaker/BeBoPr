@@ -25,12 +25,9 @@ extern int temp_config( temp_config_record* config_data, int nr_config_items);
 extern int temp_init( void);
 //extern channel_tag temp_lookup_by_name( const char* id);
 extern int temp_get_celsius( channel_tag channel, double* pcelsius);
-extern int temp_achieved( void);
+extern int temp_achieved( channel_tag temp_channel);
 extern int temp_set_setpoint( channel_tag channel, double setpoint, double delta_low, double delta_high);
 extern int temp_get_setpoint( channel_tag channel, double* psetpoint);
-// TODO: remove the following two from all code:
-extern void temp_tick( void);
-extern int temp_all_zero( void);
 
 #endif
 

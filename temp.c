@@ -27,14 +27,12 @@
  * Optionally, an I2C connected device (ADC / TC interface) can be used (TBI).
  */
 
-
-static const int out_of_range_time = 15;
-
 struct temp_channel {
   channel_tag		id;
   channel_tag		source;
   temp_conversion_f* 	conversion;
-  unsigned int 		out_of_range;
+  int 			out_of_range;
+  unsigned int 		in_range_time;
   double 		value;
   double 		setpoint;
   double 		range_low;
@@ -84,10 +82,16 @@ static int temp_update( channel_tag temp_channel, int analog_value)
 	temp_channels[ ix].range_low <= celsius &&
 	celsius <= temp_channels[ ix].range_high) {
       if (temp_channels[ ix].out_of_range > 0) {
-	--temp_channels[ ix].out_of_range;
+        temp_channels[ ix].out_of_range -= ANALOG_UPDATE_CYCLE_TIME / 1000;
+        if (temp_channels[ ix].out_of_range == 0) {
+          fprintf( stderr, "temperature for '%s' has stabilized\n", tag_name( temp_channel));
+        }
       }	
     } else {
-      temp_channels[ ix].out_of_range = out_of_range_time;
+      if (temp_channels[ ix].out_of_range == 0) {
+          fprintf( stderr, "temperature for '%s' is out of range\n", tag_name( temp_channel));
+      }
+      temp_channels[ ix].out_of_range = temp_channels[ ix].in_range_time;
     }
   }
   return -1;
@@ -123,7 +127,8 @@ int temp_init( void)
       pd->id			= ps->tag;
       pd->source		= ps->source;
       pd->conversion 		= ps->conversion;
-      pd->out_of_range 		= ps->in_range_time;
+      pd->in_range_time		= ps->in_range_time;
+      pd->out_of_range 		= 0;
       if (analog_set_update_callback( ps->source, temp_update, ps->tag) < 0) {
         fprintf( stderr, "temp_init: could not connect callback for '%s' to source '%s'\n", ps->tag, ps->source);
       }
@@ -140,7 +145,7 @@ int temp_set_setpoint( channel_tag temp_channel, double setpoint, double delta_l
   int ix = temp_index_lookup( temp_channel);
   if (ix >= 0) {
     temp_channels[ ix].setpoint   = setpoint;
-    temp_channels[ ix].range_low  = setpoint - delta_low;
+    temp_channels[ ix].range_low  = setpoint + delta_low;
     temp_channels[ ix].range_high = setpoint + delta_high;
     return 0;
   }
@@ -159,16 +164,15 @@ int temp_get_celsius( channel_tag temp_channel, double* pcelsius)
   return -1;
 }
 
-/// report whether all temp sensors are reading their target temperatures
+/// report whether a temp sensor is reading its target temperature
 /// used for M109 and friends
-int temp_achieved( void)
+int temp_achieved( channel_tag temp_channel)
 {
-  for (int ix = 0 ; ix < num_temp_channels ; ++ix) {
-    if (temp_channels[ ix].out_of_range > 0) {
-      return 0;
-    }
+  int ix = temp_index_lookup( temp_channel);
+  if (ix >= 0) {
+    return temp_channels[ ix].out_of_range == 0;
   }
-  return 1;
+  return 0;	// unknown sensor has not reached temperature !???
 }
 
 /*
