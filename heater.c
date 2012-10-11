@@ -270,6 +270,11 @@ int heater_set_setpoint( channel_tag heater, double setpoint)
         p->log_fd = log_file_open( tag_name( p->id));
       }
     }
+    /*
+     * Activate setpoint and in-range watch in temperature code
+     * TODO: improve settings / add setting for limits
+     */
+    temp_set_setpoint( p->input, setpoint, -2.5, 1.5);
     return 0;
   }
   return -1;
@@ -386,5 +391,14 @@ channel_tag heater_lookup_by_name( const char* name)
     }
   }
   return NULL;
+}
+
+int heater_temp_reached( channel_tag heater)
+{
+  int ix = heater_index_lookup( heater);
+  if (ix >= 0) {
+    return temp_achieved( heaters[ ix].input);
+  }
+  return 0;
 }
 

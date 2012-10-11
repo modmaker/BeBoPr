@@ -38,6 +38,7 @@ extern int heater_get_setpoint( channel_tag heater, double* setpoint);
 extern int heater_enable( channel_tag heater, int state);
 extern int heater_set_raw_pwm( channel_tag heater, double percentage);
 extern int heater_get_celsius( channel_tag heater_channel, double* pcelsius);
+extern int heater_temp_reached( channel_tag heater);
 
 extern channel_tag heater_lookup_by_name( const char* name);
 

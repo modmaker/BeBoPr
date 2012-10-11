@@ -63,13 +63,13 @@ static const temp_config_record temp_config_data[] = {
   {
     .tag                = temp_extruder,
     .source		= extruder_thermistor,
-    .in_range_time	= 5000,
+    .in_range_time	= 15000,
     .conversion		= bone_epcos_b5760g104f,
   },
   {
     .tag                = temp_bed,
     .source		= bed_thermistor,
-    .in_range_time	= 5000,
+    .in_range_time	= 15000,
     .conversion		= bone_bed_thermistor_330k,
   },
 };
