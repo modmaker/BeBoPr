@@ -50,9 +50,9 @@ static inline int step_until_switch_change( axis_e axis, int reverse, int new_st
 
   while (limsw_axis( axis, reverse) != new_state) {
     /* Clear internal position information */
-    pruss_queue_accel( pruss_axis, cmin, cmin, *position + pos_delta);
-    *position += 2 * pos_delta;		// workaround for double stepping!
-    pos_move_len += 2 * pos_delta; // workaround for double stepping !
+    pruss_queue_dwell( pruss_axis, cmin, *position + pos_delta);
+    *position += pos_delta;
+    pos_move_len += pos_delta;
     /* Do not queue moves to prevent stepping after reaching position */
     while (!pruss_queue_empty()) {
       sched_yield();
@@ -66,7 +66,6 @@ static inline int step_until_switch_change( axis_e axis, int reverse, int new_st
     }
     sched_yield();
   }
-  si_delta *= 2.0;
   if (debug_flags & DEBUG_HOME) {
     printf( "  %c: limit switch state change detected after %d iterations, %1.6lf [mm]\n",
 	    axisNames[ pruss_axis], iter, (double)(direction * iter) * SI2MM( si_delta));
