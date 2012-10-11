@@ -3,6 +3,9 @@
 
 #include "beaglebone.h"
 
+#define ANALOG_CYCLE_TIME         20000 /* usecs, sensor readout cycle */
+#define ANALOG_UPDATE_CYCLE_TIME 200000 /* usecs, update interval callbacks */
+
 typedef const struct {
   channel_tag		tag;
   const char*		device_path;

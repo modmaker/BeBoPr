@@ -63,9 +63,6 @@ int analog_set_update_callback( channel_tag analog_channel, update_callback* pte
   return -1;
 }
 
-#define ANALOG_CYCLE_TIME        20000 /* usecs, sensor readout cycle */
-#define UPDATE_CYCLE_TIME       200000 /* usecs, update interval callbacks */
-
 /*
  * This is the worker thread that reads the analog inputs and
  * calls the callbacks to export the read values.
@@ -121,7 +118,7 @@ void* analog_worker( void* arg)
     ++i;
     if (i == num_analog_channels) {
       // Once every this often, push values to clients
-      if (++cycle >= UPDATE_CYCLE_TIME / ANALOG_CYCLE_TIME) {
+      if (++cycle >= ANALOG_UPDATE_CYCLE_TIME / ANALOG_CYCLE_TIME) {
         unsigned int ch;
         for (ch = 0 ; ch < num_analog_channels ; ++ch) {
           struct analog_channel_record* p = &analog_channels[ ch];
