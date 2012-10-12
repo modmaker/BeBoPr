@@ -144,9 +144,12 @@ int temp_set_setpoint( channel_tag temp_channel, double setpoint, double delta_l
 {
   int ix = temp_index_lookup( temp_channel);
   if (ix >= 0) {
-    temp_channels[ ix].setpoint   = setpoint;
-    temp_channels[ ix].range_low  = setpoint + delta_low;
-    temp_channels[ ix].range_high = setpoint + delta_high;
+    struct temp_channel* pd	= &temp_channels[ ix];
+    pd->setpoint   = setpoint;
+    pd->range_low  = setpoint + delta_low;
+    pd->range_high = setpoint + delta_high;
+    // A new setpoint starts a new validation cycle
+    pd->out_of_range = pd->in_range_time;
     return 0;
   }
   return -1;
