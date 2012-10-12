@@ -917,6 +917,45 @@ void process_gcode_command() {
 				}
 				break;
 			}
+			// M207 - Calibrate reference switch position
+			case 207:
+			{
+				double pos;
+				int min_max = 0;
+				if (DEBUG_GCODE_PROCESS && (debug_flags & DEBUG_GCODE_PROCESS)) {
+					fprintf( stderr, "M207: Z axis known position <-> reference switch calibration\n");
+				}
+				// Clear home offset, specifief current_pos is in machine coordinates (???)
+				// NOTE: the calculations that follow use home_pos (set to zero), leave them!
+				gcode_home_pos.Z = 0;
+				if (next_target.seen_Z) {
+					gcode_current_pos.Z = next_target.target.Z;
+				} else {
+					gcode_current_pos.Z = 0;
+				}
+				pruss_set_position( 3, gcode_home_pos.Z + gcode_current_pos.Z);
+				// use machine coordinates during homing
+				gcode_current_pos.Z += gcode_home_pos.Z;
+				if (config_max_switch_pos( z_axis, &pos)) {
+					home_axis_to_max_limit_switch( z_axis, &gcode_current_pos.Z, next_target.target.F);
+					min_max = 1;
+				} else if (config_min_switch_pos( z_axis, &pos)) {
+					home_axis_to_min_limit_switch( z_axis, &gcode_current_pos.Z, next_target.target.F);
+					min_max = -1;
+				}
+				// restore gcode coordinates
+				gcode_current_pos.Z -= gcode_home_pos.Z;
+				if (min_max) {
+					if (DEBUG_GCODE_PROCESS && (debug_flags & DEBUG_GCODE_PROCESS)) {
+						fprintf( stderr, "M207: update Z calibration switch position to: %lf [mm]\n", POS2MM( gcode_current_pos.Z));
+					}
+					// Clear home offset and set new calibration position
+					config_set_cal_pos( z_axis, POS2SI( gcode_current_pos.Z));
+					gcode_home_pos.Z = 0;
+					pruss_set_position( 3, gcode_home_pos.Z + gcode_current_pos.Z);
+				}
+				break;
+			}
 			#ifdef	DEBUG
 			// M240- echo off
 			case 240:

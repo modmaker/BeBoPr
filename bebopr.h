@@ -45,6 +45,9 @@ extern double config_get_max_accel( axis_e axis);
 extern double config_get_home_max_feed( axis_e axis);
 extern double config_get_home_release_feed( axis_e axis);
 
+// recalibrate reference sensor position
+extern int config_set_cal_pos( axis_e axis, double pos);
+
 // workaround for defines from pinio until removed from code
 /* the axis enable signals are handled in the PRUSS code! */
 #define	x_enable()	do { /* void */ } while (0)

@@ -293,17 +293,23 @@ int config_max_soft_limit( axis_e axis, double* pos)
 }
 
 /*
- *  Specify the positions of the homing (calibration) switches.
- *  Return true if a position is defined, false otherwise.
- *  For a consistent coordinate space, only one switch on each
- *  axis may be a reference!
+ *  Specify the positions of the limit switches or homing sensors.
+ *  Any switch can act in either one of the following modes:
+ *    as limit switch, to signal a (global) end position
+ *  or
+ *    as calibration position, to define an exact known position.
+ *  
+ *  Return true if a calibration position is defined by a switch,
+ *  false otherwise. NOTE: For a consistent coordinate space, exactly
+ *  one switch on each axis should be defined as calibration switch!
  */
 int config_min_switch_pos( axis_e axis, double* pos)
 {
   switch (axis) {
-  case x_axis:	*pos = 0.0;     return 1;
-  case y_axis:	*pos = 0.0;     return 1;
-  case z_axis:	*pos = -2.9E-3; return 1;
+  case x_axis:	*pos = x_cal_pos; return 1;
+  case y_axis:	*pos = y_cal_pos; return 1;
+  case z_axis:	*pos = z_cal_pos; return 1;
+//case z_axis:	return 0;
   default:	return 0;
   }
 }
@@ -311,6 +317,10 @@ int config_min_switch_pos( axis_e axis, double* pos)
 int config_max_switch_pos( axis_e axis, double* pos)
 {
   switch (axis) {
+  case x_axis:	return 0;
+  case y_axis:	return 0;
+  case z_axis:	return 0;
+//case z_axis: *pos = z_cal_pos; return 1;
   default:	return 0;
   }
 }
