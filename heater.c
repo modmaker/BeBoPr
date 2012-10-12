@@ -92,15 +92,17 @@ static void log_entry( const char* name, int fd, time_t time, double setpoint, d
   }
 }
 
+#define PID_LOOP_FREQUENCY	5 /* Hz */
 #define TIMER_CLOCK CLOCK_MONOTONIC
+#define NS_PER_SEC  (1000*1000*1000)
 
 static void ns_sleep( struct timespec* ts, unsigned int ns)
 {
   struct timespec tso;
   ts->tv_nsec += ns;
-  if (ts->tv_nsec >= 1000000000) {
-	  ts->tv_nsec -= 1000000000;
-	  ts->tv_sec  += 1;
+  if (ts->tv_nsec >= NS_PER_SEC) {
+    ts->tv_nsec -= NS_PER_SEC;
+    ts->tv_sec  += 1;
   }
   for (;;) {
     if (clock_nanosleep( TIMER_CLOCK, TIMER_ABSTIME, ts, &tso) == -1) {
@@ -117,8 +119,6 @@ static void ns_sleep( struct timespec* ts, unsigned int ns)
   }
 }
 
-#define PID_LOOP_FREQUENCY	5 /* Hz */
-
 /*
  * This is the worker thread that controls the heaters
  * depending on the setpoint and temperature measured.
@@ -127,25 +127,33 @@ void* heater_thread( void* arg)
 {
   struct timespec ts;
   struct timespec old_ts;
+  unsigned int timer_period;
+  int log_scaler;
+  if (num_heater_channels < 1) {
+    // nothing to do !
+    pthread_exit( NULL);
+  }
+  timer_period = NS_PER_SEC / (PID_LOOP_FREQUENCY * num_heater_channels);
   fprintf( stderr, "heater_thread: started\n");
   clock_getres( TIMER_CLOCK, &ts); 
   printf( "  timer resolution is %ld [ns]\n", ts.tv_nsec);
   clock_gettime( TIMER_CLOCK, &ts);
   old_ts = ts;
+  log_scaler = 0;
   while (1) {
-    // Sleep until some time after last sleep ended
-    ns_sleep( &ts, (1000*1000*1000) / PID_LOOP_FREQUENCY);
     for (int ix = 0 ; ix < num_heater_channels ; ++ix) {
       struct heater* p = &heaters[ ix];
       channel_tag input_channel  = p->input;
       channel_tag output_channel = p->output;
       double celsius;
-
+      // Sleep until the next mark passes, distribute the load
+      ns_sleep( &ts, timer_period);
       if (temp_get_celsius( input_channel, &celsius) < 0) {
         fprintf( stderr, "heater_thread - failed to read temperature from '%s'\n", tag_name( input_channel));
       } else {
         if (p->setpoint == 0.0) {
           // A setpoint of 0.0 means: disable heater
+          // TODO: should this be done over and over again ?
           pwm_set_output( output_channel, 0);
         } else {
           double t_error = p->setpoint - celsius;
@@ -180,17 +188,18 @@ void* heater_thread( void* arg)
           double out_ff= (p->setpoint - p->pid_settings.FF_offset) * p->pid_settings.FF_factor;
           double out   = out_p + out_i + out_d + out_ff;
           int duty_cycle = (int) clip( 0.0, out, 100.0);
-          // Only log once every second
-          if (old_ts.tv_sec != ts.tv_sec) {
+          // Do not log every cycle, but only once in a while
+          if (log_scaler == 0) {
             log_entry( tag_name( input_channel), p->log_fd, ts.tv_sec,
 		    p->setpoint, celsius, t_error, out_ff, out_p, out_i, out_d, duty_cycle);
           }
           pwm_set_output( output_channel, duty_cycle);
         }
-        if (old_ts.tv_sec != ts.tv_sec) {
-          old_ts = ts;
-        }
       }
+    }
+    // create a log entry every second
+    if (++log_scaler >= 1 * PID_LOOP_FREQUENCY) {
+      log_scaler = 0;
     }
   }
 }
