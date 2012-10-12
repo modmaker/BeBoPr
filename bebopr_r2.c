@@ -303,6 +303,20 @@ int config_max_soft_limit( axis_e axis, double* pos)
  *  false otherwise. NOTE: For a consistent coordinate space, exactly
  *  one switch on each axis should be defined as calibration switch!
  */
+static double x_cal_pos = 0.0;
+static double y_cal_pos = 0.0;
+static double z_cal_pos = 0.0;
+
+int config_set_cal_pos( axis_e axis, double pos)
+{
+  switch (axis) {
+  case x_axis:	x_cal_pos = pos; return 1;
+  case y_axis:	y_cal_pos = pos; return 1;
+  case z_axis:	z_cal_pos = pos; return 1;
+  default:	return 0;
+  }
+}
+
 int config_min_switch_pos( axis_e axis, double* pos)
 {
   switch (axis) {
