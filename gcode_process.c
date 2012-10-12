@@ -47,23 +47,32 @@ static int bed_temp_wait = 0;
 	private functions
 */
 
+static void wait_for_slow_signals( void)
+{
+  if (DEBUG_GCODE_PROCESS && (debug_flags & DEBUG_GCODE_PROCESS)) {
+    printf( "defer move until temperature is stable!\n");
+  }
+  while ( (extruder_temp_wait && !heater_temp_reached( heater_extruder)) ||
+	  (bed_temp_wait && !heater_temp_reached( heater_bed)) )
+  {
+    usleep( 100000);
+  }
+  extruder_temp_wait = 0;
+  bed_temp_wait = 0;
+  if (DEBUG_GCODE_PROCESS && (debug_flags & DEBUG_GCODE_PROCESS)) {
+    printf( "resume with move because temperature is stable!\n");
+  }
+}
+
+/*
+ *  make a move to new 'target' position, at the end of this move 'target'
+ *  should reflect the actual position.
+ */
 static void enqueue_pos( TARGET* target)
 {
   if (target != NULL) {
     if (extruder_temp_wait || bed_temp_wait) {
-      if (DEBUG_GCODE_PROCESS && (debug_flags & DEBUG_GCODE_PROCESS)) {
-        printf( "defer move until temperature is stable!\n");
-      }
-      while ( (extruder_temp_wait && !heater_temp_reached( heater_extruder)) ||
-	      (bed_temp_wait && !heater_temp_reached( heater_bed)) )
-      {
-        usleep( 100000);
-      }
-      extruder_temp_wait = 0;
-      bed_temp_wait = 0;
-      if (DEBUG_GCODE_PROCESS && (debug_flags & DEBUG_GCODE_PROCESS)) {
-        printf( "resume with move because temperature is stable!\n");
-      }
+      wait_for_slow_signals();
     }
     if (DEBUG_GCODE_PROCESS && (debug_flags & DEBUG_GCODE_PROCESS)) {
       printf( "enqueue_pos( TARGET={%d, %d, %d, %d, %u})\n",
@@ -767,19 +776,30 @@ void process_gcode_command() {
 				// newline is sent from gcode_parse after we return
 				break;
 			// M116 - Wait for all temperatures and other slowly-changing variables to arrive at their set values.
-			case 116:
+			case 116: {
 				//? ==== M116: Wait ====
 				//?
 				//? Example: M116
 				//?
 				//? Wait for ''all'' temperatures and other slowly-changing variables to arrive at their set values.  See also M109.
 
-#				ifdef ENFORCE_ORDER
-					// wait for all moves to complete
-					traject_wait_for_completion();
-#				endif
+				double setpoint;
+				// wait for all moves to complete
+				traject_wait_for_completion();
+				// wait for all (active) heaters to stabilize
+				if (heater_get_setpoint( heater_extruder, &setpoint) == 0) {
+					if (setpoint > 0.0) {
+						extruder_temp_wait = 1;
+					}
+				}
+				if (heater_get_setpoint( heater_bed, &setpoint) == 0) {
+					if (setpoint > 0.0) {
+						bed_temp_wait = 1;
+					}
+				}
+				wait_for_slow_signals();
 				break;
-
+			}
 			case 130:
 				//? ==== M130: heater P factor ====
 			case 131:
