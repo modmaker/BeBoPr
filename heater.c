@@ -60,21 +60,22 @@ static pthread_rwlock_t	control_lock;
 
 static int log_file_open( const char* fname)
 {
-  char s[ 250];
+  char s[ 270];
   snprintf( s, sizeof( s), "./pid-%s.log", fname);
   if (debug_flags & DEBUG_HEATER) {
-    printf( "log_file_open - using file '%s'\n", s);
+    printf( "log_file_open - looking for existing logfile named '%s'\n", s);
   }
-  int fd = open( s, O_WRONLY|O_CREAT|O_APPEND);
+  int fd = open( s, O_WRONLY|O_APPEND);
   if (fd < 0) {
-    perror( "Failed to open logile for writing");
+    perror( "Failed to open logile for append, logging disabled");
+    return -1;
   }
   if (debug_flags & DEBUG_HEATER) {
-    printf( "log_file_open - start logging to file '%s'\n", s);
+    printf( "log_file_open - appending to file '%s'\n", s);
   }
-  snprintf( s, sizeof( s), "-----------------------------------------------------------------------------------\n"
-                           "  time    channel        setpoint    temp   ff        p         i        d     dc%%\n"
-                           "-----------------------------------------------------------------------------------\n");
+  snprintf( s, sizeof( s), "--------------------------------------------------------------------------------------\n"
+                           "   time   channel         setpoint   temp       ff       p        i        d     out%%\n"
+                           "--------------------------------------------------------------------------------------\n");
   write( fd, s, strlen( s));
   return fd;
 }
@@ -83,7 +84,7 @@ static void log_entry( const char* name, int fd, time_t time, double setpoint, d
                 double out_ff, double out_p, double out_i, double out_d, int duty_cycle)
 {
   char s[ 120];
-  snprintf( s, sizeof( s), "%7ld   %s   %6.2lf   %6.2lf   %6.2lf   %6.2lf   %6.2lf   %6.2lf   %3d\n",
+  snprintf( s, sizeof( s), "%7ld   %-14s   %6.2lf   %6.2lf   %6.2lf   %6.2lf   %6.2lf   %6.2lf   %3d\n",
           time, name, setpoint, celsius, out_ff, out_p, out_i, out_d, duty_cycle);
   write( fd, s, strlen( s));
   if (debug_flags & DEBUG_HEATER) {
@@ -133,15 +134,14 @@ void* heater_thread( void* arg)
   old_ts = ts;
   while (1) {
     // Sleep until some time after last sleep ended
-    ns_sleep( &ts, 1000000000 / PID_LOOP_FREQUENCY);
+    ns_sleep( &ts, (1000*1000*1000) / PID_LOOP_FREQUENCY);
     for (int ix = 0 ; ix < num_heater_channels ; ++ix) {
       struct heater* p = &heaters[ ix];
       channel_tag input_channel  = p->input;
       channel_tag output_channel = p->output;
       double celsius;
 
-      int result = temp_get_celsius( input_channel, &celsius);
-      if (result < 0) {
+      if (temp_get_celsius( input_channel, &celsius) < 0) {
         fprintf( stderr, "heater_thread - failed to read temperature from '%s'\n", tag_name( input_channel));
       } else {
         if (p->setpoint == 0.0) {
