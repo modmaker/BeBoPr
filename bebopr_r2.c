@@ -369,12 +369,22 @@ double config_get_home_max_feed( axis_e axis)
   }
 }
 
+static int e_axis_rel_mode = 1;
+
+int config_set_e_axis_mode( int relative)
+{
+  int old = e_axis_rel_mode;
+  e_axis_rel_mode = (relative) ? 1 : 0;
+  return old;
+}
+
+
 /*
  *  Specify is the E axis is being fed relative coordinates only
  */
 int config_e_axis_is_always_relative( void)
 {
-  return 1;
+  return e_axis_rel_mode;
 }
 
 /*

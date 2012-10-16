@@ -550,6 +550,22 @@ void process_gcode_command() {
 				//? Undocumented.
 				tool = next_tool;
 				break;
+			// M82- set extruder to absolute mode
+			case 82: {
+				int old_mode = config_set_e_axis_mode( 0);
+				if (old_mode != 0 && DEBUG_GCODE_PROCESS && (debug_flags & DEBUG_GCODE_PROCESS)) {
+					fprintf( stderr, "G82: switching to absolute extruder coordinates\n");
+				}
+				break;
+			}
+			// M83- set extruder to relative mode
+			case 83: {
+				int old_mode = config_set_e_axis_mode( 1);
+				if (old_mode != 1 && DEBUG_GCODE_PROCESS && (debug_flags & DEBUG_GCODE_PROCESS)) {
+					fprintf( stderr, "G82: switching to absolute extruder coordinates\n");
+				}
+				break;
+			}
 			// M84- stop idle hold
 			case 84:
 				x_disable();
