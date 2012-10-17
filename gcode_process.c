@@ -30,6 +30,8 @@ static uint8_t next_tool;
 /// variable that holds the idea of 'current position' for the gcode interpreter.
 /// the actual machine position will probably lag!
 static TARGET gcode_current_pos;
+//  Home Position holds the offset set by G92, it is used to convert the
+//  gcode coordinates to machine / PRUSS coordinates.
 static TARGET gcode_home_pos;
 static double gcode_initial_feed;
 /*
@@ -103,15 +105,17 @@ static void enqueue_pos( TARGET* target)
 #endif
     /* make the move */
     traject_delta_on_all_axes( &traj);
-    /* update our sense of position */
+    /*
+     * For a 3D printer, the E-axis controls the extruder and for that axis
+     * the +/- 2000 mm operating range is not sufficient a this axis moves
+     * mostly into one direction.
+     * If this axis is configured to use relative coordinates only, after
+     * each move the origin is shifted to the current position restoring the
+     * full +/- 2000 mm operating range.
+     */
     if (config_e_axis_is_always_relative()) {
-      /*
-       * For a 3D printer, an E-axis coordinate is often a relative setting,
-       * independent of the absolute or relative mode. (This way it doesn't
-       * overflow because it is mostly moving in one direction.)
-       * This requires special handling here and in the traject calculation.
-       */
-      target->E = gcode_home_pos.E;
+      pruss_queue_adjust_origin( 4, gcode_home_pos.E + target->E);
+      target->E = 0;	// target->E -= target->E;
     }
   }
 }
@@ -244,6 +248,7 @@ void process_gcode_command() {
 					// synchronised motion
 					enqueue_pos( &next_target.target);
 				}
+				/* update our sense of position */
 				gcode_current_pos.X = next_target.target.X;
 				gcode_current_pos.Y = next_target.target.Y;
 				gcode_current_pos.Z = next_target.target.Z;
@@ -379,12 +384,22 @@ void process_gcode_command() {
 					gcode_current_pos.Z = next_target.target.Z;
 					axisSelected = 1;
 				}
+				// TODO: this is exceptional, check wheter this doesn't clash 
+				// with relative E axis operation !!!!
 				if (next_target.seen_E) {
-					gcode_home_pos.E += gcode_current_pos.E - next_target.target.E;
+					if (!config_e_axis_is_always_relative() && next_target.target.E == 0) {
+						// slicers use this te adjust the origin to prevent running
+						// out of E range, adjust the PRUSS internal origin too.
+						pruss_queue_adjust_origin( 4, gcode_home_pos.E + gcode_current_pos.E);
+						// gcode_home_pos can overflow too, so clear it! NOTE: the E-axis
+						// now doesn't behave like a normal (absolute) axis anymore!
+						gcode_home_pos.E = 0;
+					} else {
+						gcode_home_pos.E += gcode_current_pos.E - next_target.target.E;
+					}
 					gcode_current_pos.E = next_target.target.E;
 					axisSelected = 1;
 				}
-
 				if (axisSelected == 0) {
 					gcode_home_pos.X += gcode_current_pos.X;
 					gcode_current_pos.X = next_target.target.X = 0;
@@ -550,6 +565,22 @@ void process_gcode_command() {
 				//? Undocumented.
 				tool = next_tool;
 				break;
+			// M82- set extruder to absolute mode
+			case 82: {
+				int old_mode = config_set_e_axis_mode( 0);
+				if (old_mode != 0 && DEBUG_GCODE_PROCESS && (debug_flags & DEBUG_GCODE_PROCESS)) {
+					fprintf( stderr, "G82: switching to absolute extruder coordinates\n");
+				}
+				break;
+			}
+			// M83- set extruder to relative mode
+			case 83: {
+				int old_mode = config_set_e_axis_mode( 1);
+				if (old_mode == 0 && DEBUG_GCODE_PROCESS && (debug_flags & DEBUG_GCODE_PROCESS)) {
+					fprintf( stderr, "G83: switching to relative extruder coordinates\n");
+				}
+				break;
+			}
 			// M84- stop idle hold
 			case 84:
 				x_disable();
@@ -937,7 +968,7 @@ void process_gcode_command() {
 				}
 				break;
 			}
-			// M207 - Calibrate reference switch position
+			// M207 - Calibrate reference switch position (Z-axis)
 			case 207:
 			{
 				double pos;
@@ -967,7 +998,8 @@ void process_gcode_command() {
 				gcode_current_pos.Z -= gcode_home_pos.Z;
 				if (min_max) {
 					if (DEBUG_GCODE_PROCESS && (debug_flags & DEBUG_GCODE_PROCESS)) {
-						fprintf( stderr, "M207: update Z calibration switch position to: %lf [mm]\n", POS2MM( gcode_current_pos.Z));
+						fprintf( stderr, "M207: update Z calibration switch position to: %lf [mm]\n",
+							POS2MM( gcode_current_pos.Z));
 					}
 					// Clear home offset and set new calibration position
 					config_set_cal_pos( z_axis, POS2SI( gcode_current_pos.Z));

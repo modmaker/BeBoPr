@@ -14,8 +14,6 @@
 
 /*
  *  Settings that are changed during initialization.
- *  Silly defaults to prevent division-by-zero or similar
- *  while not initialized (TODO: remove)
  */
 static double step_size_x;	/* [m] */
 static double step_size_y;
@@ -455,9 +453,6 @@ void traject_delta_on_all_axes( traject5D* traject)
   }
   if (ramp_de != 0.0) {
     pruss_queue_adjust_for_ramp( 4, (int32_t)(1.0E9 * ramp_de));
-  }
-  if (config_e_axis_is_always_relative()) {
-    pruss_queue_adjust_origin( 4);
   }
 }
 

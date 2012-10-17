@@ -47,6 +47,8 @@ extern double config_get_home_release_feed( axis_e axis);
 
 // recalibrate reference sensor position
 extern int config_set_cal_pos( axis_e axis, double pos);
+// set absolute or relative E-axis mode
+extern int config_set_e_axis_mode( int relative);
 
 // workaround for defines from pinio until removed from code
 /* the axis enable signals are handled in the PRUSS code! */
