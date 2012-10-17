@@ -360,8 +360,8 @@ void gcode_parse_char(uint8_t c) {
 
 		// assume a G1 by default
 #if 0
-		// TODO: disabling this keeps comments from generation moves. TEST !
-		next_target.seen_G= 1;
+		// TODO: disabling this keeps comments from generating moves. TEST !
+		next_target.seen_G = 1;
 		next_target.G = 1;
 #endif
 		if (next_target.option_relative) {

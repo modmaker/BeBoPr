@@ -30,6 +30,8 @@ static uint8_t next_tool;
 /// variable that holds the idea of 'current position' for the gcode interpreter.
 /// the actual machine position will probably lag!
 static TARGET gcode_current_pos;
+//  Home Position holds the offset set by G92, it is used to convert the
+//  gcode coordinates to machine / PRUSS coordinates.
 static TARGET gcode_home_pos;
 static double gcode_initial_feed;
 /*
@@ -381,12 +383,13 @@ void process_gcode_command() {
 					gcode_current_pos.Z = next_target.target.Z;
 					axisSelected = 1;
 				}
+				// TODO: this is exceptional, check wheter this doesn't clash 
+				// with relative E axis operation !!!!
 				if (next_target.seen_E) {
 					gcode_home_pos.E += gcode_current_pos.E - next_target.target.E;
 					gcode_current_pos.E = next_target.target.E;
 					axisSelected = 1;
 				}
-
 				if (axisSelected == 0) {
 					gcode_home_pos.X += gcode_current_pos.X;
 					gcode_current_pos.X = next_target.target.X = 0;
@@ -955,7 +958,7 @@ void process_gcode_command() {
 				}
 				break;
 			}
-			// M207 - Calibrate reference switch position
+			// M207 - Calibrate reference switch position (Z-axis)
 			case 207:
 			{
 				double pos;
@@ -985,7 +988,8 @@ void process_gcode_command() {
 				gcode_current_pos.Z -= gcode_home_pos.Z;
 				if (min_max) {
 					if (DEBUG_GCODE_PROCESS && (debug_flags & DEBUG_GCODE_PROCESS)) {
-						fprintf( stderr, "M207: update Z calibration switch position to: %lf [mm]\n", POS2MM( gcode_current_pos.Z));
+						fprintf( stderr, "M207: update Z calibration switch position to: %lf [mm]\n",
+							POS2MM( gcode_current_pos.Z));
 					}
 					// Clear home offset and set new calibration position
 					config_set_cal_pos( z_axis, POS2SI( gcode_current_pos.Z));

@@ -14,8 +14,6 @@
 
 /*
  *  Settings that are changed during initialization.
- *  Silly defaults to prevent division-by-zero or similar
- *  while not initialized (TODO: remove)
  */
 static double step_size_x;	/* [m] */
 static double step_size_y;
