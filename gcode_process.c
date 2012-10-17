@@ -246,6 +246,7 @@ void process_gcode_command() {
 					 * This requires special handling here and in the traject calculation.
 					 */
 					gcode_current_pos.E = gcode_home_pos.E;
+					pruss_queue_adjust_origin( 4);
 				} else {
 					gcode_current_pos.E = next_target.target.E;
 				}
