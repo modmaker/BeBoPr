@@ -105,6 +105,18 @@ static void enqueue_pos( TARGET* target)
 #endif
     /* make the move */
     traject_delta_on_all_axes( &traj);
+    /*
+     * For a 3D printer, the E-axis controls the extruder and for that axis
+     * the +/- 2000 mm operating range is not sufficient a this axis moves
+     * mostly into one direction.
+     * If this axis is configured to use relative coordinates only, after
+     * each move the origin is shifted to the current position restoring the
+     * full +/- 2000 mm operating range.
+     */
+    if (config_e_axis_is_always_relative()) {
+      pruss_queue_adjust_origin( 4, gcode_home_pos.E + target->E);
+      target->E = 0;	// target->E -= target->E;
+    }
   }
 }
 
@@ -240,19 +252,7 @@ void process_gcode_command() {
 				gcode_current_pos.X = next_target.target.X;
 				gcode_current_pos.Y = next_target.target.Y;
 				gcode_current_pos.Z = next_target.target.Z;
-				if (config_e_axis_is_always_relative()) {
-					/*
-					 * For a 3D printer, an E-axis coordinate is often a relative setting,
-					 * independent of the absolute or relative mode. (This way it doesn't
-					 * overflow because it is mostly moving in one direction.)
-					 * This requires special handling here and in the traject calculation.
-					 */
-					// both machine and gcode coords are adjusted for current position
-					pruss_queue_adjust_origin( 4, gcode_home_pos.E + gcode_current_pos.E);
-					gcode_current_pos.E = 0;
-				} else {
-					gcode_current_pos.E = next_target.target.E;
-				}
+				gcode_current_pos.E = next_target.target.E;
 				gcode_current_pos.F = next_target.target.F;
 				break;
 			}
