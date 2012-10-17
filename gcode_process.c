@@ -567,8 +567,8 @@ void process_gcode_command() {
 			// M83- set extruder to relative mode
 			case 83: {
 				int old_mode = config_set_e_axis_mode( 1);
-				if (old_mode != 1 && DEBUG_GCODE_PROCESS && (debug_flags & DEBUG_GCODE_PROCESS)) {
-					fprintf( stderr, "G82: switching to absolute extruder coordinates\n");
+				if (old_mode == 0 && DEBUG_GCODE_PROCESS && (debug_flags & DEBUG_GCODE_PROCESS)) {
+					fprintf( stderr, "G83: switching to relative extruder coordinates\n");
 				}
 				break;
 			}
