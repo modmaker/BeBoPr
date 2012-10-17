@@ -175,4 +175,4 @@ comm.o: comm.c comm.h mendel.h bebopr.h debug.h beaglebone.h
 eeprom.o: eeprom.c beaglebone.h eeprom.h
 mendel.o: mendel.c heater.h temp.h beaglebone.h pwm.h bebopr.h mendel.h \
  gcode_process.h gcode_parse.h limit_switches.h traject.h pruss_stepper.h \
- algo2cmds.h comm.h
+ algo2cmds.h comm.h debug.h
