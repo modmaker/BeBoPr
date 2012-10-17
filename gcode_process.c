@@ -391,8 +391,12 @@ void process_gcode_command() {
 						// slicers use this te adjust the origin to prevent running
 						// out of E range, adjust the PRUSS internal origin too.
 						pruss_queue_adjust_origin( 4, gcode_home_pos.E + gcode_current_pos.E);
+						// gcode_home_pos can overflow too, so clear it! NOTE: the E-axis
+						// now doesn't behave like a normal (absolute) axis anymore!
+						gcode_home_pos.E = 0;
+					} else {
+						gcode_home_pos.E += gcode_current_pos.E - next_target.target.E;
 					}
-					gcode_home_pos.E += gcode_current_pos.E - next_target.target.E;
 					gcode_current_pos.E = next_target.target.E;
 					axisSelected = 1;
 				}
