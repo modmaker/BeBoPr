@@ -247,8 +247,9 @@ void process_gcode_command() {
 					 * overflow because it is mostly moving in one direction.)
 					 * This requires special handling here and in the traject calculation.
 					 */
-					gcode_current_pos.E = gcode_home_pos.E;
-					pruss_queue_adjust_origin( 4);
+					// both machine and gcode coords are adjusted for current position
+					pruss_queue_adjust_origin( 4, gcode_home_pos.E + gcode_current_pos.E);
+					gcode_current_pos.E = 0;
 				} else {
 					gcode_current_pos.E = next_target.target.E;
 				}

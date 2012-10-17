@@ -442,12 +442,17 @@ int pruss_queue_set_origin( int axis)
   return 0;
 }
 
-int pruss_queue_adjust_origin( int axis)
+/*
+ *  Shift the origin of the PRUSS coordinates to a location.
+ *  This should be the 'current' machine position in the higher
+ *  level software.
+ */
+int pruss_queue_adjust_origin( int axis, int32_t delta)
 {
   PruCommandUnion pruCmd = {
     .adjust_origin.command	= CMD_AXIS_ADJUST_ORIGIN,
     .adjust_origin.axis		= axis,
-    .adjust_origin.position 	= VIRT_POS_MID_SCALE
+    .adjust_origin.position 	= VIRT_POS_MID_SCALE + delta
   };
   if (pruss_command( &pruCmd) < 0) {
     return -1;
