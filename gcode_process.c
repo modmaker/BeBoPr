@@ -387,6 +387,11 @@ void process_gcode_command() {
 				// TODO: this is exceptional, check wheter this doesn't clash 
 				// with relative E axis operation !!!!
 				if (next_target.seen_E) {
+					if (!config_e_axis_is_always_relative() && next_target.target.E == 0) {
+						// slicers use this te adjust the origin to prevent running
+						// out of E range, adjust the PRUSS internal origin too.
+						pruss_queue_adjust_origin( 4, gcode_home_pos.E + gcode_current_pos.E);
+					}
 					gcode_home_pos.E += gcode_current_pos.E - next_target.target.E;
 					gcode_current_pos.E = next_target.target.E;
 					axisSelected = 1;
