@@ -103,16 +103,6 @@ static void enqueue_pos( TARGET* target)
 #endif
     /* make the move */
     traject_delta_on_all_axes( &traj);
-    /* update our sense of position */
-    if (config_e_axis_is_always_relative()) {
-      /*
-       * For a 3D printer, an E-axis coordinate is often a relative setting,
-       * independent of the absolute or relative mode. (This way it doesn't
-       * overflow because it is mostly moving in one direction.)
-       * This requires special handling here and in the traject calculation.
-       */
-      target->E = gcode_home_pos.E;
-    }
   }
 }
 
@@ -244,10 +234,21 @@ void process_gcode_command() {
 					// synchronised motion
 					enqueue_pos( &next_target.target);
 				}
+				/* update our sense of position */
 				gcode_current_pos.X = next_target.target.X;
 				gcode_current_pos.Y = next_target.target.Y;
 				gcode_current_pos.Z = next_target.target.Z;
-				gcode_current_pos.E = next_target.target.E;
+				if (config_e_axis_is_always_relative()) {
+					/*
+					 * For a 3D printer, an E-axis coordinate is often a relative setting,
+					 * independent of the absolute or relative mode. (This way it doesn't
+					 * overflow because it is mostly moving in one direction.)
+					 * This requires special handling here and in the traject calculation.
+					 */
+					gcode_current_pos.E = gcode_home_pos.E;
+				} else {
+					gcode_current_pos.E = next_target.target.E;
+				}
 				gcode_current_pos.F = next_target.target.F;
 				break;
 			}
