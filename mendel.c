@@ -134,6 +134,10 @@ int mendel_sub_init( const char* name, int (*subsys)( void))
 void mendel_exit( void)
 {
   fprintf( stderr, "mendel_exit called, waiting for output buffers to be flushed\n");
+  pruss_queue_set_enable( 0);
+  pruss_halt_pruss();
+//  pruss_stepper_dump_state();
+//  fprintf( stderr, "pruss halted\n");
   usleep( 2 * 1000000);
 }
 
