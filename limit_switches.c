@@ -65,13 +65,6 @@ typedef struct {
  ****************************************************************/
 static struct pollfd(* fdset)[] = NULL;
 
-#define XMIN_GPIO 10
-#define XMAX_GPIO 11
-#define YMIN_GPIO  8
-#define YMAX_GPIO  9
-#define ZMIN_GPIO 79
-#define ZMAX_GPIO 78
-
 static int limit_gpios[] = { XMIN_GPIO, XMAX_GPIO, YMIN_GPIO, YMAX_GPIO, ZMIN_GPIO, ZMAX_GPIO };
 const int nr_limits = NR_ITEMS( limit_gpios);
 
