@@ -561,7 +561,7 @@ int pruss_queue_decel( int axis, int32_t delta)
   return 0;
 }
 
-int pruss_queue_execute( void)
+int pruss_queue_exec_limited( uint8_t mask, uint8_t invert)
 {
   if (pruss_is_halted()) {
     fprintf( stderr, "FATAL: PRUSS found halted when queueing execute command\n");
@@ -570,13 +570,18 @@ int pruss_queue_execute( void)
   }
   //  fprintf( stderr, "pruss_queue_execute(): free buffers = %d\n",
   //	   pruss_get_nr_of_free_buffers());
-  PruCommandUnion pruCmd = {
-    .command.value		= CMD_AXES_EXECUTE,
-  };
+  PruCommandUnion pruCmd;
+  pruCmd.command.value		= CMD_AXES_EXECUTE;
+  pruCmd.gen[ 1]		= mask | (invert << 8);
   if (pruss_command( &pruCmd) < 0) {
     return -1;
   }
   return 0;
+}
+
+int pruss_queue_execute( void)
+{
+  return pruss_queue_exec_limited( 0, 0);	// no limits !
 }
 
 int pruss_queue_config_axis( int axis, uint32_t ssi, uint16_t sst, uint16_t ssn, int reverse)
