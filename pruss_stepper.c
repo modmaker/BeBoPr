@@ -97,6 +97,17 @@ typedef struct {
   unsigned int	stepSize	: 32;
 } ConfigAxisStruct;
 
+// CMD_AXIS_CONFIG_LIMSW
+typedef struct {
+  unsigned int			: 24;
+  unsigned int	command		:  5;
+  unsigned int	axis		:  3;
+  unsigned int  min_gpio	:  8;
+  unsigned int  min_invert	:  8;
+  unsigned int  max_gpio	:  8;
+  unsigned int  max_invert	:  8;
+} ConfigLimswStruct;
+
 // CMD_AXIS_ADJUST_ORIGIN
 typedef struct {
   unsigned int			: 24;
@@ -126,6 +137,7 @@ typedef union {
   SetIdleTimeoutStruct	timeout;
   SetEnableStruct	enable;
   ConfigAxisStruct	config;
+  ConfigLimswStruct	limsw;
   AdjustOriginStruct	adjust_origin;
   AdjustForRampStruct	adjust_for_ramp;
 } PruCommandUnion;
@@ -576,6 +588,22 @@ int pruss_queue_config_axis( int axis, uint32_t ssi, uint16_t sst, uint16_t ssn,
     .config.stepSize		= ssi,
     .config.stepSizeT		= sst,
     .config.stepSizeN		= ssn,
+  };
+  if (pruss_command( &pruCmd) < 0) {
+    return -1;
+  }
+  return 0;
+}
+
+int pruss_queue_config_limsw( int axis, uint8_t min_gpio, uint8_t min_invert, uint8_t max_gpio, uint8_t max_invert)
+{
+  PruCommandUnion pruCmd = {
+    .limsw.command		= CMD_AXIS_CONFIG_LIMSW,
+    .limsw.axis			= axis,
+    .limsw.min_gpio		= min_gpio,
+    .limsw.min_invert		= min_invert,
+    .limsw.max_gpio		= max_gpio,
+    .limsw.max_invert		= max_invert,
   };
   if (pruss_command( &pruCmd) < 0) {
     return -1;

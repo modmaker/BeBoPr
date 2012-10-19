@@ -11,6 +11,7 @@
 #include "debug.h"
 #include "beaglebone.h"
 #include "mendel.h"
+#include "limit_switches.h"
 
 /*
  *  Settings that are changed during initialization.
@@ -545,6 +546,20 @@ int traject_init( void)
   pruss_queue_set_origin( 2);
   pruss_queue_set_origin( 3);
   pruss_queue_set_origin( 4);
+
+  /* Configure limit switches in the PRUSS */
+#define CONFIG_AXIS_LIMSW( axis, prussaxis, gpiomin, gpiomax)	\
+  do {									\
+    uint8_t min_gpio = (config_axis_has_min_limit_switch( axis)) ? gpiomin : 255; \
+    uint8_t max_gpio = (config_axis_has_max_limit_switch( axis)) ? gpiomax : 255;	\
+    uint8_t min_invert = config_min_limit_switch_is_active_low( axis);	\
+    uint8_t max_invert = config_max_limit_switch_is_active_low( axis);	\
+    pruss_queue_config_limsw( prussaxis, min_gpio, min_invert, max_gpio, max_invert); \
+  } while (0)
+
+  CONFIG_AXIS_LIMSW( x_axis, 1, XMIN_GPIO, XMAX_GPIO);
+  CONFIG_AXIS_LIMSW( y_axis, 2, YMIN_GPIO, YMAX_GPIO);
+  CONFIG_AXIS_LIMSW( z_axis, 3, ZMIN_GPIO, ZMAX_GPIO);
 
   pruss_queue_set_idle_timeout( 30);	// set a 3 seconds timeout
   return 0;
