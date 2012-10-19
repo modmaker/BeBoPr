@@ -18,6 +18,8 @@
 #include "bebopr.h"
 #include "debug.h"
 
+#define PRUSS_HOMING	1
+
 
 static const double fclk = TIMER_CLOCK;
 static const char axisNames[] = { '?', 'X', 'Y', 'Z' };
@@ -40,16 +42,68 @@ static inline void update_position( int32_t* position, int direction, int count,
   *position += SI2POS( (direction * count) * step_size);
 }
 
+// new_state is 1 when running towards the switch, 0 when running away from the switch!
 static inline int step_until_switch_change( axis_e axis, int reverse, int new_state, double si_delta,
 					int pruss_axis, int32_t cmin, int direction,
 					int32_t* position, int32_t pos_delta, const char* dir_txt)
 {
+#if PRUSS_HOMING
+  /* Clear internal position information */
+  {
+    int16_t virtPosT;
+    int16_t virtPosN;
+    int32_t virtPosI;
+    int32_t virtPosI_new;
+    uint8_t mask;
+    uint8_t invert;
+    int gpiobit;
+
+    switch (axis) {
+    case x_axis: gpiobit = (reverse) ? XMIN_GPIO : XMAX_GPIO; break;
+    case y_axis: gpiobit = (reverse) ? YMIN_GPIO : YMAX_GPIO; break;
+    case z_axis: gpiobit = (reverse) ? ZMIN_GPIO : ZMAX_GPIO; break;
+    default: return 0;
+    }
+    mask = 1 << ((gpiobit % 16) - 8);	// bit magic
+    if ( ( reverse && config_min_limit_switch_is_active_low( axis)) ||
+         (!reverse && config_max_limit_switch_is_active_low( axis)) ) {
+      invert = mask;
+    } else {
+      invert = 0;
+    }
+//  printf( "  Home: axis %d, mask= %02x, invert= %02x, gpiobit= %d\n",
+//          pruss_axis, mask, invert, gpiobit);
+    pruss_get_positions( pruss_axis, &virtPosI, &virtPosT, &virtPosN, 0);
+    if (DEBUG_HOME && (debug_flags & DEBUG_HOME)) {
+      printf( "  Home: axis %d, starting at virtPos= %d+%d/%d\n",
+              pruss_axis, virtPosI, virtPosT, virtPosN);
+    }
+    pruss_queue_dwell( pruss_axis, cmin, *position + direction * SI2POS( 0.5));	// FIXME: get max from config?
+    pruss_queue_exec_limited( mask, (new_state) ? invert : ~invert);
+
+    traject_wait_for_completion();
+    pruss_get_positions( pruss_axis, &virtPosI_new, &virtPosT, &virtPosN, 0);
+    if (DEBUG_HOME && (debug_flags & DEBUG_HOME)) {
+      printf( "  Home: axis %d, ended at virtPos= %d+%d/%d\n",
+              pruss_axis, virtPosI_new, virtPosT, virtPosN);
+    }
+//  pruss_stepper_dump_state();
+   /*
+    *  For a move terminated by a limitswitch state change, part of the
+    *  internal position information is now wrong.
+    */
+    pruss_set_position( pruss_axis, virtPosI_new);	// fix requestedPos
+    if (DEBUG_HOME && (debug_flags & DEBUG_HOME)) {
+      printf( "  %c: limit switch %s detected after %1.6lf [mm]\n",
+	      axisNames[ pruss_axis], (new_state) ? "activation" : "release", POS2MM( virtPosI_new - virtPosI));
+    }
+  }
+#else
   int iter = 0;			/* count interations for exact position */
   uint32_t pos_move_len = 0.0;	/* for soft limit */
   uint32_t pos_max_move = 0;	// FIXME: needs proper initialization to work !
 
   while (limsw_axis( axis, reverse) != new_state) {
-    /* Clear internal position information */
     pruss_queue_dwell( pruss_axis, cmin, *position + pos_delta);
     *position += pos_delta;
     pos_move_len += pos_delta;
@@ -66,15 +120,17 @@ static inline int step_until_switch_change( axis_e axis, int reverse, int new_st
     }
     sched_yield();
   }
-  if (debug_flags & DEBUG_HOME) {
+  if (DEBUG_HOME && (debug_flags & DEBUG_HOME)) {
     printf( "  %c: limit switch state change detected after %d iterations, %1.6lf [mm]\n",
 	    axisNames[ pruss_axis], iter, (double)(direction * iter) * SI2MM( si_delta));
   }
+#endif
   return 1;
 }
 
 // Execute the actual homing operation. The hardware selected with the 'axis'
 // variable must exist or we'll fail miserably, so filter before calling here!
+// reverse determines the direction: towards minimum (1) or maximum switch (0)
 static int run_home_one_axis( axis_e axis, int reverse, int32_t* position, uint32_t feed)
 {
   int direction = (reverse) ? -1 : 1;

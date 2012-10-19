@@ -27,5 +27,6 @@ extern int pruss_dump_position( void);
 extern int pruss_stepper_busy( void);
 extern int pruss_stepper_halted( void);
 extern int pruss_set_position( int axis, int32_t pos);
+extern int pruss_get_positions( int axis, int32_t* virtPosI, int16_t* virtPosT, int16_t* virtPosN, int32_t* requestedPos);
 
 #endif

@@ -686,6 +686,24 @@ int pruss_set_position( int axis, int32_t pos)
   return 0;
 }
 
+int pruss_get_positions( int axis, int32_t* virtPosI, int16_t* virtPosT, int16_t* virtPosN, int32_t* requestedPos)
+{
+  uint32_t base = PRUSS_RAM_OFFSET + (axis - 1) * FullADSize;
+  if (requestedPos) {
+    *requestedPos = pruss_rd32( base + 32) - VIRT_POS_MID_SCALE;
+  }
+  if (virtPosI) {
+    *virtPosI = pruss_rd32( base + 20) - VIRT_POS_MID_SCALE;
+  }
+  if (virtPosT) {
+    *virtPosT = pruss_rd16( base + 18);
+  }
+  if (virtPosN) {
+    *virtPosN = pruss_rd16( base + 30);
+  }
+  return 0;
+}
+
 /*
  *
  */
