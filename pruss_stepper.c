@@ -145,7 +145,7 @@ typedef union {
 
 #define IX_IN		(PRUSS_RAM_OFFSET + 0xC0)
 #define IX_OUT		(PRUSS_RAM_OFFSET + 0xC1)
-#define BUSY_FLAG	(PRUSS_RAM_OFFSET + 0xC2)
+#define BUSY_FLAG	(PRUSS_RAM_OFFSET + 0xC4)
 
 static int pruss_ecap_init( void)
 {
