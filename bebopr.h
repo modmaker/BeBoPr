@@ -2,7 +2,7 @@
 #define _BEBOPR_H
 
 // Define the frequency of the PRUSS clock
-#define TIMER_CLOCK	200.0E6
+#define PRUSS_CLOCK	200.0E6
 
 // Identification values for axes
 typedef enum {

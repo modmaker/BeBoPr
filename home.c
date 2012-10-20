@@ -21,7 +21,7 @@
 #define PRUSS_HOMING	1
 
 
-static const double fclk = TIMER_CLOCK;
+static const double fclk = PRUSS_CLOCK;
 static const char axisNames[] = { '?', 'X', 'Y', 'Z' };
 
 /*
