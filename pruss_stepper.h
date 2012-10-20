@@ -8,6 +8,7 @@ extern int pruss_stepper_init( void);
 extern int pruss_stepper_dump_state( void);
 extern int pruss_queue_full( void);
 extern int pruss_queue_empty( void);
+extern int pruss_queue_set_position( int axis, int32_t pos);
 extern int pruss_queue_set_origin( int axis);
 extern int pruss_queue_adjust_origin( int axis, int32_t delta);
 extern int pruss_queue_adjust_for_ramp( int axis, int32_t delta);
@@ -26,7 +27,6 @@ extern int pruss_queue_set_enable( int on);
 extern int pruss_dump_position( void);
 extern int pruss_stepper_busy( void);
 extern int pruss_stepper_halted( void);
-extern int pruss_set_position( int axis, int32_t pos);
 extern int pruss_get_positions( int axis, int32_t* virtPosI, int16_t* virtPosT, int16_t* virtPosN, int32_t* requestedPos);
 
 #endif

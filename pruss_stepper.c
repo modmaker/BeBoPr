@@ -441,17 +441,22 @@ static int pruss_command( PruCommandUnion* cmd)
  *  PRUSS STEPPER.BIN COMMAND INTERFACE
  */
 
-int pruss_queue_set_origin( int axis)
+int pruss_queue_set_position( int axis, int32_t pos)
 {
   PruCommandUnion pruCmd = {
     .set_origin.command		= CMD_AXIS_SET_ORIGIN,
     .set_origin.axis		= axis,
-    .set_origin.position 	= VIRT_POS_MID_SCALE
+    .set_origin.position 	= VIRT_POS_MID_SCALE + pos
   };
   if (pruss_command( &pruCmd) < 0) {
     return -1;
   }
   return 0;
+}
+
+int pruss_queue_set_origin( int axis)
+{
+  return pruss_queue_set_position( axis, 0);
 }
 
 /*
@@ -674,15 +679,6 @@ int pruss_dump_position( void)
     printf( "  %c-requestedPos = %d", axes[ axis], requestedPos);
   }
   printf( "\n");
-  return 0;
-}
-
-int pruss_set_position( int axis, int32_t pos)
-{
-  uint32_t base = PRUSS_RAM_OFFSET + (axis - 1) * FullADSize;
-  pruss_wr32( base + 32, pos + VIRT_POS_MID_SCALE);	// requestedPos := pos
-  pruss_wr32( base + 20, pos + VIRT_POS_MID_SCALE);	// virtPosI := pos
-  pruss_wr16( base + 18, 0);	// virtPosT := 0
   return 0;
 }
 

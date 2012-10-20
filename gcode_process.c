@@ -466,7 +466,7 @@ void process_gcode_command() {
 						if (config_min_switch_pos( axis_xyz, &pos)) {
 							home_pos_xyz = 0;
 							current_pos_xyz = SI2POS( pos);
-							pruss_set_position( pruss_axis_xyz, home_pos_xyz + current_pos_xyz);
+							pruss_queue_set_position( pruss_axis_xyz, home_pos_xyz + current_pos_xyz);
 						}
 					} );
 
@@ -498,7 +498,7 @@ void process_gcode_command() {
 						if (config_max_switch_pos( axis_xyz, &pos)) {
 							home_pos_xyz = 0;
 							current_pos_xyz = SI2POS( pos);
-							pruss_set_position( pruss_axis_xyz, home_pos_xyz + current_pos_xyz);
+							pruss_queue_set_position( pruss_axis_xyz, home_pos_xyz + current_pos_xyz);
 						}
 					} );
 				break;
@@ -977,14 +977,15 @@ void process_gcode_command() {
 					fprintf( stderr, "M207: Z axis known position <-> reference switch calibration\n");
 				}
 				// Clear home offset, specifief current_pos is in machine coordinates (???)
-				// NOTE: the calculations that follow use home_pos (set to zero), leave them!
+				// NOTE: the calculations that follow use home_pos (that is set to zero),
+				//       do not optimize them as this shows the correct calculations!
 				gcode_home_pos.Z = 0;
 				if (next_target.seen_Z) {
 					gcode_current_pos.Z = next_target.target.Z;
 				} else {
 					gcode_current_pos.Z = 0;
 				}
-				pruss_set_position( 3, gcode_home_pos.Z + gcode_current_pos.Z);
+				pruss_queue_set_position( 3, gcode_home_pos.Z + gcode_current_pos.Z);
 				// use machine coordinates during homing
 				gcode_current_pos.Z += gcode_home_pos.Z;
 				if (config_max_switch_pos( z_axis, &pos)) {
@@ -1004,7 +1005,7 @@ void process_gcode_command() {
 					// Clear home offset and set new calibration position
 					config_set_cal_pos( z_axis, POS2SI( gcode_current_pos.Z));
 					gcode_home_pos.Z = 0;
-					pruss_set_position( 3, gcode_home_pos.Z + gcode_current_pos.Z);
+					pruss_queue_set_position( 3, gcode_home_pos.Z + gcode_current_pos.Z);
 				}
 				break;
 			}

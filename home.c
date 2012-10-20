@@ -92,7 +92,7 @@ static inline int step_until_switch_change( axis_e axis, int reverse, int new_st
     *  For a move terminated by a limitswitch state change, part of the
     *  internal position information is now wrong.
     */
-    pruss_set_position( pruss_axis, virtPosI_new);	// fix requestedPos
+    pruss_queue_set_position( pruss_axis, virtPosI_new);	// fix requestedPos
     if (DEBUG_HOME && (debug_flags & DEBUG_HOME)) {
       printf( "  %c: limit switch %s detected after %1.6lf [mm]\n",
 	      axisNames[ pruss_axis], (new_state) ? "activation" : "release", POS2MM( virtPosI_new - virtPosI));
