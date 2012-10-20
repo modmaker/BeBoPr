@@ -44,7 +44,7 @@ static inline void update_position( int32_t* position, int direction, int count,
 
 // new_state is 1 when running towards the switch, 0 when running away from the switch!
 static inline int step_until_switch_change( axis_e axis, int reverse, int new_state, double si_delta,
-					int pruss_axis, int32_t cmin, int direction,
+					int pruss_axis, uint32_t c0, uint32_t cmin, int direction,
 					int32_t* position, int32_t pos_delta, const char* dir_txt)
 {
 #if PRUSS_HOMING
@@ -53,10 +53,12 @@ static inline int step_until_switch_change( axis_e axis, int reverse, int new_st
     int16_t virtPosT;
     int16_t virtPosN;
     int32_t virtPosI;
+    int16_t virtPosT_new;
     int32_t virtPosI_new;
     uint8_t mask;
     uint8_t invert;
     int gpiobit;
+    double delta;
 
     switch (axis) {
     case x_axis: gpiobit = (reverse) ? XMIN_GPIO : XMAX_GPIO; break;
@@ -78,14 +80,15 @@ static inline int step_until_switch_change( axis_e axis, int reverse, int new_st
       printf( "  Home: axis %d, starting at virtPos= %d+%d/%d\n",
               pruss_axis, virtPosI, virtPosT, virtPosN);
     }
-    pruss_queue_dwell( pruss_axis, cmin, *position + direction * SI2POS( 0.5));	// FIXME: get max from config?
+    delta = (new_state) ? 0.500 : 0.010;
+    pruss_queue_accel( pruss_axis, c0, cmin, *position + direction * SI2POS( delta));
     pruss_queue_exec_limited( mask, (new_state) ? invert : ~invert);
 
     traject_wait_for_completion();
-    pruss_get_positions( pruss_axis, &virtPosI_new, &virtPosT, &virtPosN, 0);
+    pruss_get_positions( pruss_axis, &virtPosI_new, &virtPosT_new, 0, 0);
     if (DEBUG_HOME && (debug_flags & DEBUG_HOME)) {
       printf( "  Home: axis %d, ended at virtPos= %d+%d/%d\n",
-              pruss_axis, virtPosI_new, virtPosT, virtPosN);
+              pruss_axis, virtPosI_new, virtPosT_new, virtPosN);
     }
 //  pruss_stepper_dump_state();
    /*
@@ -93,10 +96,12 @@ static inline int step_until_switch_change( axis_e axis, int reverse, int new_st
     *  internal position information is now wrong.
     */
     pruss_queue_set_position( pruss_axis, virtPosI_new);	// fix requestedPos
+    int32_t delta_pos = virtPosI_new - virtPosI + (virtPosT_new - virtPosT + virtPosN / 2) / virtPosN;
     if (DEBUG_HOME && (debug_flags & DEBUG_HOME)) {
       printf( "  %c: limit switch %s detected after %1.6lf [mm]\n",
-	      axisNames[ pruss_axis], (new_state) ? "activation" : "release", POS2MM( virtPosI_new - virtPosI));
+	      axisNames[ pruss_axis], (new_state) ? "activation" : "release", POS2MM( delta_pos));
     }
+    *position += (virtPosI_new - virtPosI);
   }
 #else
   int iter = 0;			/* count interations for exact position */
@@ -137,6 +142,8 @@ static int run_home_one_axis( axis_e axis, int reverse, int32_t* position, uint3
   int pruss_axis = 0;
   double si_step_size = config_get_step_size( axis);
   double si_iter_size = si_step_size;
+  double a_max = config_get_max_accel( axis);
+  const double c_acc = 282842712.5;	// = fclk * sqrt( 2.0);
 
   switch (axis) {
   case x_axis: pruss_axis = 1; break;
@@ -157,14 +164,21 @@ static int run_home_one_axis( axis_e axis, int reverse, int32_t* position, uint3
    * Note: we're running at fixed speed, no acceleration is done
    * We assume that the homing feed is low enough so that we can
    * start stepping at that speed without acceleration.
+   * FIXME: This has been proven wrong!!! Even starting at relatively
+   * low speed without acceleration will give step loss!
    */
   uint32_t cmin = fclk * si_step_size / speed ;
+  uint32_t c0   = (uint32_t) (c_acc * sqrt( si_step_size / (0.25 * a_max)));
+  if (cmin > c0) {
+    cmin = c0;
+  }
   /*
    * Run towards the switch
    */
   int32_t pos_delta = (int32_t)(direction * SI2POS( si_iter_size));
+  int32_t old_position = *position;
   if (!step_until_switch_change( axis, reverse, 1, si_iter_size, pruss_axis,
-				  cmin, direction, position, pos_delta, " move")) {
+				  c0, cmin, direction, position, pos_delta, " move")) {
     return 0;
   }
   if (debug_flags & DEBUG_HOME) {
@@ -176,14 +190,19 @@ static int run_home_one_axis( axis_e axis, int reverse, int32_t* position, uint3
   sleep( 1);
   speed = config_get_home_release_feed( axis) / 60000.0;
   cmin = fclk * si_iter_size / speed ;
+  c0   = (uint32_t) (c_acc * sqrt( si_step_size / (0.25 * a_max)));
   direction = -direction;
   pos_delta = (int32_t)(direction * SI2POS( si_iter_size));
   /*
    * Run away from the switch
    */
   if (!step_until_switch_change( axis, reverse, 0, si_iter_size, pruss_axis,
-				  cmin, direction, position, pos_delta, " release")) {
+				  c0, cmin, direction, position, pos_delta, " release")) {
     return 0;
+  }
+  int32_t new_position = *position;
+  if (DEBUG_HOME && (debug_flags & DEBUG_HOME)) {
+    printf( "  position delta= %1.6lf [mm]\n", POS2MM( new_position - old_position));
   }
   return 1;
 }
