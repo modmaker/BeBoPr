@@ -130,6 +130,7 @@ static inline int step_until_switch_change( axis_e axis, int reverse, int new_st
 	    axisNames[ pruss_axis], iter, (double)(direction * iter) * SI2MM( si_delta));
   }
 #endif
+  usleep( 500 * 1000);
   return 1;
 }
 
@@ -184,10 +185,6 @@ static int run_home_one_axis( axis_e axis, int reverse, int32_t* position, uint3
   if (debug_flags & DEBUG_HOME) {
     printf( "  %c: pausing for switch debounce\n", axisNames[ pruss_axis]);
   }
-  /*
-   * Debounce and reverse direction
-   */
-  sleep( 1);
   speed = config_get_home_release_feed( axis) / 60000.0;
   cmin = fclk * si_iter_size / speed ;
   c0   = (uint32_t) (c_acc * sqrt( si_step_size / (0.25 * a_max)));
