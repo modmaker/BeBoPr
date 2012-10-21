@@ -18,6 +18,7 @@
 #include "pruss_stepper.h"
 #include "comm.h"
 #include "debug.h"
+#include "pruss.h"
 
 
 static int arm_init( void)
