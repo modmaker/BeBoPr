@@ -229,7 +229,7 @@ void traject_delta_on_all_axes( traject5D* traject)
   double de = traject->de;
 #endif
 
-  clock_gettime( CLOCK_MONOTONIC, &time);
+  clock_gettime( clock, &time);
   int nsecs = time.tv_nsec - t0.tv_nsec;
   int secs  = time.tv_sec  - t0.tv_sec;
   if (nsecs < 0) {
