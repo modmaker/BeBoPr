@@ -446,7 +446,7 @@ int pruss_queue_set_position( int axis, int32_t pos)
   PruCommandUnion pruCmd = {
     .set_origin.command		= CMD_AXIS_SET_ORIGIN,
     .set_origin.axis		= axis,
-    .set_origin.position 	= VIRT_POS_MID_SCALE + pos
+    .set_origin.position 	= pos
   };
   if (pruss_command( &pruCmd) < 0) {
     return -1;
