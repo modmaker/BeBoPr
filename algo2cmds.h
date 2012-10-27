@@ -10,7 +10,7 @@
 #define UCODE_MAGIC             0xba512191
 
 //  PRUSS code and C-code must have the same FW_VERSION to be compatible
-#define FW_VERSION              4
+#define FW_VERSION              6
 
 #define NR_CMD_FIFO_ENTRIES	16
 
@@ -21,19 +21,33 @@
 //
 #define VIRT_POS_MID_SCALE	0x80000000
 
-#define	CMD_AXIS_SET_ORIGIN	0
-#define CMD_AXIS_RAMP_UP	1
-#define CMD_AXIS_DWELL		2
-#define CMD_AXIS_RAMP_DOWN	3
-#define CMD_AXES_EXECUTE	4
-#define	CMD_AXIS_SET_ACCEL	5
-#define	CMD_AXIS_SET_PULSE_LENGTH 6
-#define	CMD_AXIS_CONFIG_AXIS	7
-#define	CMD_AXIS_ADJUST_ORIGIN	8
-#define CMD_AXIS_ADJUST_FOR_RAMP 9
-#define CMD_AXIS_RAMP_DWELL	10
-#define CMD_SET_IDLE_TIMEOUT	11
-#define CMD_SET_ENABLE		12
-#define	CMD_AXIS_CONFIG_LIMSW	13
-
-#define CMD_HALT_PRU		15
+//
+// Once a command is decoded, it behaves according to
+// one of the three following groups:
+//
+// 1. ASYNC and simple SYNC commands, id 0 - 7
+//    these commands are executed immediately (ASYNC) or wait first
+//    for the steppers to become not busy (SYNC)
+#define CMD_AXES_EXECUTE		0
+#define CMD_SET_ENABLE			1
+#define CMD_SET_IDLE_TIMEOUT		2
+#define CMD_HALT_PRU			3
+// 2. complex SYNC  commands, id 8 -15
+//    these commands are axis specific and wait
+//    for the steppers to become not busy
+#define START_CMD_AXIS_COMPLEX		8
+#define	CMD_AXIS_SET_PULSE_LENGTH	8
+#define	CMD_AXIS_CONFIG_AXIS		9
+#define	CMD_AXIS_ADJUST_ORIGIN		10
+#define CMD_AXIS_ADJUST_FOR_RAMP 	11
+#define	CMD_AXIS_SET_ORIGIN		12
+#define	CMD_AXIS_CONFIG_LIMSW		13
+#define	CMD_AXIS_SET_ACCEL		14
+// 3. QUEUE commands, id 16-31
+//    these commands are queued before being started with the execute command
+#define START_CMD_AXIS_QUEUE		16
+#define CMD_AXIS_RAMP_UP		17
+#define CMD_AXIS_DWELL			18
+#define CMD_AXIS_RAMP_DOWN		19
+#define CMD_AXIS_RAMP_DWELL		20
+//

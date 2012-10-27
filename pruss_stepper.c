@@ -238,6 +238,13 @@ int pruss_stepper_init( void)
   pruss_wr8( IX_OUT, ix_out);		// out
 //  pruss_wr16( IX_OUT + 1, 0xdeaf);	// filler
 
+  // for each axis clear CB storage
+  for (int i = 0 ; i < 4 ; ++i) {
+    for (int j = 0 ; j < 5 ; ++j) {
+      pruss_wr32( PRUSS_RAM_OFFSET + 256 * (16 + i) + 4 * j, 0);
+    }
+  }
+
  /*
   * Now start the code: Enable the PRUSS.
   */
@@ -267,7 +274,7 @@ int pruss_stepper_init( void)
 
 int pruss_stepper_dump_state( void)
 {
-  int i;
+  int i, j;
 
   int pruss_ena = pruss_dump_state();
 
@@ -288,13 +295,20 @@ int pruss_stepper_dump_state( void)
     sp += 2;
   }
 
+  unsigned int r_state = pruss_rd16( PRUSS_DBG_OFFSET + 4 * 6);
+  unsigned int cb_state = pruss_rd8( PRUSS_DBG_OFFSET + 4 * 6 + 2);
+  unsigned int pruss_axis = pruss_rd8( PRUSS_DBG_OFFSET + 4 * 7 + 3);
+  printf( "  Gstate= pend:%02x,act:%02x,%c%c%c, CB= state:%d,pend:%02x, Raxis= %d\n",
+	  (r_state >> 9) & 31, (r_state >>1) & 31, (r_state & (1 << 15)) ? 'T' : 't',
+	  (r_state & (1 << 6)) ? 'B' : 'b', (r_state & (1 << 7)) ? 'A' : 'a',
+	  (cb_state >> 6) & 3, (cb_state >> 1) & 31, pruss_axis);
+
 #define	FullADSize		(12 * 4)
 
   /* Dump per axis data */
   {
     uint32_t base[ 4];
     uint32_t data[ 4];
-    uint16_t axes_config = pruss_rd16( PRUSS_DBG_OFFSET + 4 * 11 + 2);
 
 #define DUMP_LINE( field, size, offset, format)     			          \
     do {                                                                          \
@@ -316,14 +330,24 @@ int pruss_stepper_dump_state( void)
     DUMP_LINE( "stepActiveTime .",   32,  4, "%14u");
     DUMP_LINE( "minStepCycleTime .", 32,  8, "%14u");
     DUMP_LINE( "stepCycleTime .",    32, 12, "%14u");
-    DUMP_LINE( "stateInfo x",         8, 16, "%14x");
-    DUMP_LINE( "stepPinBitNo .",      8, 17, "%14u");
+    DUMP_LINE( "stateInfo x",        16, 16, "%14x");
     // following code uses stepPinBitNo from data[] !
-    for (i = 0 ; i < 4 ; ++i) {
-      data[ i] = !!(axes_config & (1 << data[ i]));
-    }
-    printf( "%20s    %14x    %14x    %14x    %14x\n", "Axis reversal x", data[ 0], data[ 1], data[ 2], data[ 3]);
-
+    printf( "%20s    %14u    %14u    %14u    %14u\n", "stepPinBitNo .",
+	    (data[ 0] >> 12), (data[ 1] >> 12), (data[ 2] >> 12), (data[ 3] >> 12));
+    // following code uses moveReverseBit from data[] !
+    printf( "%20s    %14u    %14u    %14u    %14u\n", "Axis reversal .",
+	    !!(data[ 0] & (1 << 11)), !!(data[ 1] & (1 << 11)),
+	    !!(data[ 2] & (1 << 11)), !!(data[ 3] & (1 << 11)));
+    // following code uses decelerateBit from data[] !
+    printf( "%20s    %14u    %14u    %14u    %14u\n", "Accelerate .",
+	    !!(data[ 0] & (1 << 0)), !!(data[ 1] & (1 << 0)),
+	    !!(data[ 2] & (1 << 0)), !!(data[ 3] & (1 << 0)));
+    printf( "%20s    %14u    %14u    %14u    %14u\n", "Decelerate .",
+	    !!(data[ 0] & (1 << 1)), !!(data[ 1] & (1 << 1)),
+	    !!(data[ 2] & (1 << 1)), !!(data[ 3] & (1 << 1)));
+    printf( "%20s    %14u    %14u    %14u    %14u\n", "Move Done .",
+	    !!(data[ 0] & (1 << 3)), !!(data[ 1] & (1 << 3)),
+	    !!(data[ 2] & (1 << 3)), !!(data[ 3] & (1 << 3)));
     DUMP_LINE( "virtPosT .",         16, 18, "%14u");
     DUMP_LINE( "virtPos x",          32, 20, "%14x");
     printf( "%20s    %14d    %14d    %14d    %14d\n", "virtPos .",
@@ -346,6 +370,17 @@ int pruss_stepper_dump_state( void)
     DUMP_LINE( "accelCount .",       32, 40, "%14u");
     DUMP_LINE( "dividend .",         32, 44, "%14u");
   }
+
+  for (i = 0 ; i < 4 ; ++i) {
+    // for each axis dump first part of CB storage
+    printf( "CB[ %d] -", i);
+    for (j = 0 ; j < 4 ; ++j) {
+	    uint32_t data = pruss_rd32( PRUSS_RAM_OFFSET + 256 * (16 + i) + 4 * j);
+      printf( " 0x%08x", data);
+    }
+    printf( "\n");
+  }
+
   if (pruss_ena) {
     // Set bit15 in R6 to signal the PRUSS we're resuming from suspend
     uint32_t reg = pruss_rd32( PRUSS_DBG_OFFSET + 6 * 4);
