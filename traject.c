@@ -34,46 +34,109 @@ static double ve_max;
 static const double fclk = 200000000.0;
 static const double c_acc = 282842712.5;	// = fclk * sqrt( 2.0);
 
-#ifdef PRU_ABS_COORDS
-static inline int queue_move( const char* axis_name, double ramp, double a, double v, double dwell, uint32_t c0, uint32_t cmin, double origin)
-#else
-static inline int queue_move( const char* axis_name, double ramp, double a, double v, double dwell, uint32_t c0, uint32_t cmin)
-#endif
+
+/* ---------------------------------- */
+
+static inline int queue_accel( const char* axis_name, double ramp, double a, double v, uint32_t n0, uint32_t c0, uint32_t cmin, double origin)
 {
-  if (v != 0.0) {
+  if (v != 0.0 && ramp != 0.0) {
     char aname = *axis_name;
     if (islower( aname)) {
       aname = toupper( aname);
     }
-    int axis = (aname < 'X') ? aname - 'E' + 4 : aname - 'X' + 1;
-    if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
-      if (c0 != cmin) {
-        printf( "Queue %c: ramping to and from %1.3lf [mm/s] "
-		"with a=%1.3lf [m/s^2] over %1.6lf [mm] (c0=%u,cmin=%u)\n",
-		aname, SI2MM( v), a, SI2MM( ramp + dwell + ramp), c0, cmin);
-      } else {
-        printf( "Queue %c: running at %1.3lf [mm/s] "
-		"over %1.6lf [mm] (c0=%u,cmin=%u)\n",
-		aname, SI2MM( v), SI2MM( ramp + dwell + ramp), c0, cmin);
+    int pruss_axis = (aname < 'X') ? aname - 'E' + 4 : aname - 'X' + 1;
+    if (c0 > cmin) {
+      if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
+        printf( "Queue ACCEL %c: ramping up to v=%1.3lf [mm/s] with a=%1.3lf [m/s^2] to %1.6lf [mm]"
+		" (from n0=%u, c0=%u up to cmin=%u)\n",
+		aname, SI2MM( v), a, SI2MM( origin + ramp), n0, c0, cmin);
       }
+      pruss_queue_accel( pruss_axis, n0, c0, cmin, SI2POS( origin + ramp));
+    } else {
+      if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
+        printf( "Queue ACCEL %c: running at v=%1.3lf [mm/s] to %1.6lf [mm] (at c=%u)\n",
+		aname, SI2MM( v), SI2MM( origin + ramp), cmin);
+      }
+      pruss_queue_dwell( pruss_axis, cmin, SI2POS( origin + ramp));
     }
-#ifdef PRU_ABS_COORDS
-    pruss_queue_accel( axis, c0, cmin, (int32_t)(1.0E9 * (origin + ramp + dwell)));
-#else
-    pruss_queue_accel( axis, c0, cmin, (int32_t)(1.0E9 * (ramp + dwell)));
-#endif
     return 1;
   }
   return 0;
 }
 
 #ifdef PRU_ABS_COORDS
-#define QUEUE_MOVE( axis) queue_move( #axis, ramp_d##axis, a##axis, v##axis, dwell_d##axis, c0##axis, cmin##axis, axis##0)
+#define QUEUE_ACCEL( axis) queue_accel( #axis, ramp_d##axis, a##axis, v##axis, n0##axis, c0##axis, cmin##axis, axis##0)
 #else
-#define QUEUE_MOVE( axis) queue_move( #axis, ramp_d##axis, a##axis, v##axis, dwell_d##axis, c0##axis, cmin##axis)
+#define QUEUE_ACCEL( axis) queue_accel( #axis, ramp_d##axis, a##axis, v##axis, n0##axis, c0##axis, cmin##axis, 0)
 #endif
 
-static inline void axis_calc( const char* axis_name, double step_size_, double d, double double_s, double* ramp_d, double a, double* v, double* dwell_d, uint32_t* c0, uint32_t* cmin, double* recipr_t_acc, double* recipr_t_move)
+/* ---------------------------------- */
+
+static inline int queue_dwell( const char* axis_name, double v, double ramp, double dwell, uint32_t cmin, double origin)
+{
+  if (v != 0.0 && dwell != 0.0) {
+    char aname = *axis_name;
+    if (islower( aname)) {
+      aname = toupper( aname);
+    }
+    int pruss_axis = (aname < 'X') ? aname - 'E' + 4 : aname - 'X' + 1;
+    if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
+      printf( "Queue DWELL %c: running at v=%1.3lf [mm/s] to %1.6lf [mm] (at c=%u)\n",
+	      aname, SI2MM( v), SI2MM( origin + ramp + dwell), cmin);
+    }
+    pruss_queue_dwell( pruss_axis, cmin, SI2POS( origin + ramp + dwell));
+    return 1;
+  }
+  return 0;
+}
+
+#ifdef PRU_ABS_COORDS
+#define QUEUE_DWELL( axis) queue_dwell( #axis, v##axis, ramp_d##axis, dwell_d##axis, cmin##axis, axis##0)
+#else
+#define QUEUE_DWELL( axis) queue_dwell( #axis, v##axis, ramp_d##axis, dwell_d##axis, cmin##axis, 0)
+#endif
+
+/* ---------------------------------- */
+
+static inline int queue_decel( const char* axis_name, double a, double v, double ramp, double dwell,
+			uint32_t nmin, uint32_t c0, uint32_t cmin, double origin)
+{
+  if (v != 0.0 && ramp != 0.0) {
+    char aname = *axis_name;
+    if (islower( aname)) {
+      aname = toupper( aname);
+    }
+    int pruss_axis = (aname < 'X') ? aname - 'E' + 4 : aname - 'X' + 1;
+    if (c0 > cmin) {
+      if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
+        printf( "Queue DECEL %c: ramping down from v=%1.3lf [mm/s] with a=%1.3lf [m/s^2] to %1.6lf [mm]"
+		" (down from nmin=%u, cmin=%u)\n",
+		aname, SI2MM( v), a, SI2MM( origin + ramp + dwell + ramp), nmin, cmin);
+      }
+      pruss_queue_decel( pruss_axis, nmin, cmin, SI2POS( origin + ramp + dwell + ramp));
+    } else {
+      if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
+        printf( "Queue DECEL %c: running at v=%1.3lf [mm/s] to %1.6lf [mm] (at c=%u)\n",
+		aname, SI2MM( v), SI2MM( origin + ramp + dwell + ramp), cmin);
+      }
+      pruss_queue_dwell( pruss_axis, cmin, SI2POS( origin + ramp + dwell + ramp));
+    }
+    return 1;
+  }
+  return 0;
+}
+
+#ifdef PRU_ABS_COORDS
+#define QUEUE_DECEL( axis) queue_decel( #axis, a##axis, v##axis, ramp_d##axis, dwell_d##axis, nmin##axis, c0##axis, cmin##axis, axis##0)
+#else
+#define QUEUE_DECEL( axis) queue_decel( #axis, a##axis, v##axis, ramp_d##axis, dwell_d##axis, nmin##axis, c0##axis, cmin##axis, 0)
+#endif
+
+/* ---------------------------------- */
+
+static inline void axis_calc( const char* axis_name, double step_size_, double d, double double_s, double* ramp_d,
+			double a, double* v, double* dwell_d, uint32_t* n0, uint32_t* nmin,
+			uint32_t* c0, uint32_t* cmin, double* recipr_t_acc, double* recipr_t_move)
 {
   if (d != 0.0) {
     char aname = *axis_name;
@@ -93,16 +156,17 @@ static inline void axis_calc( const char* axis_name, double step_size_, double d
       if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
         printf( "(can't reach full speed) ");
       }
+      *ramp_d = step_size_ * floor( d / (2 * step_size_));
+      *dwell_d = d - 2 * *ramp_d;
       *v = sqrt( a * d);
-      *ramp_d = 0.5 * d;
-      *dwell_d = 0.0;
+      // TODO: check whether this is always good enough:
       *recipr_t_acc = *v / *ramp_d;
     } else {
      /*
       * Move has ramp up, constant velocity and ramp down phases
       */
-      *ramp_d = 0.5 * double_s;
-      *dwell_d = d - double_s;
+      *ramp_d = step_size_ * floor( double_s / (2 * step_size_));
+      *dwell_d = d - 2 * *ramp_d;
     }
    /*
     * Update the time it takes for the entire move to complete.
@@ -184,6 +248,8 @@ static inline void axis_calc( const char* axis_name, double step_size_, double d
 	*c0   = *cmin;
       }
     }
+    *n0 = 0;
+    *nmin = ceil( *ramp_d / step_size_);
   } else {
    /*
     * NOP
@@ -192,10 +258,13 @@ static inline void axis_calc( const char* axis_name, double step_size_, double d
     *dwell_d = 0.0;
     *cmin = 0;
     *c0   = 0;
+    *n0 = 0;
+    *nmin = 0;
   }
 }
 
-#define AXIS_CALC( axis) axis_calc( #axis, step_size_##axis, d##axis, double_s##axis, &ramp_d##axis, a##axis, &v##axis, &dwell_d##axis, &c0##axis, &cmin##axis, &recipr_t_acc, &recipr_t_move)
+#define AXIS_CALC( axis) axis_calc( #axis, step_size_##axis, d##axis, double_s##axis, &ramp_d##axis, a##axis, &v##axis, &dwell_d##axis, \
+					&n0##axis, &nmin##axis, &c0##axis, &cmin##axis, &recipr_t_acc, &recipr_t_move)
 
 /*
  * All dimensions are in SI units and relative
@@ -387,6 +456,8 @@ void traject_delta_on_all_axes( traject5D* traject)
 
   uint32_t c0x, c0y, c0z, c0e;
   uint32_t cminx, cminy, cminz, cmine;
+  uint32_t n0x, n0y, n0z, n0e;
+  uint32_t nminx, nminy, nminz, nmine;
   double recipr_t_move = 0.0;	// means: not set
  /*
   * Calculate the timing for all axes
@@ -434,27 +505,36 @@ void traject_delta_on_all_axes( traject5D* traject)
   double e0 = traject->e0;
 #endif
 
-  any_move += QUEUE_MOVE( x);
-  any_move += QUEUE_MOVE( y);
-  any_move += QUEUE_MOVE( z);
-  any_move += QUEUE_MOVE( e);
-
+// RAMP UP
+  any_move = 0;
+  any_move += QUEUE_ACCEL( x);
+  any_move += QUEUE_ACCEL( y);
+  any_move += QUEUE_ACCEL( z);
+  any_move += QUEUE_ACCEL( e);
   if (any_move) {
     pruss_queue_execute();
-    any_move = 0;
   }
-  if (ramp_dx != 0.0) {
-    pruss_queue_adjust_for_ramp( 1, (int32_t)(1.0E9 * ramp_dx));
+
+// DWELL
+  any_move = 0;
+  any_move += QUEUE_DWELL( x);
+  any_move += QUEUE_DWELL( y);
+  any_move += QUEUE_DWELL( z);
+  any_move += QUEUE_DWELL( e);
+  if (any_move) {
+    pruss_queue_execute();
   }
-  if (ramp_dy != 0.0) {
-    pruss_queue_adjust_for_ramp( 2, (int32_t)(1.0E9 * ramp_dy));
+
+// RAMP DOWN
+  any_move = 0;
+  any_move += QUEUE_DECEL( x);
+  any_move += QUEUE_DECEL( y);
+  any_move += QUEUE_DECEL( z);
+  any_move += QUEUE_DECEL( e);
+  if (any_move) {
+    pruss_queue_execute();
   }
-  if (ramp_dz != 0.0) {
-    pruss_queue_adjust_for_ramp( 3, (int32_t)(1.0E9 * ramp_dz));
-  }
-  if (ramp_de != 0.0) {
-    pruss_queue_adjust_for_ramp( 4, (int32_t)(1.0E9 * ramp_de));
-  }
+
 }
 
 static void pruss_axis_config( int axis, double step_size, int reverse)

@@ -57,7 +57,7 @@ static int step_until_switch_change( axis_e axis, int reverse, int new_state, in
               pruss_axis, virtPosI, virtPosT, virtPosN);
     }
     delta = (new_state) ? 0.500 : 0.010;
-    pruss_queue_accel( pruss_axis, c0, cmin, *position + direction * SI2POS( delta));
+    pruss_queue_accel( pruss_axis, 0, c0, cmin, *position + direction * SI2POS( delta));
     pruss_queue_exec_limited( mask, (new_state) ? invert : ~invert);
 
     traject_wait_for_completion();

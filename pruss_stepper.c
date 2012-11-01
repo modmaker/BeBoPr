@@ -29,27 +29,19 @@ typedef struct {
   unsigned int	position	: 32;
 } SetOriginStruct;
 
-// CMD_AXIS_SET_ACCEL
+// CMD_AXIS_RAMP_UP
 typedef struct {
   unsigned int	accelCount	: 24;
   unsigned int	command		:  5;
   unsigned int	axis		:  3;
-  unsigned int			: 32;
-  unsigned int	stepCycle	: 32;
-} SetAccelStruct;
-
-// CMD_AXIS_RAMP_UP
-typedef struct {
-  unsigned int			: 24;
-  unsigned int	command		:  5;
-  unsigned int	axis		:  3;
   int		moveDelta	: 32;
   unsigned int	stepCycle	: 32;
+  unsigned int	stepCycleMin	: 32;
 } AccelStruct;
 
 // CMD_AXIS_RAMP_DOWN
 typedef struct {
-  unsigned int			: 24;
+  unsigned int	accelCount	: 24;
   unsigned int	command		:  5;
   unsigned int	axis		:  3;
   int		moveDelta	: 32;
@@ -129,7 +121,6 @@ typedef union {
   uint32_t		gen[ 4];
   CommandStruct		command;
   SetOriginStruct	set_origin;
-  SetAccelStruct	set_accel;
   AccelStruct		accel;
   DecelStruct		decel;
   DwellStruct		dwell;
@@ -538,40 +529,20 @@ int pruss_queue_set_pulse_length( int axis, uint16_t length)
   return 0;
 }
 
-int pruss_queue_set_accel( int axis, uint32_t c0)
+int pruss_queue_accel( int axis, uint32_t n0, uint32_t c0, uint32_t cmin, int32_t delta)
 {
   PruCommandUnion pruCmd = {
-    .set_accel.command		= CMD_AXIS_SET_ACCEL,
-    .set_accel.axis		= axis,
-    .set_accel.accelCount 	= 0,
-    .set_accel.stepCycle 	= c0
-  };
-  if (pruss_command( &pruCmd) < 0) {
-    return -1;
-  }
-  return 0;
-}
-
-int pruss_queue_accel_more( int axis, uint32_t cmin, int32_t delta)
-{
-  PruCommandUnion pruCmd = {
+    .accel.accelCount 		= n0,
     .accel.command		= CMD_AXIS_RAMP_UP,
     .accel.axis			= axis,
     .accel.moveDelta		= delta,
-    .accel.stepCycle		= cmin
+    .accel.stepCycle 		= c0,
+    .accel.stepCycleMin		= cmin,
   };
   if (pruss_command( &pruCmd) < 0) {
     return -1;
   }
   return 0;
-}
-
-int pruss_queue_accel( int axis, uint32_t c0, uint32_t cmin, int32_t delta)
-{
-  if (pruss_queue_set_accel( axis, c0) < 0) {
-    return -1;
-  }
-  return pruss_queue_accel_more( axis, cmin, delta);
 }
 
 int pruss_queue_dwell( int axis, uint32_t cmin, int32_t delta)
@@ -588,12 +559,14 @@ int pruss_queue_dwell( int axis, uint32_t cmin, int32_t delta)
   return 0;
 }
 
-int pruss_queue_decel( int axis, int32_t delta)
+int pruss_queue_decel( int axis, uint32_t nmin, uint32_t cmin, int32_t delta)
 {
   PruCommandUnion pruCmd = {
+    .decel.accelCount 		= nmin,
     .decel.command		= CMD_AXIS_RAMP_DOWN,
     .decel.axis			= axis,
-    .decel.moveDelta		= delta
+    .decel.moveDelta		= delta,
+    .decel.stepCycle		= cmin,
   };
   if (pruss_command( &pruCmd) < 0) {
     return -1;
