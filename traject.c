@@ -65,9 +65,9 @@ static inline int queue_accel( const char* axis_name, double ramp, double a, dou
 }
 
 #ifdef PRU_ABS_COORDS
-#define QUEUE_ACCEL( axis) queue_accel( #axis, ramp_d##axis, a##axis, v##axis, n0##axis, c0##axis, cmin##axis, axis##0)
+#define QUEUE_ACCEL( axis) queue_accel( #axis, ramp_up_d##axis, a##axis, v##axis, n0##axis, c0##axis, cmin##axis, axis##0)
 #else
-#define QUEUE_ACCEL( axis) queue_accel( #axis, ramp_d##axis, a##axis, v##axis, n0##axis, c0##axis, cmin##axis, 0)
+#define QUEUE_ACCEL( axis) queue_accel( #axis, ramp_up_d##axis, a##axis, v##axis, n0##axis, c0##axis, cmin##axis, 0)
 #endif
 
 /* ---------------------------------- */
@@ -91,17 +91,17 @@ static inline int queue_dwell( const char* axis_name, double v, double ramp, dou
 }
 
 #ifdef PRU_ABS_COORDS
-#define QUEUE_DWELL( axis) queue_dwell( #axis, v##axis, ramp_d##axis, dwell_d##axis, cmin##axis, axis##0)
+#define QUEUE_DWELL( axis) queue_dwell( #axis, v##axis, ramp_up_d##axis, dwell_d##axis, cmin##axis, axis##0)
 #else
-#define QUEUE_DWELL( axis) queue_dwell( #axis, v##axis, ramp_d##axis, dwell_d##axis, cmin##axis, 0)
+#define QUEUE_DWELL( axis) queue_dwell( #axis, v##axis, ramp_up_d##axis, dwell_d##axis, cmin##axis, 0)
 #endif
 
 /* ---------------------------------- */
 
-static inline int queue_decel( const char* axis_name, double a, double v, double ramp, double dwell,
+static inline int queue_decel( const char* axis_name, double a, double v, double ramp_up, double dwell, double ramp_down,
 			uint32_t nmin, uint32_t c0, uint32_t cmin, double origin)
 {
-  if (v != 0.0 && ramp != 0.0) {
+  if (v != 0.0 && ramp_up != 0.0) {
     char aname = *axis_name;
     if (islower( aname)) {
       aname = toupper( aname);
@@ -111,15 +111,15 @@ static inline int queue_decel( const char* axis_name, double a, double v, double
       if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
         printf( "Queue DECEL %c: ramping down from v=%1.3lf [mm/s] with a=%1.3lf [m/s^2] to %1.6lf [mm]"
 		" (down from nmin=%u, cmin=%u)\n",
-		aname, SI2MM( v), a, SI2MM( origin + ramp + dwell + ramp), nmin, cmin);
+		aname, SI2MM( v), a, SI2MM( origin + ramp_up + dwell + ramp_down), nmin, cmin);
       }
-      pruss_queue_decel( pruss_axis, nmin, cmin, SI2POS( origin + ramp + dwell + ramp));
+      pruss_queue_decel( pruss_axis, nmin, cmin, SI2POS( origin + ramp_up + dwell + ramp_down));
     } else {
       if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
         printf( "Queue DECEL %c: running at v=%1.3lf [mm/s] to %1.6lf [mm] (at c=%u)\n",
-		aname, SI2MM( v), SI2MM( origin + ramp + dwell + ramp), cmin);
+		aname, SI2MM( v), SI2MM( origin + ramp_up + dwell + ramp_down), cmin);
       }
-      pruss_queue_dwell( pruss_axis, cmin, SI2POS( origin + ramp + dwell + ramp));
+      pruss_queue_dwell( pruss_axis, cmin, SI2POS( origin + ramp_up + dwell + ramp_down));
     }
     return 1;
   }
@@ -127,14 +127,16 @@ static inline int queue_decel( const char* axis_name, double a, double v, double
 }
 
 #ifdef PRU_ABS_COORDS
-#define QUEUE_DECEL( axis) queue_decel( #axis, a##axis, v##axis, ramp_d##axis, dwell_d##axis, nmin##axis, c0##axis, cmin##axis, axis##0)
+#define QUEUE_DECEL( axis) queue_decel( #axis, a##axis, v##axis, ramp_up_d##axis, dwell_d##axis, ramp_down_d##axis, \
+					nmin##axis, c0##axis, cmin##axis, axis##0)
 #else
-#define QUEUE_DECEL( axis) queue_decel( #axis, a##axis, v##axis, ramp_d##axis, dwell_d##axis, nmin##axis, c0##axis, cmin##axis, 0)
+#define QUEUE_DECEL( axis) queue_decel( #axis, a##axis, v##axis, ramp_up_d##axis, dwell_d##axis, ramp_down_d##axis, \
+					nmin##axis, c0##axis, cmin##axis, 0)
 #endif
 
 /* ---------------------------------- */
 
-static inline void axis_calc( const char* axis_name, double step_size_, double d, double double_s, double* ramp_d,
+static inline void axis_calc( const char* axis_name, double step_size_, double d, double double_s, double* ramp_up_d, double* ramp_down_d,
 			double a, double* v, double* dwell_d, uint32_t* n0, uint32_t* nmin,
 			uint32_t* c0, uint32_t* cmin, double* recipr_t_acc, double* recipr_t_move)
 {
@@ -156,24 +158,26 @@ static inline void axis_calc( const char* axis_name, double step_size_, double d
       if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
         printf( "(can't reach full speed) ");
       }
-      *ramp_d = step_size_ * floor( d / (2 * step_size_));
-      *dwell_d = d - 2 * *ramp_d;
+      *ramp_down_d = step_size_ * floor( d / (2 * step_size_));
+      *ramp_up_d = d - *ramp_down_d;
+      *dwell_d = 0.0;
       *v = sqrt( a * d);
       // TODO: check whether this is always good enough:
-      *recipr_t_acc = *v / *ramp_d;
+      *recipr_t_acc = 2 * *v / (*ramp_up_d + *ramp_down_d);
     } else {
      /*
       * Move has ramp up, constant velocity and ramp down phases
       */
-      *ramp_d = step_size_ * floor( double_s / (2 * step_size_));
-      *dwell_d = d - 2 * *ramp_d;
+      *ramp_up_d = step_size_ * floor( double_s / (2 * step_size_));
+      *ramp_down_d = *ramp_up_d;
+      *dwell_d = d - *ramp_up_d - *ramp_down_d;
     }
    /*
     * Update the time it takes for the entire move to complete.
     * (All axes will generate the same duration).
     */
     if (*recipr_t_move == 0.0) {
-      *recipr_t_move = *v / (4 * *ramp_d + *dwell_d);
+      *recipr_t_move = *v / (2 * (*ramp_up_d + *ramp_down_d) + *dwell_d);
       if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
         printf( "(set move duration to %1.3lf [ms]) ",
 		SI2MS( RECIPR( *recipr_t_move)));
@@ -197,16 +201,17 @@ static inline void axis_calc( const char* axis_name, double step_size_, double d
       if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
         printf( "(changed speed of possible single step) ");
       }
-      *ramp_d  = 0.0;
+      *ramp_up_d  = 0.0;
+      *ramp_down_d  = 0.0;
       *dwell_d = d;
-      *v = step_size_ * *recipr_t_move;
+//      *v = step_size_ * *recipr_t_move;
       if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
         printf( "\n   no ramps, dwell= %3.6lf [mm], velocity= %3.3lf [mm/s], duration= %1.3lf [ms]\n",
 		SI2MM( *dwell_d), SI2MM( *v), SI2MS( RECIPR( *recipr_t_move)));
       }
       *cmin = fclk * step_size_ / *v ;
       *c0   = *cmin;
-    } else if (*ramp_d < step_size_) {
+    } else if (*ramp_up_d < step_size_) {
      /*
       * Replace a move with ramps that are too short to execute by
       * a single constant (slightly lower) velocity move.
@@ -214,7 +219,8 @@ static inline void axis_calc( const char* axis_name, double step_size_, double d
       if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
         printf( "(removed ramps smaller than stepsize) ");
       }
-      *ramp_d  = 0.0;
+      *ramp_up_d  = 0.0;
+      *ramp_down_d  = 0.0;
       *dwell_d = d;
       *v = *dwell_d * *recipr_t_move;
       if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
@@ -225,8 +231,9 @@ static inline void axis_calc( const char* axis_name, double step_size_, double d
       *c0   = *cmin;
     } else {
       if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
-        printf( "\n   ramp= %3.6lf [mm], dwell= %3.6lf [mm], velocity= %3.3lf [mm/s], duration= %1.3lf [ms]\n",
-		SI2MM( *ramp_d), SI2MM( *dwell_d), SI2MM( *v), SI2MS( (4 * *ramp_d + *dwell_d) / *v));
+        printf( "\n   ramp-up= %3.6lf [mm], dwell= %3.6lf [mm], ramp-down= %3.6lf [mm], velocity= %3.3lf [mm/s], duration= %1.3lf [ms]\n",
+		SI2MM( *ramp_up_d), SI2MM( *dwell_d), SI2MM( *ramp_down_d), SI2MM( *v),
+		SI2MS( (2 * (*ramp_up_d + *ramp_down_d) + *dwell_d) / *v));
       }
       *cmin = fclk * step_size_ / *v ;
       *c0   = (uint32_t) (c_acc * sqrt( step_size_ / a));
@@ -237,24 +244,28 @@ static inline void axis_calc( const char* axis_name, double step_size_, double d
         if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
 		printf( "   *** motor can start at dwell speed, no acceleration needed (setting c0 to cmin)\n");
         }
-        *ramp_d  = 0.0;
+        *ramp_up_d  = 0.0;
+        *ramp_down_d  = 0.0;
         *dwell_d = d;
         *v = *dwell_d * *recipr_t_move;
 	if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
-	  printf( "   ramp: %3.6lf [mm], dwell: %3.6lf [mm], velocity: %3.3lf [mm/s], duration: %1.3lf [ms]\n",
-		  SI2MM( *ramp_d), SI2MM( *dwell_d), SI2MM( *v), SI2MS( (4 * *ramp_d + *dwell_d) / *v));
+          printf( "   ramp-up= %3.6lf [mm], dwell= %3.6lf [mm], ramp-down= %3.6lf [mm], velocity= %3.3lf [mm/s], duration= %1.3lf [ms]\n",
+		  SI2MM( *ramp_up_d), SI2MM( *dwell_d), SI2MM( *ramp_down_d), SI2MM( *v),
+		  SI2MS( (2 * (*ramp_up_d + *ramp_down_d) + *dwell_d) / *v));
 	}
 	*cmin = fclk * step_size_ / *v ;
 	*c0   = *cmin;
       }
     }
     *n0 = 0;
-    *nmin = ceil( *ramp_d / step_size_);
+//    *nmin = floor( *ramp_down_d / step_size_) - 0;
+    *nmin = 0;	// keep end value from acceleration phase
   } else {
    /*
     * NOP
     */
-    *ramp_d  = 0.0;
+    *ramp_up_d  = 0.0;
+    *ramp_down_d  = 0.0;
     *dwell_d = 0.0;
     *cmin = 0;
     *c0   = 0;
@@ -263,8 +274,8 @@ static inline void axis_calc( const char* axis_name, double step_size_, double d
   }
 }
 
-#define AXIS_CALC( axis) axis_calc( #axis, step_size_##axis, d##axis, double_s##axis, &ramp_d##axis, a##axis, &v##axis, &dwell_d##axis, \
-					&n0##axis, &nmin##axis, &c0##axis, &cmin##axis, &recipr_t_acc, &recipr_t_move)
+#define AXIS_CALC( axis) axis_calc( #axis, step_size_##axis, d##axis, double_s##axis, &ramp_up_d##axis, &ramp_down_d##axis, a##axis, &v##axis, \
+					&dwell_d##axis,	&n0##axis, &nmin##axis, &c0##axis, &cmin##axis, &recipr_t_acc, &recipr_t_move)
 
 /*
  * All dimensions are in SI units and relative
@@ -451,7 +462,8 @@ void traject_delta_on_all_axes( traject5D* traject)
     printf( "Distance to reach full speed: X= %1.6lf Y= %1.6lf Z= %1.6lf E= %1.6lf [mm]\n",
 	    SI2MM( 0.5 * double_sx), SI2MM( 0.5 * double_sy), SI2MM( 0.5 * double_sz), SI2MM( 0.5 * double_se));
   }
-  double ramp_dx, ramp_dy, ramp_dz, ramp_de;
+  double ramp_up_dx, ramp_up_dy, ramp_up_dz, ramp_up_de;
+  double ramp_down_dx, ramp_down_dy, ramp_down_dz, ramp_down_de;
   double dwell_dx, dwell_dy, dwell_dz, dwell_de;
 
   uint32_t c0x, c0y, c0z, c0e;
@@ -470,24 +482,29 @@ void traject_delta_on_all_axes( traject5D* traject)
   * Put the sign back into the deltas
   */
   if (reverse_x) {
-    ramp_dx = -ramp_dx;
+    ramp_up_dx = -ramp_up_dx;
+    ramp_down_dx = -ramp_down_dx;
     dwell_dx = -dwell_dx;
   }
   if (reverse_y) {
-    ramp_dy = -ramp_dy;
+    ramp_up_dy = -ramp_up_dy;
+    ramp_down_dy = -ramp_down_dy;
     dwell_dy = -dwell_dy;
   }
   if (reverse_z) {
-    ramp_dz = -ramp_dz;
+    ramp_up_dz = -ramp_up_dz;
+    ramp_down_dz = -ramp_down_dz;
     dwell_dz = -dwell_dz;
   }
   if (reverse_e) {
-    ramp_de = -ramp_de;
+    ramp_up_de = -ramp_up_de;
+    ramp_down_de = -ramp_down_de;
     dwell_de = -dwell_de;
   }
   if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
-    printf( "Ramps: X= %1.6lf, Y= %1.6lf, Z= %1.6lf, E= %1.6lf [mm], ramp duration= %1.3lf [ms]\n",
-	    SI2MM( ramp_dx), SI2MM( ramp_dy), SI2MM( ramp_dz), SI2MM( ramp_de), SI2MS( RECIPR( recipr_t_acc)));
+    printf( "Ramps: X= %1.6lf/%1.6lf, Y= %1.6lf/%1.6lf, Z= %1.6lf/%1.6lf, E= %1.6lf/%1.6lf [mm], ramp duration= %1.3lf [ms]\n",
+	    SI2MM( ramp_up_dx), SI2MM( ramp_down_dx), SI2MM( ramp_up_dy), SI2MM( ramp_down_dy), SI2MM( ramp_up_dz), SI2MM( ramp_down_dz),
+	    SI2MM( ramp_up_de), SI2MM( ramp_down_de), SI2MS( RECIPR( recipr_t_acc)));
   }
 
  /*
