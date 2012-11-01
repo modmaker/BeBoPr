@@ -29,35 +29,15 @@ typedef struct {
   unsigned int	position	: 32;
 } SetOriginStruct;
 
-// CMD_AXIS_RAMP_UP
+// CMD_AXIS_MOVE
 typedef struct {
-  unsigned int	accelCount	: 24;
+  unsigned int	n0		: 24;
   unsigned int	command		:  5;
   unsigned int	axis		:  3;
-  int		moveDelta	: 32;
-  unsigned int	stepCycle	: 32;
-  unsigned int	stepCycleMin	: 32;
-} AccelStruct;
-
-// CMD_AXIS_RAMP_DOWN
-typedef struct {
-  unsigned int	accelCount	: 24;
-  unsigned int	command		:  5;
-  unsigned int	axis		:  3;
-  int		moveDelta	: 32;
-  unsigned int	stepCycle	: 32;
-  unsigned int	stepCycleMin	: 32;
-} DecelStruct;
-
-// CMD_AXIS_DWELL
-typedef struct {
-  unsigned int	accelCount	: 24;
-  unsigned int	command		:  5;
-  unsigned int	axis		:  3;
-  int		moveDelta	: 32;
-  unsigned int	stepCycle	: 32;
-  unsigned int	stepCycleMin	: 32;
-} DwellStruct;
+  int		position	: 32;
+  unsigned int	c0		: 32;
+  unsigned int	cn		: 32;
+} MoveStruct;
 
 // CMD_AXIS_SET_PULSE_LENGTH
 typedef struct {
@@ -123,9 +103,7 @@ typedef union {
   uint32_t		gen[ 4];
   CommandStruct		command;
   SetOriginStruct	set_origin;
-  AccelStruct		accel;
-  DecelStruct		decel;
-  DwellStruct		dwell;
+  MoveStruct		move;
   SetPulseStruct	set_pulse;
   SetIdleTimeoutStruct	timeout;
   SetEnableStruct	enable;
@@ -534,12 +512,12 @@ int pruss_queue_set_pulse_length( int axis, uint16_t length)
 int pruss_queue_accel( int axis, uint32_t n0, uint32_t c0, uint32_t cmin, int32_t delta)
 {
   PruCommandUnion pruCmd = {
-    .accel.accelCount 		= n0,
-    .accel.command		= CMD_AXIS_RAMP_UP,
-    .accel.axis			= axis,
-    .accel.moveDelta		= delta,
-    .accel.stepCycle 		= c0,
-    .accel.stepCycleMin		= cmin,
+    .move.n0	 		= n0,
+    .move.command		= CMD_AXIS_MOVE,
+    .move.axis			= axis,
+    .move.position		= delta,
+    .move.c0	 		= c0,
+    .move.cn			= cmin,
   };
   if (pruss_command( &pruCmd) < 0) {
     return -1;
@@ -550,12 +528,12 @@ int pruss_queue_accel( int axis, uint32_t n0, uint32_t c0, uint32_t cmin, int32_
 int pruss_queue_dwell( int axis, uint32_t cmin, int32_t delta)
 {
   PruCommandUnion pruCmd = {
-    .dwell.accelCount 		= 0,
-    .dwell.command		= CMD_AXIS_DWELL,
-    .dwell.axis			= axis,
-    .dwell.moveDelta		= delta,
-    .dwell.stepCycle		= cmin
-    .dwell.stepCycleMin		= cmin,
+    .move.n0	 		= 0,
+    .move.command		= CMD_AXIS_MOVE,
+    .move.axis			= axis,
+    .move.position		= delta,
+    .move.c0	 		= cmin,
+    .move.cn			= cmin,
   };
   if (pruss_command( &pruCmd) < 0) {
     return -1;
@@ -566,11 +544,12 @@ int pruss_queue_dwell( int axis, uint32_t cmin, int32_t delta)
 int pruss_queue_decel( int axis, uint32_t nmin, uint32_t cmin, int32_t delta)
 {
   PruCommandUnion pruCmd = {
-    .decel.accelCount 		= nmin,
-    .decel.command		= CMD_AXIS_RAMP_DOWN,
-    .decel.axis			= axis,
-    .decel.moveDelta		= delta,
-    .decel.stepCycle		= cmin,
+    .move.n0	 		= nmin,
+    .move.command		= CMD_AXIS_MOVE,
+    .move.axis			= axis,
+    .move.position		= delta,
+    .move.c0	 		= cmin,
+    .move.cn			= 2 * cmin,	// quick hack to get it working
   };
   if (pruss_command( &pruCmd) < 0) {
     return -1;

@@ -46,6 +46,7 @@
 // 3. QUEUE commands, id 16-31
 //    these commands are queued before being started with the execute command
 #define START_CMD_AXIS_QUEUE		16
+#define CMD_AXIS_MOVE			16
 #define CMD_AXIS_RAMP_UP		17
 #define CMD_AXIS_DWELL			18
 #define CMD_AXIS_RAMP_DOWN		19
