@@ -223,6 +223,12 @@ int heater_config( heater_config_record* config_data, int nr_config_items)
   return 0;
 }
 
+void heater_exit( void)
+{
+  pwm_exit();
+//  temp_exit();
+}
+
 /*
  * set defaults, init pwm hardware, set heater state to off.
  * create the heaters thread
@@ -231,6 +237,7 @@ int heater_config( heater_config_record* config_data, int nr_config_items)
 int heater_init( void)
 {
   if (heater_config_data != NULL) {
+    atexit( heater_exit);
     // First initialize input and output subsystems
     mendel_sub_init( "temp", temp_init);
     mendel_sub_init( "pwm", pwm_init);

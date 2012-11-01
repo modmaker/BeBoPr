@@ -107,7 +107,6 @@ int pwm_init( void)
   }
   if (pwm_config_data) {
     char s[ 100];
-    atexit( pwm_exit);
     for (int ch = 0 ; ch < pwm_config_items ; ++ch) {
       pwm_config_record*         ps = &pwm_config_data[ ch];
       struct pwm_channel_record* pd = &pwm_channels[ ch];

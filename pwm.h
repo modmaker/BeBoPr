@@ -10,6 +10,7 @@ typedef const struct {
 } pwm_config_record;
 
 extern int pwm_init( void);
+extern void pwm_exit( void);
 extern int pwm_config( pwm_config_record* pconfig_data, int nr_config_items);
 
 extern int pwm_set_output( channel_tag pwm_channel, unsigned int percentage);
