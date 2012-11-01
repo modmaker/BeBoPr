@@ -46,15 +46,17 @@ typedef struct {
   unsigned int	axis		:  3;
   int		moveDelta	: 32;
   unsigned int	stepCycle	: 32;
+  unsigned int	stepCycleMin	: 32;
 } DecelStruct;
 
 // CMD_AXIS_DWELL
 typedef struct {
-  unsigned int			: 24;
+  unsigned int	accelCount	: 24;
   unsigned int	command		:  5;
   unsigned int	axis		:  3;
   int		moveDelta	: 32;
   unsigned int	stepCycle	: 32;
+  unsigned int	stepCycleMin	: 32;
 } DwellStruct;
 
 // CMD_AXIS_SET_PULSE_LENGTH
@@ -548,10 +550,12 @@ int pruss_queue_accel( int axis, uint32_t n0, uint32_t c0, uint32_t cmin, int32_
 int pruss_queue_dwell( int axis, uint32_t cmin, int32_t delta)
 {
   PruCommandUnion pruCmd = {
+    .dwell.accelCount 		= 0,
     .dwell.command		= CMD_AXIS_DWELL,
     .dwell.axis			= axis,
     .dwell.moveDelta		= delta,
     .dwell.stepCycle		= cmin
+    .dwell.stepCycleMin		= cmin,
   };
   if (pruss_command( &pruCmd) < 0) {
     return -1;
