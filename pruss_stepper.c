@@ -69,6 +69,7 @@ typedef struct {
   unsigned int	stepSizeT	: 16;
   unsigned int	stepSizeN	: 16;
   unsigned int	stepSize	: 32;
+  unsigned int	reciprStepSize	: 32;
 } ConfigAxisStruct;
 
 // CMD_AXIS_CONFIG_LIMSW
@@ -319,7 +320,7 @@ int pruss_stepper_dump_state( void)
     printf( "%20s    %14u    %14u    %14u    %14u\n", "Move Done .",
 	    !!(data[ 0] & (1 << 3)), !!(data[ 1] & (1 << 3)),
 	    !!(data[ 2] & (1 << 3)), !!(data[ 3] & (1 << 3)));
-    DUMP_LINE( "virtPosT .",         16, 18, "%14u");
+    DUMP_LINE( "moveCounter .",      16, 18, "%14u");
     DUMP_LINE( "virtPos x",          32, 20, "%14x");
     printf( "%20s    %14d    %14d    %14d    %14d\n", "virtPos .",
 	    data[ 0] - VIRT_POS_MID_SCALE,
@@ -328,8 +329,6 @@ int pruss_stepper_dump_state( void)
 	    data[ 3] - VIRT_POS_MID_SCALE);
 
     DUMP_LINE( "stepSize .",         32, 24, "%14u");
-    DUMP_LINE( "stepSizeT .",        16, 28, "%14u");
-    DUMP_LINE( "stepSizeN .",        16, 30, "%14u");
 
     DUMP_LINE( "requestedPos x",     32, 32, "%14x");
     printf( "%20s    %14d    %14d    %14d    %14d\n", "requestedPos .",
@@ -589,6 +588,7 @@ int pruss_queue_config_axis( int axis, uint32_t ssi, uint16_t sst, uint16_t ssn,
     .config.stepSize		= ssi,
     .config.stepSizeT		= sst,
     .config.stepSizeN		= ssn,
+    .config.reciprStepSize	= (uint32_t) (0xFFFFFFFF / ssi),	// as close as possible
   };
   if (pruss_command( &pruCmd) < 0) {
     return -1;
