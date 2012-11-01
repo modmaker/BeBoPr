@@ -158,7 +158,8 @@ static inline void axis_calc( const char* axis_name, double step_size_, double d
       if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
         printf( "(can't reach full speed) ");
       }
-      *ramp_down_d = step_size_ * floor( d / (2 * step_size_));
+      // 2012-10-31 SJL - runs with new pruss code that doesn't need all the work-arounds
+      *ramp_down_d = d / 2;
       *ramp_up_d = d - *ramp_down_d;
       *dwell_d = 0.0;
       *v = sqrt( a * d);
@@ -204,7 +205,6 @@ static inline void axis_calc( const char* axis_name, double step_size_, double d
       *ramp_up_d  = 0.0;
       *ramp_down_d  = 0.0;
       *dwell_d = d;
-//      *v = step_size_ * *recipr_t_move;
       if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
         printf( "\n   no ramps, dwell= %3.6lf [mm], velocity= %3.3lf [mm/s], duration= %1.3lf [ms]\n",
 		SI2MM( *dwell_d), SI2MM( *v), SI2MS( RECIPR( *recipr_t_move)));
@@ -258,7 +258,6 @@ static inline void axis_calc( const char* axis_name, double step_size_, double d
       }
     }
     *n0 = 0;
-//    *nmin = floor( *ramp_down_d / step_size_) - 0;
     *nmin = 0;	// keep end value from acceleration phase
   } else {
    /*
