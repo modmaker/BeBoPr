@@ -95,6 +95,7 @@ void pwm_exit( void)
       pwm_write_int_to_file( pd->device_path, "run", 0);
       pwm_write_int_to_file( pd->device_path, "request", 0);
       close (pd->duty_fd);
+      pwm_channels[ ch].duty_fd = -1;
     }
   }
 }
@@ -124,9 +125,9 @@ int pwm_init( void)
       if (pd->frequency) {
         pwm_write_int_to_file( pd->device_path, "period_freq", pd->frequency);
       }
-      snprintf( s, sizeof( s), "%s/duty_percent", pwm_channels[ ch].device_path);
-      pwm_channels[ ch].duty_fd = open( s, O_WRONLY);
-      if (pwm_channels[ ch].duty_fd < 0) {
+      snprintf( s, sizeof( s), "%s/duty_percent", pd->device_path);
+      pd->duty_fd = open( s, O_WRONLY);
+      if (pd->duty_fd < 0) {
         perror( "pwm_init: failed to open 'duty_percent' file");
       }
       pwm_set_output( pd->id, 0);
@@ -142,10 +143,15 @@ int pwm_set_output( channel_tag pwm_channel, unsigned int percentage)
 {
   int ix = pwm_index_lookup( pwm_channel);
   if (ix >= 0 && percentage <= 100) {
+    int fd = pwm_channels[ ix].duty_fd;
+    // Only write to the file if it is (still) available
+    if (fd < 0) {
+      return -1;
+    }
     char s[ 10];
     snprintf( s, sizeof( s), "%d", percentage);
     int count = strlen( s);
-    int result = write( pwm_channels[ ix].duty_fd, s, count);
+    int result = write( fd, s, count);
     if (result < 0) {
       perror( "pwm_set_output: error writing to duty_fd file");
     } else if (result == count) {
