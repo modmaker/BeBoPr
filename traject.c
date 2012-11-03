@@ -228,7 +228,7 @@ void traject_delta_on_all_axes( traject5D* traject)
 {
   static unsigned long int serno = 0;
   static struct timespec t0;
-  struct timespec time;
+  struct timespec t1;
 
   if (traject == NULL) {
     return;
@@ -253,9 +253,9 @@ void traject_delta_on_all_axes( traject5D* traject)
   double de = traject->de;
 #endif
 
-  clock_gettime( clock, &time);
-  int nsecs = time.tv_nsec - t0.tv_nsec;
-  int secs  = time.tv_sec  - t0.tv_sec;
+  clock_gettime( clock, &t1);
+  int nsecs = t1.tv_nsec - t0.tv_nsec;
+  int secs  = t1.tv_sec  - t0.tv_sec;
   if (nsecs < 0) {
     --secs;
     nsecs += 1000000000;
