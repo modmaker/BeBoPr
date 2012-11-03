@@ -314,6 +314,11 @@ void traject_delta_on_all_axes( traject5D* traject)
     printf( "Request: total distance = %1.6lf [mm], vector velocity = %1.3lf [mm/s] => est. time = %1.3lf [ms]\n",
 	    SI2MM( distance), SI2MS( traject->feed / 60000.0), SI2MS( RECIPR( recipr_dt)));
   }
+  if (recipr_dt > 20) {
+    recipr_dt = 20;
+    printf( "*** Short move requested, slowing down to velocity= %1.3lf [mm/s] to prevent gaps\n",
+		  SI2MS( recipr_dt * distance));
+  }
   int v_change = 0;
   double vx = dx * recipr_dt;
   if (vx > vx_max) {	  // clip feed !
