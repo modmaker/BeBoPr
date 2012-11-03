@@ -34,6 +34,9 @@ static double ve_max;
 static const double fclk = 200000000.0;
 static const double c_acc = 282842712.5;	// = fclk * sqrt( 2.0);
 
+static double speed_override_factor = 1.0;
+static double extruder_override_factor = 1.0;
+
 
 /* ---------------------------------- */
 
@@ -229,6 +232,7 @@ void traject_delta_on_all_axes( traject5D* traject)
   static unsigned long int serno = 0;
   static struct timespec t0;
   struct timespec t1;
+  double feed = speed_override_factor * traject->feed;
 
   if (traject == NULL) {
     return;
@@ -262,8 +266,8 @@ void traject_delta_on_all_axes( traject5D* traject)
   }
   int msecs = (nsecs + 500000) / 1000000;
   if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
-    printf( "\nMOVE[ #%lu %d.%03ds] traject_delta_on_all_axes( traject( %0.9lf, %1.9lf, %1.9lf, %1.9lf, F=%u) [m])\n",
-	    serno, secs, msecs, dx, dy, dz, de, traject->feed);
+    printf( "\nMOVE[ #%lu %d.%03ds] traject_delta_on_all_axes( traject( %0.9lf, %1.9lf, %1.9lf, %1.9lf, F=%1.3lf) [m])\n",
+	    serno, secs, msecs, dx, dy, dz, de, feed);
   }
 
   int reverse_x = 0;
@@ -309,10 +313,10 @@ void traject_delta_on_all_axes( traject5D* traject)
   * If a calculated velocity is higher than the maximum
   * allowed, slow down the entire move.
   */
-  double recipr_dt = traject->feed / ( 60000.0 * distance);	/* [m/s] / [m] */
+  double recipr_dt = feed / ( 60000.0 * distance);	/* [m/s] / [m] */
   if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
     printf( "Request: total distance = %1.6lf [mm], vector velocity = %1.3lf [mm/s] => est. time = %1.3lf [ms]\n",
-	    SI2MM( distance), SI2MS( traject->feed / 60000.0), SI2MS( RECIPR( recipr_dt)));
+	    SI2MM( distance), SI2MS( feed / 60000.0), SI2MS( RECIPR( recipr_dt)));
   }
   if (recipr_dt > 20) {
     recipr_dt = 20;
@@ -569,6 +573,21 @@ int traject_status_print( void)
 {
   printf( "traject_status_print - TODO:implementation\n");
   return 0;
+}
+
+double traject_set_speed_override( double factor)
+{
+  double old = speed_override_factor;
+  speed_override_factor = factor;
+  return old;
+}
+
+double traject_set_extruder_override( double factor)
+{
+  double old = extruder_override_factor;
+  extruder_override_factor = factor;
+  pruss_axis_config( 4, step_size_e / factor, config_reverse_axis( e_axis));
+  return old;
 }
 
 int traject_init( void)

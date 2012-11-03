@@ -166,8 +166,12 @@ void gcode_parse_char(uint8_t c) {
 						serwrite_uint32(next_target.target.F);
 					break;
 				case 'S':
-					// if this is temperature, PID setting or anything else, scale 1:1
-					next_target.S = decfloat_to_int( &read_digit, 1.0);
+					if (next_target.seen_M && (next_target.M == 220 || next_target.M == 221)) {
+						next_target.S = decfloat_to_int( &read_digit, 1000.0);
+					} else {
+						// if this is temperature, PID setting or anything else, scale 1:1
+						next_target.S = decfloat_to_int( &read_digit, 1.0);
+					}
 					if (DEBUG_ECHO && (debug_flags & DEBUG_ECHO))
 						serwrite_uint16(next_target.S);
 					break;

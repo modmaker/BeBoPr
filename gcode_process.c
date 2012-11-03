@@ -107,7 +107,7 @@ static void enqueue_pos( TARGET* target)
     traject_delta_on_all_axes( &traj);
     /*
      * For a 3D printer, the E-axis controls the extruder and for that axis
-     * the +/- 2000 mm operating range is not sufficient a this axis moves
+     * the +/- 2000 mm operating range is not sufficient as this axis moves
      * mostly into one direction.
      * If this axis is configured to use relative coordinates only, after
      * each move the origin is shifted to the current position restoring the
@@ -1009,6 +1009,27 @@ void process_gcode_command() {
 				}
 				break;
 			}
+			case 220:
+				//? ==== M220: speed override factor ====
+			case 221:
+				//? ==== M221: extruder override factor ====
+				if (next_target.seen_S) {
+					double old;
+					double factor = 0.001 * next_target.S;
+					if (factor < 0.001) {
+						factor = 0.001;
+					}
+					if (next_target.M == 220) {
+						old = traject_set_speed_override( factor);
+					} else {
+						old = traject_set_extruder_override( factor);
+					}
+					if (DEBUG_GCODE_PROCESS && (debug_flags & DEBUG_GCODE_PROCESS)) {
+						fprintf( stderr, "M%d: set %s override factor to %1.3lf, old value was %1.3lf\n",
+							next_target.M, (next_target.M == 221) ? "extruder" : "speed", factor, old);
+					}
+				}
+				break;
 			#ifdef	DEBUG
 			// M240- echo off
 			case 240:

@@ -30,6 +30,9 @@ extern int traject_wait_for_completion( void);
 extern int traject_abort( void);
 extern int traject_status_print( void);
 
+extern double traject_set_speed_override( double factor);
+extern double traject_set_extruder_override( double factor);
+
 extern int traject_init( void);
 
 #endif
