@@ -140,7 +140,18 @@ static inline void axis_calc( const char* axis_name, double step_size_, double d
 			double a, double* v, double* dwell_d, uint32_t* n0, uint32_t* nmin,
 			uint32_t* c0, uint32_t* cmin, double* recipr_t_acc, double* recipr_t_move)
 {
-  if (d != 0.0) {
+  if (d == 0.0) {
+   /*
+    * NOP
+    */
+    *ramp_up_d  = 0.0;
+    *ramp_down_d  = 0.0;
+    *dwell_d = 0.0;
+    *cmin = 0;
+    *c0   = 0;
+    *n0 = 0;
+    *nmin = 0;
+  } else {
     char aname = *axis_name;
     if (islower( aname)) {
       aname = toupper( aname);
@@ -163,7 +174,7 @@ static inline void axis_calc( const char* axis_name, double step_size_, double d
       *ramp_up_d = d - *ramp_down_d;
       *dwell_d = 0.0;
       *v = sqrt( a * d);
-      // TODO: check whether this is always good enough:
+      // Used for debug output only:
       *recipr_t_acc = 2 * *v / (*ramp_up_d + *ramp_down_d);
     } else {
      /*
@@ -173,9 +184,10 @@ static inline void axis_calc( const char* axis_name, double step_size_, double d
       *ramp_down_d = *ramp_up_d;
       *dwell_d = d - *ramp_up_d - *ramp_down_d;
     }
+
    /*
     * Update the time it takes for the entire move to complete.
-    * (All axes will generate the same duration).
+    * (All axes should generate the same duration, so only do this once).
     */
     if (*recipr_t_move == 0.0) {
       *recipr_t_move = *v / (2 * (*ramp_up_d + *ramp_down_d) + *dwell_d);
@@ -184,92 +196,25 @@ static inline void axis_calc( const char* axis_name, double step_size_, double d
 		SI2MS( RECIPR( *recipr_t_move)));
       }
     }
-    if (d < step_size_) {
-     /*
-      * A move smaller than step_size will not always generate a step,
-      * that depends on the current position and happens inside the PRU.
-      * Moves much smaller than step_size will rarely step, but once
-      * in a while, if a step border is crossed, a step pulse is generated.
-      * This (full) step pulse however then runs at such a low velocity
-      * that it comes late and with a cycle much larger than the complete
-      * move. This manifests itself as a pause in gcode execution (the
-      * single step that is made is very hard to detect).
-      * The solution: If this (single) step is generated, it's best generated
-      * in the center of the complete move. This result can be obtained
-      * by raising the velocity so that the stepcycle takes exactly the
-      * same amount of time as the complete move does.
-      */
-      if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
-        printf( "(changed speed of possible single step) ");
-      }
-      *ramp_up_d  = 0.0;
-      *ramp_down_d  = 0.0;
-      *dwell_d = d;
-      if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
-        printf( "\n   no ramps, dwell= %3.6lf [mm], velocity= %3.3lf [mm/s], duration= %1.3lf [ms]\n",
-		SI2MM( *dwell_d), SI2MM( *v), SI2MS( RECIPR( *recipr_t_move)));
-      }
-      *cmin = fclk * step_size_ / *v ;
-      *c0   = *cmin;
-    } else if (*ramp_up_d < step_size_) {
-     /*
-      * Replace a move with ramps that are too short to execute by
-      * a single constant (slightly lower) velocity move.
-      */
-      if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
-        printf( "(removed ramps smaller than stepsize) ");
-      }
-      *ramp_up_d  = 0.0;
-      *ramp_down_d  = 0.0;
-      *dwell_d = d;
-      *v = *dwell_d * *recipr_t_move;
-      if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
-        printf( "\n   no ramps, dwell= %3.6lf [mm], velocity= %3.3lf [mm/s], duration= %1.3lf [ms]\n",
-		SI2MM( *dwell_d), SI2MM( *v), SI2MS( RECIPR( *recipr_t_move)));
-      }
-      *cmin = fclk * step_size_ / *v ;
-      *c0   = *cmin;
-    } else {
-      if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
-        printf( "\n   ramp-up= %3.6lf [mm], dwell= %3.6lf [mm], ramp-down= %3.6lf [mm], velocity= %3.3lf [mm/s], duration= %1.3lf [ms]\n",
-		SI2MM( *ramp_up_d), SI2MM( *dwell_d), SI2MM( *ramp_down_d), SI2MM( *v),
-		SI2MS( (2 * (*ramp_up_d + *ramp_down_d) + *dwell_d) / *v));
-      }
-      *cmin = fclk * step_size_ / *v ;
-      *c0   = (uint32_t) (c_acc * sqrt( step_size_ / a));
-      if (*c0 < *cmin) {
-       /*
-	* Does this really happen?
-	*/
-        if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
-		printf( "   *** motor can start at dwell speed, no acceleration needed (setting c0 to cmin)\n");
-        }
-        *ramp_up_d  = 0.0;
-        *ramp_down_d  = 0.0;
-        *dwell_d = d;
-        *v = *dwell_d * *recipr_t_move;
-	if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
-          printf( "   ramp-up= %3.6lf [mm], dwell= %3.6lf [mm], ramp-down= %3.6lf [mm], velocity= %3.3lf [mm/s], duration= %1.3lf [ms]\n",
-		  SI2MM( *ramp_up_d), SI2MM( *dwell_d), SI2MM( *ramp_down_d), SI2MM( *v),
-		  SI2MS( (2 * (*ramp_up_d + *ramp_down_d) + *dwell_d) / *v));
-	}
-	*cmin = fclk * step_size_ / *v ;
-	*c0   = *cmin;
-      }
-    }
-    *n0 = 0;
-    *nmin = 0;	// keep end value from acceleration phase
-  } else {
+
    /*
-    * NOP
+    * Calculate timing parameters for stepper
     */
-    *ramp_up_d  = 0.0;
-    *ramp_down_d  = 0.0;
-    *dwell_d = 0.0;
-    *cmin = 0;
-    *c0   = 0;
-    *n0 = 0;
-    *nmin = 0;
+    *cmin = fclk * step_size_ / *v ;
+    *c0   = (uint32_t) (c_acc * sqrt( step_size_ / a));
+    if (*c0 < *cmin) {
+      if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
+        printf( "(can start at dwell speed, no ramping needed) ");
+      }
+      *c0   = *cmin;
+    }
+    if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
+      printf( "\n   ramp-up= %3.6lf [mm], dwell= %3.6lf [mm], ramp-down= %3.6lf [mm], velocity= %3.3lf [mm/s], duration= %1.3lf [ms]\n",
+	      SI2MM( *ramp_up_d), SI2MM( *dwell_d), SI2MM( *ramp_down_d), SI2MM( *v),
+	      SI2MS( (2 * (*ramp_up_d + *ramp_down_d) + *dwell_d) / *v));
+    }
+    *n0 = 0;	// start acceleration from zero speed
+    *nmin = 0;	// zero will use the end value from the acceleration phase
   }
 }
 
@@ -422,8 +367,8 @@ void traject_delta_on_all_axes( traject5D* traject)
   }
  /*
   * For a neat linear move, all ramps must start and end at the same moment
-  * and have constant (or synchronized) accelation.
-  * Now that the targeted velocity is now known for each axis, determine
+  * and have constant (or at least synchronized) accelation.
+  * Now that the targeted velocity is known for each axis, determine
   * how long it takes for that axis to reach its target speed using maximum
   * acceleration. The slowest axis then scales the acceleration used for all axes.
   */
@@ -506,13 +451,40 @@ void traject_delta_on_all_axes( traject5D* traject)
 	    SI2MM( ramp_up_de), SI2MM( ramp_down_de), SI2MS( RECIPR( recipr_t_acc)));
   }
 
- /*
-  * Up from version v3.0 of the stepper firmware, the stepper driver does acceleration
-  * and deceleration timing and switching all by itself. Only one command needs to be
-  * queued to accelerate from zero speed to max speed, dwell at max speed and decelerate
-  * back to zero speed.
-  */
-  int any_move = 0;
+// If for at least one axis, there is a move but no dwell,
+// all axes that have a move should have no dwell!
+  int x_move_but_no_dwell = (dx != 0.0 && dwell_dx == 0.0);
+  int y_move_but_no_dwell = (dy != 0.0 && dwell_dy == 0.0);
+  int z_move_but_no_dwell = (dz != 0.0 && dwell_dz == 0.0);
+  int e_move_but_no_dwell = (de != 0.0 && dwell_de == 0.0);
+  int x_no_move_or_no_dwell = (dx == 0.0 || dwell_dx == 0.0);
+  int y_no_move_or_no_dwell = (dy == 0.0 || dwell_dy == 0.0);
+  int z_no_move_or_no_dwell = (dz == 0.0 || dwell_dz == 0.0);
+  int e_no_move_or_no_dwell = (de == 0.0 || dwell_de == 0.0);
+  if (x_move_but_no_dwell || y_move_but_no_dwell || z_move_but_no_dwell || e_move_but_no_dwell) {
+    if (x_no_move_or_no_dwell && y_no_move_or_no_dwell && z_no_move_or_no_dwell && e_no_move_or_no_dwell) {
+    } else {
+      printf( "*** UNEXPECTED DWELL TROUBLES !!!!\n");
+    }
+  }
+
+  if (1) {
+    struct timespec time;
+    clock_gettime( clock, &time);
+    int nsecs = time.tv_nsec - t1.tv_nsec;
+    int secs  = time.tv_sec  - t1.tv_sec;
+    if (nsecs < 0) {
+      --secs;
+      nsecs += 1000000000;
+    }
+    unsigned int usecs = (nsecs + 500) / 1000;
+    unsigned int msecs = usecs / 1000;
+    usecs -= 1000 * msecs;
+    msecs += 1000 * secs;
+    if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
+      printf( "Calculations took %u.%03u ms\n", msecs, usecs);
+    }
+  }
 
 #ifdef PRU_ABS_COORDS
   double x0 = traject->x0;
@@ -521,6 +493,12 @@ void traject_delta_on_all_axes( traject5D* traject)
   double e0 = traject->e0;
 #endif
 
+  int any_move;
+
+ /*
+  * Up from version v6.0 of the stepper firmware, the stepper driver strings together
+  * the individual acceleration, dwell and deceleration moves.
+  */
 // RAMP UP
   any_move = 0;
   any_move += QUEUE_ACCEL( x);
@@ -551,11 +529,12 @@ void traject_delta_on_all_axes( traject5D* traject)
     pruss_queue_execute();
   }
 
+  pruss_queue_set_pulse_length( 4, 10 * 200);
 }
 
 static void pruss_axis_config( int axis, double step_size, int reverse)
 {
-  uint32_t ssi = (int) SI2NM( step_size);
+  uint32_t ssi = (int) SI2NM( step_size) & ~1;	// make even for symetry
 
   if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
     printf( "Set axis nr %d step size to %u [nm] and %s direction\n",
