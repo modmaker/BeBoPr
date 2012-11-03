@@ -19,12 +19,12 @@ extern int pruss_queue_execute( void);
 extern int pruss_queue_exec_limited( uint8_t invert, uint8_t mask);
 extern int pruss_queue_set_pulse_length( int axis, uint16_t length);
 extern int pruss_queue_set_idle_timeout( uint8_t period);
-extern int pruss_queue_config_axis( int axis, uint32_t ssi, uint16_t sst, uint16_t ssn, int reverse);
+extern int pruss_queue_config_axis( int axis, uint32_t ssi, int reverse);
 extern int pruss_queue_config_limsw( int axis, uint8_t min_gpio, uint8_t min_invert, uint8_t max_gpio, uint8_t max_invert);
 extern int pruss_queue_set_enable( int on);
 extern int pruss_dump_position( void);
 extern int pruss_stepper_busy( void);
 extern int pruss_stepper_halted( void);
-extern int pruss_get_positions( int axis, int32_t* virtPosI, int16_t* virtPosT, int16_t* virtPosN, int32_t* requestedPos);
+extern int pruss_get_positions( int axis, int32_t* virtPosI, int32_t* requestedPos);
 
 #endif

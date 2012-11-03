@@ -28,10 +28,7 @@ static int step_until_switch_change( axis_e axis, int reverse, int new_state, in
 {
   /* Clear internal position information */
   {
-    int16_t virtPosT;
-    int16_t virtPosN;
     int32_t virtPosI;
-    int16_t virtPosT_new;
     int32_t virtPosI_new;
     uint8_t mask;
     uint8_t invert;
@@ -51,27 +48,26 @@ static int step_until_switch_change( axis_e axis, int reverse, int new_state, in
     } else {
       invert = 0;
     }
-    pruss_get_positions( pruss_axis, &virtPosI, &virtPosT, &virtPosN, 0);
+    pruss_get_positions( pruss_axis, &virtPosI, NULL);
     if (DEBUG_HOME && (debug_flags & DEBUG_HOME)) {
-      printf( "  Home: axis %d, starting at virtPos= %d+%d/%d\n",
-              pruss_axis, virtPosI, virtPosT, virtPosN);
+      printf( "  Home: axis %d, starting at virtPos= %d\n", pruss_axis, virtPosI);
     }
     delta = (new_state) ? 0.500 : 0.010;
     pruss_queue_accel( pruss_axis, 0, c0, cmin, *position + direction * SI2POS( delta));
     pruss_queue_exec_limited( mask, (new_state) ? invert : ~invert);
 
     traject_wait_for_completion();
-    pruss_get_positions( pruss_axis, &virtPosI_new, &virtPosT_new, 0, 0);
+    pruss_get_positions( pruss_axis, &virtPosI_new, NULL);
     if (DEBUG_HOME && (debug_flags & DEBUG_HOME)) {
-      printf( "  Home: axis %d, ended at virtPos= %d+%d/%d\n",
-              pruss_axis, virtPosI_new, virtPosT_new, virtPosN);
+      printf( "  Home: axis %d, ended at virtPos= %d\n",
+              pruss_axis, virtPosI_new);
     }
    /*
     *  For a move terminated by a limitswitch state change, part of the
     *  internal position information is now wrong. Fix this now.
     */
     pruss_queue_set_position( pruss_axis, virtPosI_new);
-    int32_t delta_pos = virtPosI_new - virtPosI + (virtPosT_new - virtPosT + virtPosN / 2) / virtPosN;
+    int32_t delta_pos = virtPosI_new - virtPosI;
     if (DEBUG_HOME && (debug_flags & DEBUG_HOME)) {
       printf( "  %c: limit switch %s detected after %1.6lf [mm]\n",
 	      axisNames[ pruss_axis], (new_state) ? "activation" : "release", POS2MM( delta_pos));

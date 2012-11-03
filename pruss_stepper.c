@@ -66,8 +66,7 @@ typedef struct {
   unsigned int			: 23;
   unsigned int	command		:  5;
   unsigned int	axis		:  3;
-  unsigned int	stepSizeT	: 16;
-  unsigned int	stepSizeN	: 16;
+  unsigned int			: 32;
   unsigned int	stepSize	: 32;
   unsigned int	reciprStepSize	: 32;
 } ConfigAxisStruct;
@@ -527,12 +526,12 @@ int pruss_queue_accel( int axis, uint32_t n0, uint32_t c0, uint32_t cmin, int32_
 int pruss_queue_dwell( int axis, uint32_t cmin, int32_t delta)
 {
   PruCommandUnion pruCmd = {
-    .move.n0	 		= 0,
+    .move.n0	 		= 0,		// not used
     .move.command		= CMD_AXIS_MOVE,
     .move.axis			= axis,
     .move.position		= delta,
     .move.c0	 		= cmin,
-    .move.cn			= cmin,
+    .move.cn			= cmin,		// equal to c0 to create dwell
   };
   if (pruss_command( &pruCmd) < 0) {
     return -1;
@@ -548,7 +547,7 @@ int pruss_queue_decel( int axis, uint32_t nmin, uint32_t cmin, int32_t delta)
     .move.axis			= axis,
     .move.position		= delta,
     .move.c0	 		= cmin,
-    .move.cn			= 2 * cmin,	// quick hack to get it working
+    .move.cn			= cmin + 1,	// greater than c0 to create ramp-down
   };
   if (pruss_command( &pruCmd) < 0) {
     return -1;
@@ -579,15 +578,13 @@ int pruss_queue_execute( void)
   return pruss_queue_exec_limited( 0, 0);	// no limits !
 }
 
-int pruss_queue_config_axis( int axis, uint32_t ssi, uint16_t sst, uint16_t ssn, int reverse)
+int pruss_queue_config_axis( int axis, uint32_t ssi, int reverse)
 {
   PruCommandUnion pruCmd = {
     .config.command		= CMD_AXIS_CONFIG_AXIS,
     .config.axis		= axis,
     .config.reverse		= (reverse) ? 1 : 0,
     .config.stepSize		= ssi,
-    .config.stepSizeT		= sst,
-    .config.stepSizeN		= ssn,
     .config.reciprStepSize	= (uint32_t) (0xFFFFFFFF / ssi),	// as close as possible
   };
   if (pruss_command( &pruCmd) < 0) {
@@ -654,14 +651,7 @@ int pruss_dump_position( void)
   for (axis = 1 ; axis <= 4 ; ++axis) {
     uint32_t base = PRUSS_RAM_OFFSET + (axis - 1) * FullADSize;
     int32_t virtPosI = pruss_rd32( base + 20) - VIRT_POS_MID_SCALE;
-    uint16_t virtPosT = pruss_rd16( base + 18);
-    uint16_t stepSizeN = pruss_rd16( base + 30);
-    uint16_t stepSizeT = pruss_rd16( base + 28);
-    if (stepSizeT == 0) {
-      printf( "  %c-virtPos = %d", axes[ axis], virtPosI);
-    } else {
-      printf( "  %c-virtPos = %d+%u/%u", axes[ axis], virtPosI, virtPosT, stepSizeN);
-    }
+    printf( "  %c-virtPos = %d", axes[ axis], virtPosI);
   }
   printf( "\n");
   for (axis = 1 ; axis <= 4 ; ++axis) {
@@ -673,7 +663,7 @@ int pruss_dump_position( void)
   return 0;
 }
 
-int pruss_get_positions( int axis, int32_t* virtPosI, int16_t* virtPosT, int16_t* virtPosN, int32_t* requestedPos)
+int pruss_get_positions( int axis, int32_t* virtPosI, int32_t* requestedPos)
 {
   uint32_t base = PRUSS_RAM_OFFSET + (axis - 1) * FullADSize;
   if (requestedPos) {
@@ -681,12 +671,6 @@ int pruss_get_positions( int axis, int32_t* virtPosI, int16_t* virtPosT, int16_t
   }
   if (virtPosI) {
     *virtPosI = pruss_rd32( base + 20) - VIRT_POS_MID_SCALE;
-  }
-  if (virtPosT) {
-    *virtPosT = pruss_rd16( base + 18);
-  }
-  if (virtPosN) {
-    *virtPosN = pruss_rd16( base + 30);
   }
   return 0;
 }

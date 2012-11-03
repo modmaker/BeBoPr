@@ -556,14 +556,12 @@ void traject_delta_on_all_axes( traject5D* traject)
 static void pruss_axis_config( int axis, double step_size, int reverse)
 {
   uint32_t ssi = (int) SI2NM( step_size);
-  uint16_t ssn = 1000;
-  uint16_t sst = (int) ssn * (SI2NM( step_size) - ssi);
 
   if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
-    printf( "Set axis nr %d step size (%1.6lf) to %u + %u / %u [nm] and %s direction\n",
-	    axis, step_size, ssi, sst, ssn, (reverse) ? "reversed" : "normal");
+    printf( "Set axis nr %d step size to %u [nm] and %s direction\n",
+	    axis, ssi, (reverse) ? "reversed" : "normal");
   }
-  pruss_queue_config_axis( axis, ssi, sst, ssn, reverse);
+  pruss_queue_config_axis( axis, ssi, reverse);
 }
 
 int traject_wait_for_completion( void)
