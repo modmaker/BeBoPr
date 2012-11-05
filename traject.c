@@ -75,7 +75,7 @@ static inline int queue_accel( const char* axis_name, double ramp, double a, dou
 
 /* ---------------------------------- */
 
-static inline int queue_dwell( const char* axis_name, double v, double ramp, double dwell, uint32_t cmin, double origin)
+static inline int queue_dwell( const char* axis_name, double v, double ramp, double dwell, uint32_t cdwell, double origin)
 {
   if (v != 0.0 && dwell != 0.0) {
     char aname = *axis_name;
@@ -85,18 +85,18 @@ static inline int queue_dwell( const char* axis_name, double v, double ramp, dou
     int pruss_axis = (aname < 'X') ? aname - 'E' + 4 : aname - 'X' + 1;
     if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
       printf( "Queue DWELL %c: running at v=%1.3lf [mm/s] to %1.6lf [mm] (at c=%u)\n",
-	      aname, SI2MM( v), SI2MM( origin + ramp + dwell), cmin);
+	      aname, SI2MM( v), SI2MM( origin + ramp + dwell), cdwell);
     }
-    pruss_queue_dwell( pruss_axis, cmin, SI2POS( origin + ramp + dwell));
+    pruss_queue_dwell( pruss_axis, cdwell, SI2POS( origin + ramp + dwell));
     return 1;
   }
   return 0;
 }
 
 #ifdef PRU_ABS_COORDS
-#define QUEUE_DWELL( axis) queue_dwell( #axis, v##axis, ramp_up_d##axis, dwell_d##axis, cmin##axis, axis##0)
+#define QUEUE_DWELL( axis) queue_dwell( #axis, v##axis, ramp_up_d##axis, dwell_d##axis, cdwell##axis, axis##0)
 #else
-#define QUEUE_DWELL( axis) queue_dwell( #axis, v##axis, ramp_up_d##axis, dwell_d##axis, cmin##axis, 0)
+#define QUEUE_DWELL( axis) queue_dwell( #axis, v##axis, ramp_up_d##axis, dwell_d##axis, cdwell##axis, 0)
 #endif
 
 /* ---------------------------------- */
@@ -141,7 +141,7 @@ static inline int queue_decel( const char* axis_name, double a, double v, double
 
 static inline void axis_calc( const char* axis_name, double step_size_, double d, double double_s, double* ramp_up_d, double* ramp_down_d,
 			double a, double* v, double* dwell_d, uint32_t* n0, uint32_t* nmin,
-			uint32_t* c0, uint32_t* cmin, double* recipr_t_acc, double* recipr_t_move)
+			uint32_t* c0, uint32_t* cmin, uint32_t* cdwell, double* recipr_t_acc, double* recipr_t_move)
 {
   if (d == 0.0) {
    /*
@@ -152,6 +152,7 @@ static inline void axis_calc( const char* axis_name, double step_size_, double d
     *dwell_d = 0.0;
     *cmin = 0;
     *c0   = 0;
+    *cdwell = 0;
     *n0 = 0;
     *nmin = 0;
   } else {
@@ -205,11 +206,14 @@ static inline void axis_calc( const char* axis_name, double step_size_, double d
     */
     *cmin = fclk * step_size_ / *v ;
     *c0   = (uint32_t) (c_acc * sqrt( step_size_ / a));
+    *cdwell = *cmin;
     if (*c0 < *cmin) {
       if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
         printf( "(can start at dwell speed, no ramping needed) ");
       }
-      *c0   = *cmin;
+      /* replace the ramp by a dwell at half the speed for the same distance */
+      *c0   = 2 * *cmin;
+      *cmin = *c0;
     }
     if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
       printf( "\n   ramp-up= %3.6lf [mm], dwell= %3.6lf [mm], ramp-down= %3.6lf [mm], velocity= %3.3lf [mm/s], duration= %1.3lf [ms]\n",
@@ -221,8 +225,9 @@ static inline void axis_calc( const char* axis_name, double step_size_, double d
   }
 }
 
-#define AXIS_CALC( axis) axis_calc( #axis, step_size_##axis, d##axis, double_s##axis, &ramp_up_d##axis, &ramp_down_d##axis, a##axis, &v##axis, \
-					&dwell_d##axis,	&n0##axis, &nmin##axis, &c0##axis, &cmin##axis, &recipr_t_acc, &recipr_t_move)
+#define AXIS_CALC( axis) axis_calc( #axis, step_size_##axis, d##axis, double_s##axis, &ramp_up_d##axis, &ramp_down_d##axis, \
+					a##axis, &v##axis, &dwell_d##axis, &n0##axis, &nmin##axis, \
+					&c0##axis, &cmin##axis, &cdwell##axis, &recipr_t_acc, &recipr_t_move)
 
 /*
  * All dimensions are in SI units and relative
@@ -318,6 +323,13 @@ void traject_delta_on_all_axes( traject5D* traject)
     printf( "Request: total distance = %1.6lf [mm], vector velocity = %1.3lf [mm/s] => est. time = %1.3lf [ms]\n",
 	    SI2MM( distance), SI2MS( feed / 60000.0), SI2MS( RECIPR( recipr_dt)));
   }
+ /*
+  * Because it takes some time (15-30 ms) to calculate a (new) move, that calculation
+  * may take longer than the (previous) move and cause a gap between the last step of
+  * the previous move and the first step of the next move.
+  * TODO: If we know that the current move will take longer than the calculation of
+  * the next move, we may skip this slow down!!!
+  */
   if (recipr_dt > 20) {
     recipr_dt = 20;
     printf( "*** Short move requested, slowing down to velocity= %1.3lf [mm/s] to prevent gaps\n",
@@ -421,6 +433,7 @@ void traject_delta_on_all_axes( traject5D* traject)
 
   uint32_t c0x, c0y, c0z, c0e;
   uint32_t cminx, cminy, cminz, cmine;
+  uint32_t cdwellx, cdwelly, cdwellz, cdwelle;
   uint32_t n0x, n0y, n0z, n0e;
   uint32_t nminx, nminy, nminz, nmine;
   double recipr_t_move = 0.0;	// means: not set
