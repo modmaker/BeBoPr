@@ -167,7 +167,11 @@ void gcode_parse_char(uint8_t c) {
 					break;
 				case 'S':
 					if (next_target.seen_M && (next_target.M == 220 || next_target.M == 221)) {
+						// if this is a scaling factor, scale 1.0 to 1000
 						next_target.S = decfloat_to_int( &read_digit, 1000.0);
+					} else if (next_target.seen_M && (next_target.M == 113)) {
+						// if this is PWM output, scale 1.0 to 100(%)
+						next_target.S = decfloat_to_int( &read_digit, 100.0);
 					} else {
 						// if this is temperature, PID setting or anything else, scale 1:1
 						next_target.S = decfloat_to_int( &read_digit, 1.0);

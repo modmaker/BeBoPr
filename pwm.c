@@ -159,3 +159,15 @@ int pwm_set_output( channel_tag pwm_channel, unsigned int percentage)
   }
   return -1;
 }
+
+channel_tag pwm_lookup_by_name( const char* name)
+{
+  for (int ix = 0 ; ix < num_pwm_channels ; ++ix) {
+    channel_tag tag = pwm_channels[ ix].id;
+    if (strcmp( tag_name( tag), name) == 0) {
+      return tag;
+    }
+  }
+  return NULL;
+}
+

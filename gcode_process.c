@@ -41,6 +41,7 @@ static channel_tag heater_extruder = NULL;
 static channel_tag heater_bed = NULL;
 static channel_tag temp_extruder = NULL;
 static channel_tag temp_bed = NULL;
+static channel_tag pwm_extruder = NULL;
 
 static int extruder_temp_wait = 0;
 static int bed_temp_wait = 0;
@@ -769,6 +770,18 @@ void process_gcode_command() {
 				break;
 			#endif
 			// M113- extruder PWM
+			case 113: {
+				//? ==== M113: Set (extruder) PWM ====
+				//?
+				//? Example: M113 S0.125
+				//?
+				//? Set the (raw) extruder heater output to the specified value: 0.0-1.0 gives 0-100% duty cycle.
+				//? Should only be used when there is no heater control loop configured for this output!!!
+				if (next_target.seen_S) {
+					pwm_set_output( pwm_extruder, next_target.S);
+				}
+				break;
+			}
 			// M114- report XYZEF to host
 			case 114:
 				//? ==== M114: Get Current Position ====
@@ -1107,7 +1120,9 @@ int gcode_process_init( void)
 	    tag_name( heater_extruder), tag_name( heater_bed),
 	    tag_name( temp_extruder), tag_name( temp_bed));
   }
-  if (heater_extruder == NULL || temp_extruder == NULL) {
+  pwm_extruder    = pwm_lookup_by_name( "pwm_laser_power");
+  // If there's no extruder, or no laser power there's probably a configuration error!
+  if ((heater_extruder == NULL || temp_extruder == NULL) && pwm_extruder == NULL) {
     return -1;
   }
   gcode_current_pos.X = gcode_home_pos.X = 0;

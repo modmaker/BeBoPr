@@ -33,6 +33,9 @@
 GENERATE_TAG( bed_thermistor);
 GENERATE_TAG( extruder_thermistor);
 GENERATE_TAG( spare_ain);
+#ifdef LASER_CUTTER
+GENERATE_TAG( pwm_laser_power);
+#else
 GENERATE_TAG( temp_extruder);
 GENERATE_TAG( temp_bed);
 GENERATE_TAG( heater_extruder);
@@ -40,6 +43,7 @@ GENERATE_TAG( heater_bed);
 GENERATE_TAG( pwm_extruder);
 GENERATE_TAG( pwm_bed);
 GENERATE_TAG( pwm_fan);
+#endif
 
 static const analog_config_record analog_config_data[] = {
   {
@@ -60,6 +64,7 @@ static const analog_config_record analog_config_data[] = {
 };
 
 static const temp_config_record temp_config_data[] = {
+#ifndef LASER_CUTTER
   {
     .tag                = temp_extruder,
     .source		= extruder_thermistor,
@@ -75,6 +80,13 @@ static const temp_config_record temp_config_data[] = {
 };
 
 static const pwm_config_record pwm_config_data[] = {
+#ifdef LASER_CUTTER
+  {
+    .tag		= pwm_laser_power,
+    .device_path	= PWM_PATH_PREFIX "ehrpwm.2:0",	// BEBOPR_R2_J3 - PWM1
+    .frequency		= 10,
+  },
+#else
   {
     .tag		= pwm_extruder,
     .device_path	= PWM_PATH_PREFIX "ehrpwm.2:0",	// BEBOPR_R2_J3 - PWM1
@@ -90,9 +102,11 @@ static const pwm_config_record pwm_config_data[] = {
     .device_path	= PWM_PATH_PREFIX "ehrpwm.1:0",	// BEBOPR_R2_J4 - PWM2
     .frequency		= 10,
   },
+#endif
 };
 
 static const heater_config_record heater_config_data[] = {
+#ifndef LASER_CUTTER
   {
     .tag		= heater_extruder,
     .analog_input	= temp_extruder,
@@ -121,6 +135,7 @@ static const heater_config_record heater_config_data[] = {
 	    .I_limit = 0.0,
     },
   },
+#endif
 };
 
 static int use_pololu_drivers = 1;
