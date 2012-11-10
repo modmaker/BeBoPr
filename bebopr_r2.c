@@ -440,3 +440,10 @@ int bebopr_post_init( void)
 
   return result;
 }
+
+void bebopr_exit( void)
+{
+  gpio_write_value_to_pin_file( 38, "value", "0");
+  gpio_write_value_to_pin_file( 34, "value", "1");
+  fprintf( stderr, "Turned BEBOPR I/O power off\n");
+}

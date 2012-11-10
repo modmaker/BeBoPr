@@ -676,5 +676,9 @@ int pruss_get_positions( int axis, int32_t* virtPosI, int32_t* requestedPos)
 }
 
 /*
- *
+ * exit handling: return to safe state for program exit
  */
+void pruss_queue_exit( void)
+{
+  bebopr_exit();
+}
