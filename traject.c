@@ -37,6 +37,12 @@ static const double c_acc = 282842712.5;	// = fclk * sqrt( 2.0);
 static double speed_override_factor = 1.0;
 static double extruder_override_factor = 1.0;
 
+static unsigned int moveNrs[ 1 + 5];	/* 5 axes, 1-based */
+
+void incMoveNr( unsigned int pruss_axis)
+{
+  ++moveNrs[ pruss_axis];
+}
 
 /* ---------------------------------- */
 
@@ -48,17 +54,18 @@ static inline int queue_accel( const char* axis_name, double ramp, double a, dou
       aname = toupper( aname);
     }
     int pruss_axis = (aname < 'X') ? aname - 'E' + 4 : aname - 'X' + 1;
+    ++moveNrs[ pruss_axis];
     if (c0 > cmin) {
       if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
-        printf( "Queue ACCEL %c: ramping up to v=%1.3lf [mm/s] with a=%1.3lf [m/s^2] to %1.6lf [mm]"
+        printf( "Queue ACCEL %c%u: ramping up to v=%1.3lf [mm/s] with a=%1.3lf [m/s^2] to %1.6lf [mm]"
 		" (from n0=%u, c0=%u up to cmin=%u)\n",
-		aname, SI2MM( v), a, SI2MM( origin + ramp), n0, c0, cmin);
+		aname, moveNrs[ pruss_axis], SI2MM( v), a, SI2MM( origin + ramp), n0, c0, cmin);
       }
       pruss_queue_accel( pruss_axis, n0, c0, cmin, SI2POS( origin + ramp));
     } else {
       if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
-        printf( "Queue ACCEL %c: running at v=%1.3lf [mm/s] to %1.6lf [mm] (at c=%u)\n",
-		aname, SI2MM( v), SI2MM( origin + ramp), cmin);
+        printf( "Queue ACCEL %c%u: running at v=%1.3lf [mm/s] to %1.6lf [mm] (at c=%u)\n",
+		aname, moveNrs[ pruss_axis], SI2MM( v), SI2MM( origin + ramp), cmin);
       }
       pruss_queue_dwell( pruss_axis, cmin, SI2POS( origin + ramp));
     }
@@ -83,9 +90,10 @@ static inline int queue_dwell( const char* axis_name, double v, double ramp, dou
       aname = toupper( aname);
     }
     int pruss_axis = (aname < 'X') ? aname - 'E' + 4 : aname - 'X' + 1;
+    ++moveNrs[ pruss_axis];
     if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
-      printf( "Queue DWELL %c: running at v=%1.3lf [mm/s] to %1.6lf [mm] (at c=%u)\n",
-	      aname, SI2MM( v), SI2MM( origin + ramp + dwell), cdwell);
+      printf( "Queue DWELL %c%u: running at v=%1.3lf [mm/s] to %1.6lf [mm] (at c=%u)\n",
+	      aname, moveNrs[ pruss_axis], SI2MM( v), SI2MM( origin + ramp + dwell), cdwell);
     }
     pruss_queue_dwell( pruss_axis, cdwell, SI2POS( origin + ramp + dwell));
     return 1;
@@ -110,17 +118,18 @@ static inline int queue_decel( const char* axis_name, double a, double v, double
       aname = toupper( aname);
     }
     int pruss_axis = (aname < 'X') ? aname - 'E' + 4 : aname - 'X' + 1;
+    ++moveNrs[ pruss_axis];
     if (c0 > cmin) {
       if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
-        printf( "Queue DECEL %c: ramping down from v=%1.3lf [mm/s] with a=%1.3lf [m/s^2] to %1.6lf [mm]"
+        printf( "Queue DECEL %c%u: ramping down from v=%1.3lf [mm/s] with a=%1.3lf [m/s^2] to %1.6lf [mm]"
 		" (down from nmin=%u, cmin=%u)\n",
-		aname, SI2MM( v), a, SI2MM( origin + ramp_up + dwell + ramp_down), nmin, cmin);
+		aname, moveNrs[ pruss_axis], SI2MM( v), a, SI2MM( origin + ramp_up + dwell + ramp_down), nmin, cmin);
       }
       pruss_queue_decel( pruss_axis, nmin, cmin, SI2POS( origin + ramp_up + dwell + ramp_down));
     } else {
       if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
-        printf( "Queue DECEL %c: running at v=%1.3lf [mm/s] to %1.6lf [mm] (at c=%u)\n",
-		aname, SI2MM( v), SI2MM( origin + ramp_up + dwell + ramp_down), cmin);
+        printf( "Queue DECEL %c%u: running at v=%1.3lf [mm/s] to %1.6lf [mm] (at c=%u)\n",
+		aname, moveNrs[ pruss_axis], SI2MM( v), SI2MM( origin + ramp_up + dwell + ramp_down), cmin);
       }
       pruss_queue_dwell( pruss_axis, cmin, SI2POS( origin + ramp_up + dwell + ramp_down));
     }

@@ -33,6 +33,8 @@ extern int traject_status_print( void);
 extern double traject_set_speed_override( double factor);
 extern double traject_set_extruder_override( double factor);
 
+extern void incMoveNr( unsigned int pruss_axis);
+
 extern int traject_init( void);
 
 #endif

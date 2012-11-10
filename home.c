@@ -61,8 +61,10 @@ static int step_until_switch_change( axis_e axis, int reverse, int new_state, in
     /*
      * Start a ramp followed by a dwell that will be terminated by a limitswitch state change.
      */
+    incMoveNr( pruss_axis);
     pruss_queue_accel( pruss_axis, 0, c0, cmin, *position + direction * ramp);
     pruss_queue_exec_limited( mask, (new_state) ? invert : ~invert);
+    incMoveNr( pruss_axis);
     pruss_queue_dwell( pruss_axis, cmin, *position + direction * (ramp + delta));
     pruss_queue_exec_limited( mask, (new_state) ? invert : ~invert);
     traject_wait_for_completion();
