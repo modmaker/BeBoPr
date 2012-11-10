@@ -77,6 +77,7 @@ static const temp_config_record temp_config_data[] = {
     .in_range_time	= 15000,
     .conversion		= bone_bed_thermistor_330k,
   },
+#endif
 };
 
 static const pwm_config_record pwm_config_data[] = {
