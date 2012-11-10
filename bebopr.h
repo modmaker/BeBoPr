@@ -15,6 +15,9 @@ extern int bebopr_pre_init( void);
 // Late init that enables I/O power
 extern int bebopr_post_init( void);
 
+// Ultimate exit, disable I/O power
+extern void bebopr_exit( void);
+
 // Configuration
 
 extern int config_e_axis_is_always_relative( void);
