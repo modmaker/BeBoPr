@@ -172,7 +172,7 @@ static inline void axis_calc( const char* axis_name, double step_size_, double d
     if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
       printf( "%c move : ", aname);
     }
-    if (d < double_s) {
+    if (d <= double_s) {
       /*
        * Move length is too short to reach full speed.
        * Recalculate new (lower) top speed and remove the dwell.
@@ -193,7 +193,7 @@ static inline void axis_calc( const char* axis_name, double step_size_, double d
      /*
       * Move has ramp up, constant velocity and ramp down phases
       */
-      *ramp_up_d = step_size_ * floor( double_s / (2 * step_size_));
+      *ramp_up_d = double_s / 2;
       *ramp_down_d = *ramp_up_d;
       *dwell_d = d - *ramp_up_d - *ramp_down_d;
     }
@@ -219,6 +219,13 @@ static inline void axis_calc( const char* axis_name, double step_size_, double d
     if (*c0 < *cmin) {
       if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
         printf( "(can start at dwell speed, no ramping needed) ");
+      }
+      /* replace the ramp by a dwell at half the speed for the same distance */
+      *c0   = 2 * *cmin;
+      *cmin = *c0;
+    } else if (*ramp_up_d < step_size_) {
+      if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
+        printf( "(replacing tiny ramp by dwell) ");
       }
       /* replace the ramp by a dwell at half the speed for the same distance */
       *c0   = 2 * *cmin;
