@@ -567,7 +567,8 @@ void traject_delta_on_all_axes( traject5D* traject)
     pruss_queue_execute();
   }
 
-  pruss_queue_set_pulse_length( 4, 10 * 200);
+  // this command act as NOP that will generate a sync point for the axes !
+  pruss_queue_set_pulse_length( 4, 20 * 200);
 }
 
 static void pruss_axis_config( int axis, double step_size, int reverse)
