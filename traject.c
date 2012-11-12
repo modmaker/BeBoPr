@@ -285,7 +285,12 @@ void traject_delta_on_all_axes( traject5D* traject)
     --secs;
     nsecs += 1000000000;
   }
-  int msecs = (nsecs + 500000) / 1000000;
+  nsecs += 500000;
+  if (nsecs >= 1000000000) {
+    nsecs -= 1000000000;
+    ++secs;
+  }
+  int msecs = nsecs / 1000000;
   if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
     printf( "\nMOVE[ #%lu %d.%03ds] traject_delta_on_all_axes( traject( %0.9lf, %1.9lf, %1.9lf, %1.9lf, F=%1.3lf) [m])\n",
 	    serno, secs, msecs, dx, dy, dz, de, feed);
