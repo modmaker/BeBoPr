@@ -254,6 +254,7 @@ void traject_delta_on_all_axes( traject5D* traject)
   static struct timespec t0;
   struct timespec t1;
   double feed = speed_override_factor * traject->feed;
+  static double current_move_duration = 0;
 
   if (traject == NULL) {
     return;
@@ -345,17 +346,21 @@ void traject_delta_on_all_axes( traject5D* traject)
 	    SI2MM( distance), SI2MS( feed / 60000.0), SI2MS( RECIPR( recipr_dt)));
   }
  /*
-  * Because it takes some time (15-30 ms) to calculate a (new) move, that calculation
-  * may take longer than the (previous) move and cause a gap between the last step of
-  * the previous move and the first step of the next move.
-  * TODO: If we know that the current move will take longer than the calculation of
-  * the next move, we may skip this slow down!!!
+  * FIXME: Either the calculations, Linux scheduling or (?) causes some large gaps here:
+  * Sometimes it takes up to 50 ms before a new move is ready to be queued here. To
+  * (try to) prevent a gap falling between the two moves, slow down short moves.
+  * NOTE: This is highly experimental and probably the scheduling should be looked at first!
   */
-  if (recipr_dt > 20) {
-    recipr_dt = 20;
-    printf( "*** Short move requested, slowing down to velocity= %1.3lf [mm/s] to prevent gaps\n",
-		  SI2MS( recipr_dt * distance));
+  const double calc_margin = 0.0350; /* [s] */
+  if (calc_margin > current_move_duration) {
+    if ((calc_margin - current_move_duration) * recipr_dt > 1.0) {
+      recipr_dt = RECIPR( calc_margin - current_move_duration);
+      printf( "*** Short move requested, slowing down average velocity to %1.3lf [mm/s], duration %1.3lf [ms] to prevent gap\n",
+	      SI2MS( recipr_dt * distance), SI2MS( RECIPR( recipr_dt)));
+    }
   }
+  current_move_duration = RECIPR( recipr_dt);
+
   int v_change = 0;
   double vx = dx * recipr_dt;
   if (vx > vx_max) {	  // clip feed !
