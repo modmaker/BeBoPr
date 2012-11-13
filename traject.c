@@ -672,11 +672,20 @@ int traject_init( void)
   pruss_axis_config( 3, step_size_z, config_reverse_axis( z_axis));
   pruss_axis_config( 4, step_size_e, config_reverse_axis( e_axis));
 
+ /*
+  * Duration of active part of step pulse. Note that the real generated
+  * value also depends on the cycletime of the stepper code and can be
+  * less than the value specified here.
+  * actual = FLOOR( setting / cycletime) * cycletime
+  * Setting a value less than the cycletime will generate zero-length
+  * step pulses!
+  */
+  const int step_pulse_time = 16;	/* [us] */
   /* Set the duration of the active part of the step pulse */
-  pruss_queue_set_pulse_length( 1, 10 * 200);
-  pruss_queue_set_pulse_length( 2, 10 * 200);
-  pruss_queue_set_pulse_length( 3, 10 * 200);
-  pruss_queue_set_pulse_length( 4, 10 * 200);
+  pruss_queue_set_pulse_length( 1, step_pulse_time * 200);
+  pruss_queue_set_pulse_length( 2, step_pulse_time * 200);
+  pruss_queue_set_pulse_length( 3, step_pulse_time * 200);
+  pruss_queue_set_pulse_length( 4, step_pulse_time * 200);
 
   /* Set internal reference for all axis to current position */
   pruss_queue_set_origin( 1);
