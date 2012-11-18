@@ -90,14 +90,6 @@ typedef struct {
   unsigned int	position	: 32;
 } AdjustOriginStruct;
 
-// CMD_AXIS_ADJUST_FOR_RAMP
-typedef struct {
-  unsigned int			: 24;
-  unsigned int	command		:  5;
-  unsigned int	axis		:  3;
-  int		delta		: 32;
-} AdjustForRampStruct;
-
 /* TODO: can we mmap an array of this struct directly onto SRAM ? */
 typedef union {
   uint32_t		gen[ 4];
@@ -110,7 +102,6 @@ typedef union {
   ConfigAxisStruct	config;
   ConfigLimswStruct	limsw;
   AdjustOriginStruct	adjust_origin;
-  AdjustForRampStruct	adjust_for_ramp;
 } PruCommandUnion;
 
 
@@ -474,19 +465,6 @@ int pruss_queue_adjust_origin( int axis, int32_t delta)
     .adjust_origin.command	= CMD_AXIS_ADJUST_ORIGIN,
     .adjust_origin.axis		= axis,
     .adjust_origin.position 	= delta
-  };
-  if (pruss_command( &pruCmd) < 0) {
-    return -1;
-  }
-  return 0;
-}
-
-int pruss_queue_adjust_for_ramp( int axis, int32_t delta)
-{
-  PruCommandUnion pruCmd = {
-    .adjust_for_ramp.command	= CMD_AXIS_ADJUST_FOR_RAMP,
-    .adjust_for_ramp.axis	= axis,
-    .adjust_for_ramp.delta	= delta
   };
   if (pruss_command( &pruCmd) < 0) {
     return -1;

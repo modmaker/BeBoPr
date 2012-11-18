@@ -12,7 +12,7 @@
 //  PRUSS code and C-code must have the same FW_VERSION to be compatible
 #define FW_VERSION              6
 
-#define NR_CMD_FIFO_ENTRIES	16
+#define NR_CMD_FIFO_ENTRIES	64
 
 //
 // The stepper code uses a 32-bit unsigned integer to keep track of position.
@@ -39,7 +39,6 @@
 #define	CMD_AXIS_SET_PULSE_LENGTH	8
 #define	CMD_AXIS_CONFIG_AXIS		9
 #define	CMD_AXIS_ADJUST_ORIGIN		10
-#define CMD_AXIS_ADJUST_FOR_RAMP 	11
 #define	CMD_AXIS_SET_ORIGIN		12
 #define	CMD_AXIS_CONFIG_LIMSW		13
 #define	CMD_AXIS_SET_ACCEL		14
@@ -47,8 +46,4 @@
 //    these commands are queued before being started with the execute command
 #define START_CMD_AXIS_QUEUE		16
 #define CMD_AXIS_MOVE			16
-#define CMD_AXIS_RAMP_UP		17
-#define CMD_AXIS_DWELL			18
-#define CMD_AXIS_RAMP_DOWN		19
-#define CMD_AXIS_RAMP_DWELL		20
 //
