@@ -389,7 +389,7 @@ int pruss_wait_for_queue_space( void)
      * Until an interrupt driven interface is implemented, reduce the
      * cpu load and number of poll cycles by sleeping part of the time.
      */
-    usleep( 50);
+    usleep( 1000);
   }
   return 0;
 }
