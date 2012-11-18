@@ -625,12 +625,15 @@ int pruss_dump_state( void)
       printf( "\n");
     }
   }
-  for (i = 24 ; i <= 25 ; ++i) {
+  for (i = 24 ; i <= 28 ; i += 4) {
     uint32_t reg = pruss_rd32( PRUSS_DBG_OFFSET + 128 + 4 * i);
     printf( "    C%-2d = 0x%08x (%10u)", i, reg, reg);
     if (i % 2 == 1) {
       printf( "\n");
     }
+  }
+  if (i % 2 != 1) {
+    printf( "\n");
   }
   return pruss_ena;
 }
