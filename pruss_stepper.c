@@ -13,6 +13,8 @@
 #include "beaglebone.h"
 #include "debug.h"
 #include "bebopr.h"
+#include "timestamp.h"
+
 
 // Generic struct for access to 'command' field for all commands.
 typedef struct {
@@ -417,18 +419,24 @@ int pruss_write_command_struct( int ix_in, PruCommandUnion* data)
 // Write command structure to PRUSS, wait for free buffer is nescessary
 static int pruss_command( PruCommandUnion* cmd)
 {
+  double t0;
   int ix_in = pruss_rd8( IX_IN);
-  //  int ix_out = pruss_rd8( IX_OUT);
+  int ix_out = pruss_rd8( IX_OUT);
+  if (DEBUG_PRUSS && (debug_flags & DEBUG_PRUSS)) {
+    t0 = timestamp_get();
+  }
   if (pruss_wait_for_queue_space() < 0) {
     pruss_stepper_dump_state();
     printf( "ERROR: found pruss halted waiting for queue space for command %d, bailing out!\n",
 	    cmd->command.value);
     exit( EXIT_FAILURE);
   }
-  //  printf( "pruss_command - write to SRAM buffer at index %d, out index is %d.\n", ix_in, ix_out);
   (void) pruss_write_command_struct( ix_in, cmd);
-  //  ix_in = writeCommandStruct( ix_in, cmd);
-  //  ix_out = pruss_rd8( PRUSS_RAM_OFFSET + 129);
+  if (DEBUG_PRUSS && (debug_flags & DEBUG_PRUSS)) {
+    double t1 = timestamp_get();
+    printf( "pruss_command started at %1.3lfs - wrote to SRAM buffer at index %d, out index was %d. Operation took %1.3fms.\n",
+	    t0, ix_in, ix_out, 1000 * (t1 - t0));
+  }
   return 0;
 }
 

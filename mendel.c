@@ -19,6 +19,7 @@
 #include "comm.h"
 #include "debug.h"
 #include "pruss.h"
+#include "timestamp.h"
 
 
 static int arm_init( void)
@@ -50,6 +51,7 @@ static int arm_init( void)
   } else {
     printf( "Clock resolution = %ld.%09ld s.\n", clock_resolution.tv_sec, clock_resolution.tv_nsec);
   }
+  timestamp_init();
   return 0;
 }
 

@@ -12,6 +12,8 @@
 #include "beaglebone.h"
 #include "mendel.h"
 #include "limit_switches.h"
+#include "timestamp.h"
+
 
 /*
  *  Settings that are changed during initialization.
@@ -251,22 +253,17 @@ static inline void axis_calc( const char* axis_name, double step_size_, double d
 void traject_delta_on_all_axes( traject5D* traject)
 {
   static unsigned long int serno = 0;
-  static struct timespec t0;
-  struct timespec t1;
+  static double queued_time = 0;
+  static double calc_start_old;
   double feed = speed_override_factor * traject->feed;
-  static double current_move_duration = 0;
 
   if (traject == NULL) {
     return;
   }
-#ifdef _POSIX_MONOTONIC_CLOCK
-  clockid_t clock = CLOCK_MONOTONIC;
-#else
-# error NO SUITING CLOCK SOURCE AVAILABLE
-#endif
   if (serno++ == 0) {
-    clock_gettime( clock, &t0);
+    calc_start_old = timestamp_get();
   }
+
 #ifdef PRU_ABS_COORDS
   double dx = traject->x1 - traject->x0;
   double dy = traject->y1 - traject->y0;
@@ -279,22 +276,10 @@ void traject_delta_on_all_axes( traject5D* traject)
   double de = traject->de;
 #endif
 
-  clock_gettime( clock, &t1);
-  int nsecs = t1.tv_nsec - t0.tv_nsec;
-  int secs  = t1.tv_sec  - t0.tv_sec;
-  if (nsecs < 0) {
-    --secs;
-    nsecs += 1000000000;
-  }
-  nsecs += 500000;
-  if (nsecs >= 1000000000) {
-    nsecs -= 1000000000;
-    ++secs;
-  }
-  int msecs = nsecs / 1000000;
+  double move_start = timestamp_get();
   if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
-    printf( "\nMOVE[ #%lu %d.%03ds] traject_delta_on_all_axes( traject( %0.9lf, %1.9lf, %1.9lf, %1.9lf, F=%1.3lf) [m])\n",
-	    serno, secs, msecs, dx, dy, dz, de, feed);
+    printf( "\nMOVE[ #%lu %1.3fs] traject_delta_on_all_axes( traject( %0.9lf, %1.9lf, %1.9lf, %1.9lf, F=%1.3lf) [m])\n",
+	    serno, move_start, dx, dy, dz, de, feed);
   }
 
   int reverse_x = 0;
@@ -351,15 +336,33 @@ void traject_delta_on_all_axes( traject5D* traject)
   * (try to) prevent a gap falling between the two moves, slow down short moves.
   * NOTE: This is highly experimental and probably the scheduling should be looked at first!
   */
-  const double calc_margin = 0.0350; /* [s] */
-  if (calc_margin > current_move_duration) {
-    if ((calc_margin - current_move_duration) * recipr_dt > 1.0) {
-      recipr_dt = RECIPR( calc_margin - current_move_duration);
-      printf( "*** Short move requested, slowing down average velocity to %1.3lf [mm/s], duration %1.3lf [ms] to prevent gap\n",
-	      SI2MS( recipr_dt * distance), SI2MS( RECIPR( recipr_dt)));
+  double calc_start = timestamp_get();
+  double elapsed_time = calc_start - calc_start_old;
+  calc_start_old = calc_start;
+  const double est_calc_time = 0.0350; /* [s] */
+  queued_time -= elapsed_time;
+  if (!pruss_stepper_busy() || queued_time < 0) {
+    queued_time = 0;
+  }
+  double slack = queued_time - est_calc_time;
+  if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
+    printf( "%sElapsed_time= %1.3lfms slack= %1.3fms, duration of moves in queue= %1.3fms\n",
+	    (slack < 0) ? "GAP - " : "", SI2MS( elapsed_time), SI2MS( slack), SI2MS( queued_time));
+  }
+  if (slack < 0) {
+   /*
+    * No slack. If the next move is short one, slow it down to keep the stepper
+    * busy until the next move will be queued. Note: this is not exact science
+    * but based on best guess!
+    */
+    if (-slack * recipr_dt > 1.0) {
+      recipr_dt = RECIPR( -slack);
+      if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
+        printf( "*** Short move requested, slowing down average velocity to %1.3lf [mm/s], duration %1.3lf [ms] to prevent gap\n",
+		SI2MS( recipr_dt * distance), SI2MS( RECIPR( recipr_dt)));
+      }
     }
   }
-  current_move_duration = RECIPR( recipr_dt);
 
   int v_change = 0;
   double vx = dx * recipr_dt;
@@ -516,22 +519,14 @@ void traject_delta_on_all_axes( traject5D* traject)
     }
   }
 
-  if (1) {
-    struct timespec time;
-    clock_gettime( clock, &time);
-    int nsecs = time.tv_nsec - t1.tv_nsec;
-    int secs  = time.tv_sec  - t1.tv_sec;
-    if (nsecs < 0) {
-      --secs;
-      nsecs += 1000000000;
-    }
-    unsigned int usecs = (nsecs + 500) / 1000;
-    unsigned int msecs = usecs / 1000;
-    usecs -= 1000 * msecs;
-    msecs += 1000 * secs;
-    if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
-      printf( "Calculations took %u.%03u ms\n", msecs, usecs);
-    }
+  double queue_start = timestamp_get();
+  if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
+    printf( "Calculations took %1.3lf ms\n", SI2MS( queue_start - calc_start));
+  }
+  queued_time += RECIPR( recipr_t_move);
+  if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
+    printf( "Duration of moves in queue= %1.3lf [ms] after adding move of %1.3lf [ms]\n",
+	    SI2MS( queued_time), SI2MS( RECIPR( recipr_t_move)));
   }
 
 #ifdef PRU_ABS_COORDS
@@ -579,6 +574,11 @@ void traject_delta_on_all_axes( traject5D* traject)
 
   // this command act as NOP that will generate a sync point for the axes !
   pruss_queue_set_pulse_length( 4, 20 * 200);
+
+  double end_time = timestamp_get();
+  if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
+    printf( "Queueing took %1.3lf ms\n", 1000 * (end_time - queue_start));
+  }
 }
 
 static void pruss_axis_config( int axis, double step_size, int reverse)

@@ -64,6 +64,7 @@ SOURCES := \
 	traject.c \
 	comm.c \
 	eeprom.c \
+	timestamp.c \
 	$(PROGRAM).c
 
 CC      = $(CROSS_COMPILE)gcc
@@ -171,9 +172,10 @@ pwm.o: pwm.c pwm.h beaglebone.h debug.h
 temp.o: temp.c temp.h beaglebone.h analog.h debug.h mendel.h
 thermistor.o: thermistor.c beaglebone.h thermistor.h
 traject.o: traject.c bebopr.h traject.h pruss_stepper.h algo2cmds.h \
- debug.h beaglebone.h mendel.h
+ debug.h beaglebone.h mendel.h limit_switches.h
 comm.o: comm.c comm.h mendel.h bebopr.h debug.h beaglebone.h
 eeprom.o: eeprom.c beaglebone.h eeprom.h
+timestamp.o: timestamp.c timestamp.h
 mendel.o: mendel.c heater.h temp.h beaglebone.h pwm.h bebopr.h mendel.h \
  gcode_process.h gcode_parse.h limit_switches.h traject.h pruss_stepper.h \
- algo2cmds.h comm.h debug.h
+ algo2cmds.h comm.h debug.h pruss.h timestamp.h
