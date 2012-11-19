@@ -419,7 +419,7 @@ int pruss_write_command_struct( int ix_in, PruCommandUnion* data)
 // Write command structure to PRUSS, wait for free buffer is nescessary
 static int pruss_command( PruCommandUnion* cmd)
 {
-  double t0;
+  double t0 = 0;
   int ix_in = pruss_rd8( IX_IN);
   int ix_out = pruss_rd8( IX_OUT);
   if (DEBUG_PRUSS && (debug_flags & DEBUG_PRUSS)) {
