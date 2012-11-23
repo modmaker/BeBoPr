@@ -18,13 +18,13 @@
 #define ELEV_PRIO	55
 #define NORM_PRIO	50
 
-#define COMM_PRIO	TOP_PRIO	/* keep connection allive at all times */
+#define COMM_PRIO	ELEV_PRIO	/* keep connection allive at all times */
 #define COMM_SCHED	SCHED_FIFO
 
 #define LIMSW_PRIO      TOP_PRIO
 #define LIMSW_SCHED	SCHED_FIFO
 
-#define MENDEL_PRIO     ELEV_PRIO
+#define MENDEL_PRIO     TOP_PRIO
 #define MENDEL_SCHED	SCHED_FIFO
 
 #define HEATER_PRIO	NORM_PRIO
