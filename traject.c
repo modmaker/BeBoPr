@@ -339,7 +339,7 @@ void traject_delta_on_all_axes( traject5D* traject)
   double calc_start = timestamp_get();
   double elapsed_time = calc_start - calc_start_old;
   calc_start_old = calc_start;
-  const double est_calc_time = 0.0350; /* [s] */
+  const double est_calc_time = 0.010; /* [s] */
   queued_time -= elapsed_time;
   if (!pruss_stepper_busy() || queued_time < 0) {
     queued_time = 0;
