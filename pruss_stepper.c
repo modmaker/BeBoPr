@@ -6,6 +6,7 @@
 #include <string.h> 
 #include <sched.h>
 #include <unistd.h>
+#include <fcntl.h>
 
 #include "pruss_stepper.h"
 #define PRU_NR		1
@@ -14,6 +15,7 @@
 #include "debug.h"
 #include "bebopr.h"
 #include "timestamp.h"
+#include "eeprom.h"
 
 
 // Generic struct for access to 'command' field for all commands.
@@ -162,13 +164,116 @@ static int pruss_ecap_init( void)
   return 0;
 }
 
+/*
+ * Extract code signature from specified file, return 0 on success, errorcode otherwise.
+ */
+static int get_code_signature( const char* fname, int offset, struct ucode_signature* signature)
+{
+  int error = 0;
+  int fd = open( fname, O_RDONLY);
+  if (fd < 0) {
+    error = 1;		// failed to open file
+  } else {
+    /* Position file read pointer to start of the code */
+    if (offset) {
+      if (lseek( fd, offset, SEEK_SET) < 0) {
+        error = 5;	// code start seek failed
+      }
+    }
+    /* stay compatible with old loader format: allow for leading zero's in file */
+    unsigned int opcode;
+    if (error == 0) {
+      do {
+        if (read( fd, &opcode, sizeof( opcode)) < sizeof( opcode)) {
+          error = 2;	// failed to read non-zero opcode
+          break;
+        }
+      } while (opcode == 0);
+    }
+    /* extract the code signature from the file */
+    if (error == 0) {
+      if (read( fd, signature, sizeof( *signature)) < sizeof( *signature)) {
+        error = 3;	// failed to read proper signature
+      } else if (signature->pruss_magic != PRUSS_MAGIC) {
+        error = 4;	// not a valid code file
+      }
+    }
+  }
+  if (fd >= 0) {
+    close( fd);
+  }
+  return error;		// 0 == valid signature
+}
+
 static int pruss_command( PruCommandUnion* cmd);
 
 int pruss_stepper_init( void)
 {
-  struct ucode_signature signature;
+  // Check for a valid pruss code update file
+  struct ucode_signature fs_signature;
+  const char* fs_fname = UCODE_FILE;
+  const unsigned int fs_offset = 0;
+  int fs_sig_state = get_code_signature( fs_fname, fs_offset, &fs_signature);
+  if (fs_sig_state == 0) {
+    if (debug_flags & DEBUG_PRUSS) {
+      printf( "Valid STEPPER code update found in file '%s' (version %d.%d).\n",
+	      fs_fname, fs_signature.fw_version, fs_signature.fw_revision);
+    }
+  }
+  // Check for valid pruss code in EEPROM
+  struct ucode_signature ee_signature;
+  const char* ee_fname = EEPROM_PATH;
+  const unsigned int ee_offset = eeprom_get_pru_code_offset( PRU_NR);
+  int ee_sig_state = get_code_signature( ee_fname, ee_offset, &ee_signature);
+  if (ee_sig_state == 0) {
+    if (debug_flags & DEBUG_PRUSS) {
+      printf( "Valid STEPPER code found in EEPROM '%s' (version %d.%d).\n",
+	      ee_fname, ee_signature.fw_version, ee_signature.fw_revision);
+    }
+  }
+  // Fail if neither was found
+  if (fs_sig_state != 0 && ee_sig_state != 0) {
+    fprintf( stderr, "ERROR: no valid STEPPER code was found (status %d.%d)\n",
+	    fs_sig_state, ee_sig_state);
+    return -1;
+  }
+  // Overwrite EEPROM code if an update file is present and it differs
+  if (fs_sig_state == 0) {
+    if (ee_sig_state != 0 || (
+	 (ee_signature.fw_version != fs_signature.fw_version) ||
+	 (ee_signature.fw_revision != fs_signature.fw_revision) ) )
+    {
+      if (debug_flags & DEBUG_PRUSS) {
+	printf( "*** Start EEPROM update, this may take a while! ****\n");
+      }
+      int result = eeprom_write_pru_code( ee_fname, PRU_NR, fs_fname);
+      if (result == 0) {
+        if (debug_flags & DEBUG_PRUSS) {
+          printf( "*** EEPROM updated successfull, restart the application! ****\n");
+	}
+      } else {
+	fprintf( stderr, "*** ERROR: EEPROM code update failed! ****\n");
+      }
+      return -1;		// Don't commence, require a restart
+    }
+  }
 
-  if (pruss_init( UCODE_FILE, 0, &signature) < 0) {
+  const char* code_fname;
+  int code_offset;
+  if (ee_sig_state == 0) {
+    // use code from EEPROM
+    code_fname = ee_fname;
+    code_offset = ee_offset;
+  } else {
+    // use code from file
+    code_fname = fs_fname;
+    code_offset = fs_offset;
+  }
+  if (debug_flags & DEBUG_PRUSS) {
+    printf( "Loading microcode from '%s'\n", code_fname);
+  }
+  struct ucode_signature signature;
+  if (pruss_init( code_fname, code_offset, &signature) < 0) {
     return -1;
   }
   if (signature.ucode_magic == UCODE_MAGIC && signature.fw_version == FW_VERSION) {
@@ -180,13 +285,14 @@ int pruss_stepper_init( void)
     if (signature.ucode_magic == UCODE_MAGIC) {
       // This is stepper code, must be an incompatible version
       fprintf( stderr, "ERROR: the code in file '%s' (version %d.%d) is not compatible with this version %d.x!\n",
-	      UCODE_FILE, signature.fw_version, signature.fw_revision, FW_VERSION);
+	      code_fname, signature.fw_version, signature.fw_revision, FW_VERSION);
     } else {
       // This is not stepper code.
-      fprintf( stderr, "ERROR: the code in file '%s' is not STEPPER firmware!\n", UCODE_FILE);
+      fprintf( stderr, "ERROR: the code in file '%s' is not STEPPER firmware!\n", code_fname);
     }
     return -1;
   }
+
   if (pruss_ecap_init() < 0) {
     return -1;
   }
