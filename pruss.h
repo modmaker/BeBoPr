@@ -74,8 +74,8 @@ extern void pruss_wr8( unsigned int addr, uint8_t data);
 
 extern int locate_pruss_device( const char* driver_name, char* drv_name, int drv_name_len, char* uio_name, int uio_name_len);
 extern int map_device( const char* uio_name);
-extern int pruss_load_code( const char* fname, unsigned int* start_addr, struct ucode_signature* signature);
-extern int pruss_init( const char* ucodename, struct ucode_signature* signature);
+extern int pruss_load_code( const char* fname, unsigned int offset, unsigned int* start_addr, struct ucode_signature* signature);
+extern int pruss_init( const char* ucodename, unsigned int offset, struct ucode_signature* signature);
 extern void pruss_wait_for_halt( void);
 extern int pruss_dump_state( void);
 extern int pruss_halt_pruss( void);

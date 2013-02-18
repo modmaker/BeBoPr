@@ -366,19 +366,27 @@ void pruss_wr8( unsigned int addr, uint8_t data)
 
 #define VERBOSE 0
 
-int pruss_load_code( const char* fname, unsigned int* start_addr, struct ucode_signature* signature)
+int pruss_load_code( const char* fname, unsigned int offset, unsigned int* start_addr, struct ucode_signature* signature)
 {
   int count;
-  int fd = open( fname, O_RDONLY);
   unsigned int opcode;
   unsigned int address;
   unsigned int data;
   int skip_zeros;
   int error = 0;
 
+  int fd = open( fname, O_RDONLY);
   if (fd < 0) {
     perror( "Cannot open microcode file.\n");
     return -1;
+  }
+  /* Position file read pointer to start of the code */
+  if (offset) {
+    if (lseek( fd, offset, SEEK_SET) < 0) {
+      close( fd);
+      perror( "Cannot lseek microcode file.\n");
+      return -1;
+    }
   }
   for (address = 0, skip_zeros = 1 ; address < 8192 ; address += 4) {
     count = read( fd, &opcode, sizeof( opcode));
@@ -403,15 +411,16 @@ int pruss_load_code( const char* fname, unsigned int* start_addr, struct ucode_s
         close( fd);
         return -1;
       }
-      lseek( fd, address + 4, SEEK_SET);
+      lseek( fd, offset + address + 4, SEEK_SET);
     }
     pruss_wr32( PRUSS_IRAM_OFFSET + address, opcode);
     if (VERBOSE) {
       printf( "IRAM%d+%d <= 0x%08x\n", PRU_NR, address, opcode);
     }
   }
+  /* Reposition file read pointer to the start of the code */
+  lseek( fd, offset, SEEK_SET);
   /*  Verify contents of instruction RAM with file */
-  lseek( fd, 0, SEEK_SET);
   for (address = 0 ; address < 8192 ; address += 4) {
     count = read( fd, &opcode, sizeof( opcode));
     if (count < 4) {
@@ -448,7 +457,7 @@ int pruss_halt_pruss( void)
   return 0;
 }
 
-int pruss_init( const char* ucodename, struct ucode_signature* signature)
+int pruss_init( const char* ucodename, unsigned int offset, struct ucode_signature* signature)
 {
   char uio_name[ NAME_MAX];
   char drv_name[ NAME_MAX];
@@ -513,12 +522,15 @@ int pruss_init( const char* ucodename, struct ucode_signature* signature)
   pruss_wr32( PRUSS_PRU_CTRL_CYCLE, 0);
   pruss_wr32( PRUSS_PRU_CTRL_STALL, 0);
 
+  // Load PRUSS code
   if (debug_flags & DEBUG_PRUSS) {
     printf( "Loading microcode from file '%s'\n", ucodename);
   }
-  if (pruss_load_code( ucodename, (start_addr_arg) ? NULL : &start_addr, signature) < 0) {
+  if (pruss_load_code( ucodename, offset, (start_addr_arg) ? NULL : &start_addr, signature) < 0) {
     return -1;
   }
+
+  // Clear/init memory and registers
   if (debug_flags & DEBUG_PRUSS) {
     printf( "Clearing register space...\n");
   }

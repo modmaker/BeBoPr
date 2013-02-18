@@ -168,7 +168,7 @@ int pruss_stepper_init( void)
 {
   struct ucode_signature signature;
 
-  if (pruss_init( UCODE_FILE, &signature) < 0) {
+  if (pruss_init( UCODE_FILE, 0, &signature) < 0) {
     return -1;
   }
   if (signature.ucode_magic == UCODE_MAGIC && signature.fw_version == FW_VERSION) {
