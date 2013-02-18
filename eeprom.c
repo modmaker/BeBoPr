@@ -11,7 +11,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#include "beaglebone.h"
+#include "bebopr.h"
 #include "eeprom.h"
 
 
