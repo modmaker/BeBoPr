@@ -1,6 +1,6 @@
 /*
  * compile with:
- *	ARCH=arm arm-arago-linux-gnueabi-gcc eeprom-decode.c -o eeprom-decode
+ *	ARCH=arm ${CROSS_COMPILE}gcc -std=c99 eeprom.c -DSTAND_ALONE -o eeprom-tool
  */
 
 
@@ -11,6 +11,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <stddef.h>
+#include <stdlib.h>
 
 #include "bebopr.h"
 #include "eeprom.h"
@@ -224,15 +225,57 @@ done:
   return result;
 }
 
+//----------------------------------------------------------------
 #ifdef STANDALONE
+//----------------------------------------------------------------
+
+
+void usage( void)
+{
+  printf( "Usage:\n");
+  printf( " -p<pru-nr> -f<filename>\n");
+  printf( " -s<flagnr>\n");
+  printf( " -c<flagnr>\n");
+  exit( 1);
+}
 
 int main( int argc, char* argv[])
 {
+  int c;
+  unsigned int pru_nr = 1;	// default PRU nr
+  char fname[ 250] = { 0 };
+
+  while ((c = getopt( argc, argv, "p:f:c:s:")) != -1) {
+    switch (c) {
+    case 'p':	// set pru nr
+      pru_nr = atoi( optarg);
+      break;
+    case 'f':	// set filename
+      strncpy( fname, optarg, sizeof( fname) - 1);
+      break;
+    case 'c':	// clear flag
+      break;
+    case 's':	// set flag
+      break;
+    default:
+      usage();
+    }
+  }
+  if (optind < argc) {
+    usage();
+  }
+  if (*fname) {
+    printf( "Writing code from file '%s' for PRU%d to EEPROM.\n(this may take a while!\n", fname, pru_nr);
+    int result = eeprom_write_pru_code( EEPROM_PATH, pru_nr, fname);
+  }
+
+#if 0
   int result = eeprom_get_step_io_config( EEPROM_PATH);
   printf( "Current EEPROM step_io_config value is: 0x%02x (%d)\n", result, result);
   result = eeprom_set_step_io_config( EEPROM_PATH, TB6560_DRIVERS);
   result = eeprom_get_step_io_config( EEPROM_PATH);
   printf( "New EEPROM step_io_config value is: 0x%02x (%d)\n", result, result);
+#endif
   return 0;
 }
 
