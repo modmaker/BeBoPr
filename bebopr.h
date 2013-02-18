@@ -1,6 +1,8 @@
 #ifndef _BEBOPR_H
 #define _BEBOPR_H
 
+/* Define the file that contains the (new) stepper code for the PRUSS */
+#define UCODE_FILE "stepper.bin"
 /* Where to find the BeBoPr's EEPROM: */
 #define EEPROM_PATH "/sys/class/i2c-adapter/i2c-3/3-0054/eeprom"
 

@@ -162,15 +162,13 @@ static int pruss_ecap_init( void)
   return 0;
 }
 
-#define UCODENAME "stepper.bin"
-
 static int pruss_command( PruCommandUnion* cmd);
 
 int pruss_stepper_init( void)
 {
   struct ucode_signature signature;
 
-  if (pruss_init( UCODENAME, &signature) < 0) {
+  if (pruss_init( UCODE_FILE, &signature) < 0) {
     return -1;
   }
   if (signature.ucode_magic == UCODE_MAGIC && signature.fw_version == FW_VERSION) {
@@ -182,10 +180,10 @@ int pruss_stepper_init( void)
     if (signature.ucode_magic == UCODE_MAGIC) {
       // This is stepper code, must be an incompatible version
       fprintf( stderr, "ERROR: the code in file '%s' (version %d.%d) is not compatible with this version %d.x!\n",
-	      UCODENAME, signature.fw_version, signature.fw_revision, FW_VERSION);
+	      UCODE_FILE, signature.fw_version, signature.fw_revision, FW_VERSION);
     } else {
       // This is not stepper code.
-      fprintf( stderr, "ERROR: the code in file '%s' is not STEPPER firmware!\n", UCODENAME);
+      fprintf( stderr, "ERROR: the code in file '%s' is not STEPPER firmware!\n", UCODE_FILE);
     }
     return -1;
   }
