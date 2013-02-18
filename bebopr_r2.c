@@ -165,7 +165,7 @@ int bebopr_pre_init( void)
     fprintf( stderr, "heater_config failed!\n");
     goto done;
   }
-  result = get_step_io_config( EEPROM_PATH);
+  result = eeprom_get_step_io_config( EEPROM_PATH);
   // Only differentiate between Pololu and TB6560, default to Pololu
   if (result == TB6560_DRIVERS) {
     use_pololu_drivers = 0;
