@@ -64,7 +64,7 @@ static int map_device_l2( const char* path, struct uio_dev_info* info)
   snprintf( buffer, sizeof( buffer), "%s/addr", path);
   fd = open( buffer, O_RDONLY );
   if (fd < 0) {
-    perror( "    Cannot open UIO map 'addr' descriptor file.\n");
+    perror( "    Cannot open UIO map 'addr' descriptor file");
     return -1;
   }
   read( fd, buffer2, sizeof( buffer2));
@@ -74,7 +74,7 @@ static int map_device_l2( const char* path, struct uio_dev_info* info)
   snprintf( buffer, sizeof( buffer), "%s/size", path);
   fd = open( buffer, O_RDONLY );
   if (fd < 0) {
-    perror( "    Cannot open UIO map 'size' descriptor file.\n");
+    perror( "    Cannot open UIO map 'size' descriptor file");
     return -1;
   }
   read( fd, buffer2, sizeof( buffer2));
@@ -84,7 +84,7 @@ static int map_device_l2( const char* path, struct uio_dev_info* info)
   snprintf( buffer, sizeof( buffer), "%s/offset", path);
   fd = open( buffer, O_RDONLY );
   if (fd < 0) {
-    perror( "    Cannot open UIO map 'offset' descriptor file.\n");
+    perror( "    Cannot open UIO map 'offset' descriptor file");
     return -1;
   }
   read( fd, buffer2, sizeof( buffer2));
@@ -377,14 +377,14 @@ int pruss_load_code( const char* fname, unsigned int offset, unsigned int* start
 
   int fd = open( fname, O_RDONLY);
   if (fd < 0) {
-    perror( "Cannot open microcode file.\n");
+    perror( "Cannot open STEPPER code file");
     return -1;
   }
   /* Position file read pointer to start of the code */
   if (offset) {
     if (lseek( fd, offset, SEEK_SET) < 0) {
       close( fd);
-      perror( "Cannot lseek microcode file.\n");
+      perror( "Cannot lseek STEPPER code file");
       return -1;
     }
   }
@@ -403,7 +403,7 @@ int pruss_load_code( const char* fname, unsigned int offset, unsigned int* start
       /* Check code signature */
       count = read( fd, signature, sizeof( *signature));
       if (count != sizeof( *signature)) {
-        fprintf( stderr, "Short read on microcode signature!\n");
+        fprintf( stderr, "Short read on STEPPER code signature!\n");
         break;
       }
       if (signature->pruss_magic != PRUSS_MAGIC) {
@@ -524,7 +524,7 @@ int pruss_init( const char* ucodename, unsigned int offset, struct ucode_signatu
 
   // Load PRUSS code
   if (debug_flags & DEBUG_PRUSS) {
-    printf( "Loading microcode from file '%s'\n", ucodename);
+    printf( "Loading STEPPER code from file '%s'\n", ucodename);
   }
   if (pruss_load_code( ucodename, offset, (start_addr_arg) ? NULL : &start_addr, signature) < 0) {
     return -1;
@@ -571,7 +571,7 @@ int pruss_is_halted( void)
 void pruss_wait_for_halt( void)
 {
   do {
-    // The microcode is running, wait for HALT
+    // The STEPPER code may still be running, wait for HALT
   } while (!pruss_is_halted());
 }
 

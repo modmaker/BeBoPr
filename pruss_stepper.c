@@ -270,21 +270,28 @@ int pruss_stepper_init( void)
     code_offset = fs_offset;
   }
   if (debug_flags & DEBUG_PRUSS) {
-    printf( "Loading microcode from '%s'\n", code_fname);
+    printf( "Will load STEPPER code for PRU%d from '%s'\n", PRU_NR, code_fname);
   }
   struct ucode_signature signature;
   if (pruss_init( code_fname, code_offset, &signature) < 0) {
+    // Generate some stdout output too!
+    if (debug_flags & DEBUG_PRUSS) {
+      printf( "PRUSS initialization failed!\n");
+    }
     return -1;
   }
+  /*
+   * TODO: due to the new loading from either file or EEPROM, there is some redundancy here!
+   */
   if (signature.ucode_magic == UCODE_MAGIC && signature.fw_version == FW_VERSION) {
     if (debug_flags & DEBUG_PRUSS) {
-      printf( "Valid STEPPER microcode found (version %d.%d).\n",
-	      signature.fw_version, signature.fw_revision);
+      printf( "PRU%d now contains STEPPER code version %d.%d.\n",
+	      PRU_NR, signature.fw_version, signature.fw_revision);
     }
   } else {
     if (signature.ucode_magic == UCODE_MAGIC) {
       // This is stepper code, must be an incompatible version
-      fprintf( stderr, "ERROR: the code in file '%s' (version %d.%d) is not compatible with this version %d.x!\n",
+      fprintf( stderr, "ERROR: the STEPPER code in file '%s' (version %d.%d) is not compatible with our version (%d.x)!\n",
 	      code_fname, signature.fw_version, signature.fw_revision, FW_VERSION);
     } else {
       // This is not stepper code.
