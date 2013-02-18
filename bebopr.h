@@ -1,8 +1,6 @@
 #ifndef _BEBOPR_H
 #define _BEBOPR_H
 
-// Define the frequency of the PRUSS clock
-#define PRUSS_CLOCK	200.0E6
 /* Where to find the BeBoPr's EEPROM: */
 #define EEPROM_PATH "/sys/class/i2c-adapter/i2c-3/3-0054/eeprom"
 

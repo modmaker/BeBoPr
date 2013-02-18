@@ -56,6 +56,9 @@
 #define SI2POS( x) (int32_t)(1.0E9 * (x))
 #define POS2SI( x) (double)(1.0E-9 * (x))
 
+// Define the frequency of the PRUSS clock
+#define PRUSS_CLOCK	200.0E6
+
 typedef const char* channel_tag;
 static inline const char* tag_name( channel_tag tag) { return (char*)tag; }
 
