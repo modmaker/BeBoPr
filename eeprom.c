@@ -133,7 +133,88 @@ unsigned int eeprom_get_pru_code_offset( int pru_nr)
 }
 
 /*
+ *  Write the datablock determined by 'data' and 'datacount' into EEPROM at the specified offset.
+ *
+ *  NOTE: This is rather slow, measurements show that with a I2C bus
+ *        operating at 100 kHz, every 20 ms one word is written.
+ *        So 2k words written at 50 Hz takes around 41 seconds.
+ */
+int eeprom_write_block( const char* eeprom_path, uint8* data, unsigned int datacount, unsigned int offset)
+{
+  int result;
+  int ee_fd = -1;
+  int i;
+  // Open destination (EEPROM) file at specified offset for writing
+  ee_fd = open( eeprom_path, O_WRONLY);
+  if (ee_fd < 0) {
+    perror( "Failed to open EEPROM for writing");
+    result = -1;
+    goto done;
+  }
+  result = lseek( ee_fd, offset, SEEK_SET);
+  if (result < 0 || result != offset) {
+    perror( "Failed to lseek EEPROM");
+    result = -1;
+    goto done;
+  }
+  //  Write data to EEPROM
+  unsigned int chunksize = 4;
+  for (i = 0 ; i < datacount ; i += chunksize) {
+    if (i > datacount - chunksize) {
+      chunksize = datacount - i;
+    }
+    count = write( ee_fd, data, chunksize);
+    if (count != chunksize) {
+      perror( "Failed to write to EEPROM");
+      if (count >= 0) {
+        fprintf( stderr, "Short write (%d) at byte %d.\n", count, i);
+      }
+      result = -1;
+      goto done;
+    }
+  }
+  //  Verify EEPROM contents against data
+  close( ee_fd);
+  ee_fd = open( eeprom_path, O_RDONLY);
+  if (ee_fd < 0) {
+    perror( "Failed to open EEPROM for reading");
+    result = -1;
+    goto done;
+  }
+  result = lseek( ee_fd, offset, SEEK_SET);
+  for (i = 0 ; i < datacount ; ++i) {
+    uint8_t ee_data;
+    int count = read( ee_fd, &ee_data, sizeof( ee_data));
+    if (count != sizeof( ee_data)) {
+      perror( "Failed to read from EEPROM");
+      if (count >= 0) {
+        fprintf( stderr, "Short read (%d) at byte %d.\n", count, i);
+      }
+      result = -1;
+      goto done;
+    }
+    if (ee_data != data[ i]) {
+      fprintf( stderr, "EEPROM verification failed at opcode[%d]: is %02x, should be %02x.\n",
+              i, ee_data, data[ i]);
+      result = -1;
+      goto done;
+    }
+  }
+  // Success
+  result = 0;
+done:
+  if (ee_fd >= 0) {
+    close( ee_fd);
+  }
+  return result;
+}
+
+/*
  *  Write the file specified by fname to a pru code block in EEPROM.
+ *
+ *  NOTE: This is rather slow, measurements show that with a I2C bus
+ *        operating at 100 kHz, every 20 ms one word is written.
+ *        So 2k words written at 50 Hz takes around 41 seconds.
  */
 int eeprom_write_pru_code( const char* eeprom_path, int pru_nr, const char* fname)
 {
@@ -141,6 +222,7 @@ int eeprom_write_pru_code( const char* eeprom_path, int pru_nr, const char* fnam
   int result;
   int ee_fd = -1;
   int fs_fd = -1;
+  int i;
   // Open destination (EEPROM) file at specified offset for writing
   ee_fd = open( eeprom_path, O_WRONLY);
   if (ee_fd < 0) {
@@ -165,7 +247,7 @@ int eeprom_write_pru_code( const char* eeprom_path, int pru_nr, const char* fnam
     goto done;
   }
   //  Write contents of file to EEPROM
-  for (int i = 0 ; i < 2048 ; ++i) {
+  for (i = 0 ; i < 2048 ; ++i) {
     uint32_t opcode;
     int count = read( fs_fd, &opcode, sizeof( opcode));
     if (count != sizeof( opcode)) {
@@ -190,7 +272,7 @@ int eeprom_write_pru_code( const char* eeprom_path, int pru_nr, const char* fnam
     goto done;
   }
   result = lseek( ee_fd, offset, SEEK_SET);
-  for (int i = 0 ; i < 2048 ; ++i) {
+  for (i = 0 ; i < 2048 ; ++i) {
     uint32_t ee_opcode;
     uint32_t fs_opcode;
     int count = read( fs_fd, &fs_opcode, sizeof( fs_opcode));
