@@ -1,6 +1,14 @@
 /*
+ * This file contains the EEPROM contents definition for the BeBoPr and
+ * interfaces to manipulate the contents.
+ *
+ * The first 244 bytes of the EEPROM are defined by the BeagleBone TRM and
+ * are used to configure the BeagleBone I/O properly during kernel start.
+ * The remainder is used by the BeBoPr to store flags and PRU code.
+ *
+ * This code can be compiled in STANDALONE mode to generated a commandline tool:
  * compile with:
- *	ARCH=arm ${CROSS_COMPILE}gcc -std=c99 eeprom.c -DSTAND_ALONE -o eeprom-tool
+ *	ARCH=arm ${CROSS_COMPILE}gcc -std=c99 eeprom.c -DSTANDALONE -o eeprom-tool
  */
 
 
@@ -51,78 +59,16 @@ struct pru_code_block {
 
 struct eeprom {
   union bone_cape_io_config cape_io_config;
-  uint8_t                   step_io_config;
-  uint8_t                   reserved[ 11];
+  uint8_t                   flags[ 12];
   struct pru_code_block     pru0_code;
   struct pru_code_block     pru1_code;
 };
 
-int eeprom_get_step_io_config( const char* eeprom_path)
-{
-  uint8_t step_io_config;
-  int fd = open( eeprom_path, O_RDONLY);
-  int result;
-  if (fd < 0) {
-    perror( "Failed to open EEPROM for reading");
-    result = -1;
-    goto done;
-  }
-  result = lseek( fd, offsetof( struct eeprom, step_io_config), SEEK_SET);
-  if (result < 0) {
-    perror( "Failed to lseek EEPROM");
-    result = -1;
-    goto done;
-  }
-  int cnt = read( fd, &step_io_config, sizeof( step_io_config));
-  if (cnt < 0) {
-    perror( "Failed to read EEPROM");
-    result = -1;
-    goto done;
-  } else if (cnt != sizeof( step_io_config)) {
-    // short write ?
-    result = -1;
-    goto done;
-  }
-  result = step_io_config;
-done:
-  close( fd);
-  return result;
-}
+//----------------------------------------------------------------
 
+#define member_size( type, member) sizeof( ((type *)0)->member)
 
-int eeprom_set_step_io_config( const char* eeprom_path, uint8_t value)
-{
-  uint8_t step_io_config = value;
-  int fd = open( eeprom_path, O_WRONLY);
-  int result;
-  if (fd < 0) {
-    perror( "Failed to open EEPROM for writing");
-    result = -1;
-    goto done;
-  }
-  result = lseek( fd, offsetof( struct eeprom, step_io_config), SEEK_SET);
-  if (result < 0) {
-    perror( "Failed to lseek EEPROM");
-    result = -1;
-    goto done;
-  }
-  int cnt = write( fd, &step_io_config, sizeof( step_io_config));
-  if (cnt < 0) {
-    perror( "Failed to read EEPROM");
-    result = -1;
-    goto done;
-  } else if (cnt != sizeof( step_io_config)) {
-    // short write ?
-    result = -1;
-    goto done;
-  }
-  result = 0;
-done:
-  close( fd);
-  return result;
-}
-
-unsigned int eeprom_get_pru_code_offset( int pru_nr)
+unsigned int eeprom_get_pru_code_offset( unsigned int pru_nr)
 {
   unsigned int offset = 0;
   switch (pru_nr) {
@@ -132,6 +78,36 @@ unsigned int eeprom_get_pru_code_offset( int pru_nr)
   return offset;
 }
 
+unsigned int eeprom_get_flag_offset( unsigned int flag_nr)
+{
+  // always return a legal offset, even for a bad flag_nr value!
+  unsigned int offset = offsetof( struct eeprom, flags);
+  if (flag_nr < member_size( struct eeprom, flags)) {
+    offset += flag_nr;
+  }
+  return offset;
+}
+
+int eeprom_read_byte( const char* eeprom_path, uint8_t* data, unsigned int offset)
+{
+  int ee_fd = open( eeprom_path, O_RDONLY);
+  if (ee_fd < 0) {
+    perror( "Failed to open EEPROM for reading");
+    return -1;
+  }
+  if (lseek( ee_fd, offset, SEEK_SET) < 0) {
+    perror( "Failed to seek EEPROM");
+    return -1;
+  }
+  int count = read( ee_fd, data, 1);
+  if (count != 1) {
+    perror( "Failed to read from EEPROM");
+    fprintf( stderr, "Failed to read single byte at offset %d from EEPROM\n", offset);
+    return -1;
+  }
+  return 0;
+}
+
 /*
  *  Write the datablock determined by 'data' and 'datacount' into EEPROM at the specified offset.
  *
@@ -139,7 +115,7 @@ unsigned int eeprom_get_pru_code_offset( int pru_nr)
  *        operating at 100 kHz, every 20 ms one word is written.
  *        So 2k words written at 50 Hz takes around 41 seconds.
  */
-int eeprom_write_block( const char* eeprom_path, uint8* data, unsigned int datacount, unsigned int offset)
+int eeprom_write_block( const char* eeprom_path, uint8_t* data, unsigned int datacount, unsigned int offset)
 {
   int result;
   int ee_fd = -1;
@@ -158,12 +134,12 @@ int eeprom_write_block( const char* eeprom_path, uint8* data, unsigned int datac
     goto done;
   }
   //  Write data to EEPROM
-  unsigned int chunksize = 4;
+  unsigned int chunksize = 16;
   for (i = 0 ; i < datacount ; i += chunksize) {
     if (i > datacount - chunksize) {
       chunksize = datacount - i;
     }
-    count = write( ee_fd, data, chunksize);
+    int count = write( ee_fd, &data[ i], chunksize);
     if (count != chunksize) {
       perror( "Failed to write to EEPROM");
       if (count >= 0) {
@@ -216,29 +192,12 @@ done:
  *        operating at 100 kHz, every 20 ms one word is written.
  *        So 2k words written at 50 Hz takes around 41 seconds.
  */
-int eeprom_write_pru_code( const char* eeprom_path, int pru_nr, const char* fname)
+int eeprom_write_pru_code( const char* eeprom_path, unsigned int pru_nr, const char* fname)
 {
   unsigned int offset = eeprom_get_pru_code_offset( pru_nr);
   int result;
-  int ee_fd = -1;
   int fs_fd = -1;
-  int i;
-  // Open destination (EEPROM) file at specified offset for writing
-  ee_fd = open( eeprom_path, O_WRONLY);
-  if (ee_fd < 0) {
-    perror( "Failed to open EEPROM for writing");
-    result = -1;
-    goto done;
-  }
-  result = lseek( ee_fd, offset, SEEK_SET);
-  if (result < 0) {
-    perror( "Failed to lseek EEPROM");
-    result = -1;
-    goto done;
-  }
-  if (result != offset) {
-    fprintf( stderr, "lseek returned position %d\n", result);
-  }
+  uint32_t data[ 2048];		// PRU instruction memory size
   // Open source file for reading
   fs_fd = open( fname, O_RDONLY);
   if (fs_fd < 0) {
@@ -246,53 +205,17 @@ int eeprom_write_pru_code( const char* eeprom_path, int pru_nr, const char* fnam
     result = -1;
     goto done;
   }
-  //  Write contents of file to EEPROM
-  for (i = 0 ; i < 2048 ; ++i) {
-    uint32_t opcode;
-    int count = read( fs_fd, &opcode, sizeof( opcode));
-    if (count != sizeof( opcode)) {
-      // No more data (or some other failure), clear EEPROM location
-      opcode = 0xFFFFFFFF;
-    }
-    count = write( ee_fd, &opcode, sizeof( opcode));
-    if (count != sizeof( opcode)) {
-      perror( "Failed to write to EEPROM");
-      fprintf( stderr, "Failed to write opcode[%d] to EEPROM\n", i);
-      result = -1;
-      goto done;
-    }
-  }
-  //  Verify EEPROM contents with file
-  result = lseek( fs_fd, 0, SEEK_SET);
-  close( ee_fd);
-  ee_fd = open( eeprom_path, O_RDONLY);
-  if (ee_fd < 0) {
-    perror( "Failed to open EEPROM for reading");
+  memset( &data, 0xFF, sizeof( data));
+  int datacount = read( fs_fd, &data, sizeof( data));
+  if (datacount < 0) {
+    perror( "Failed to read from file");
     result = -1;
     goto done;
   }
-  result = lseek( ee_fd, offset, SEEK_SET);
-  for (i = 0 ; i < 2048 ; ++i) {
-    uint32_t ee_opcode;
-    uint32_t fs_opcode;
-    int count = read( fs_fd, &fs_opcode, sizeof( fs_opcode));
-    if (count != sizeof( fs_opcode)) {
-      // No more data (or some other failure), clear EEPROM location
-      fs_opcode = 0xFFFFFFFF;
-    }
-    count = read( ee_fd, &ee_opcode, sizeof( ee_opcode));
-    if (count != sizeof( ee_opcode)) {
-      perror( "Failed to read from EEPROM");
-      fprintf( stderr, "Failed to read opcode[%d] from EEPROM\n", i);
-      result = -1;
-      goto done;
-    }
-    if (ee_opcode != fs_opcode) {
-      fprintf( stderr, "EEPROM verification failed at opcode[%d]: is %08x, should be %08x.\n",
-              i, ee_opcode, fs_opcode);
-      result = -1;
-      goto done;
-    }
+  result = eeprom_write_block( eeprom_path, (void*)data, (unsigned)datacount, offset);
+  if (result < 0) {
+    result = -1;
+    goto done;
   }
   // Success
   result = 0;
@@ -301,64 +224,177 @@ done:
   if (fs_fd >= 0) {
     close( fs_fd);
   }
-  if (ee_fd >= 0) {
-    close( ee_fd);
-  }
   return result;
+}
+
+//----------------------------------------------------------------
+
+int eeprom_write_flag( const char* eeprom_path, unsigned int flag_nr, uint8_t value)
+{
+  unsigned int offset = eeprom_get_flag_offset( flag_nr);
+  return eeprom_write_block( eeprom_path, &value, 1, offset);
+}
+
+int eeprom_read_flag( const char* eeprom_path, unsigned int flag_nr, uint8_t* value)
+{
+  unsigned int offset = eeprom_get_flag_offset( flag_nr);
+  return eeprom_read_byte( eeprom_path, value, offset);
+}
+
+//----------------------------------------------------------------
+
+int eeprom_get_step_io_config( const char* eeprom_path)
+{
+  uint8_t step_io_config;
+  int result = eeprom_read_flag( eeprom_path, 0, &step_io_config);	// (old) io_config is (new) flag[ 0]
+  if (result < 0) {
+    return result;
+  }
+  return step_io_config;
+}
+
+int eeprom_set_step_io_config( const char* eeprom_path, uint8_t step_io_config)
+{
+  return eeprom_write_flag( eeprom_path, 0, step_io_config);		// (old) io_config is (new) flag[ 0]
 }
 
 //----------------------------------------------------------------
 #ifdef STANDALONE
 //----------------------------------------------------------------
 
+static void eeprom_dump( const char* eeprom_path, unsigned int offset, unsigned int bytecount, unsigned int wordsize)
+{
+  int i;
+  int ee_fd = open( eeprom_path, O_RDONLY);
+  if (ee_fd < 0) {
+    perror( "Failed to open EEPROM for reading");
+    return;
+  }
+  int result = lseek( ee_fd, offset, SEEK_SET);
+  int rowsize = (wordsize == 4) ? 32 : 16;
+  for (i = 0 ; i < bytecount ; i += wordsize) {
+    uint32_t ee_code;
+    int count = read( ee_fd, &ee_code, wordsize);
+    if (count != wordsize) {
+      perror( "Failed to read from EEPROM");
+      fprintf( stderr, "Failed to read %d bytes @ %d from EEPROM\n", wordsize, i);
+      result = -1;
+      break;
+    }
+    if (i % rowsize == 0) {
+      printf( "%06x:", offset + i);
+    }
+    switch (wordsize) {
+    case 2:  printf( " %04x", ee_code); break;   
+    case 4:  printf( " %08x", ee_code); break;   
+    default: printf( " %02x", ee_code);
+    }
+    if (i % rowsize >= rowsize - wordsize || i >= bytecount - wordsize) {
+      printf( "\n");
+    }
+  }
+}
 
-void usage( void)
+static void eeprom_flag_dump( const char* eeprom_path, unsigned int flag_nr)
+{
+  unsigned int offset = eeprom_get_flag_offset( flag_nr);
+  eeprom_dump( eeprom_path, offset, 1, 1);
+}
+
+static void eeprom_code_dump( const char* eeprom_path, unsigned int pru_nr)
+{
+  unsigned int offset = eeprom_get_pru_code_offset( pru_nr);
+  eeprom_dump( eeprom_path, offset, 8192, 4);
+}
+
+
+static void usage( void)
 {
   printf( "Usage:\n");
-  printf( " -p<pru-nr> -f<filename>\n");
-  printf( " -s<flagnr>\n");
-  printf( " -c<flagnr>\n");
+  printf( " -w -p<pru_nr> <filename>\n");
+  printf( " -w -f<flag_nr> <flag_value>\n");
+  printf( " -d -f<flag_nr>\n");
+  printf( " -d -p<pru_nr>\n");
+  printf( " with <flag_nr> in range 0..11\n");
+  printf( " with <pru_nr> in range 0..1\n");
   exit( 1);
 }
 
 int main( int argc, char* argv[])
 {
+  int pru_nr = -1;
+  int flag_nr = -1;
+  enum { e_null, e_write, e_dump } mode = e_null;
   int c;
-  unsigned int pru_nr = 1;	// default PRU nr
-  char fname[ 250] = { 0 };
 
-  while ((c = getopt( argc, argv, "p:f:c:s:")) != -1) {
+  // parse commandline
+  while ((c = getopt( argc, argv, "wdp:f:")) != -1) {
     switch (c) {
-    case 'p':	// set pru nr
+    case 'w':	// write to EEPROM
+      if (mode != e_null) {
+        goto not_ok;
+      }
+      mode = e_write;
+      break;
+    case 'd':	// dump EEPROM
+      if (mode != e_null) {
+        goto not_ok;
+      }
+      mode = e_dump;
+      break;
+    case 'p':	// specify and validate pru nr
       pru_nr = atoi( optarg);
+      if (pru_nr < 0 || pru_nr > 1) {
+        goto not_ok;
+      }
       break;
-    case 'f':	// set filename
-      strncpy( fname, optarg, sizeof( fname) - 1);
-      break;
-    case 'c':	// clear flag
-      break;
-    case 's':	// set flag
+    case 'f':	// specify and validate flag_nr
+      flag_nr = atoi( optarg);
+      if (flag_nr < 0 || flag_nr >= member_size( struct eeprom, flags)) {
+        goto not_ok;
+      }
       break;
     default:
-      usage();
+      goto not_ok;
     }
   }
-  if (optind < argc) {
-    usage();
+  // execute command
+  if (mode == e_write) {
+    if (pru_nr >= 0 && flag_nr < 0) {
+      // write file to EEPROM
+      if (optind == argc - 1) {
+        eeprom_write_pru_code( EEPROM_PATH, pru_nr, argv[ optind]);
+      } else {
+        goto not_ok;
+      }
+    } else if (flag_nr >= 0 && pru_nr < 0) {
+      // set flag in EEPROM
+      uint8_t flag_value = 0;
+      if (optind == argc - 1) {
+        // no error checking, keep this simple!
+        flag_value = (uint8_t) atoi( argv[ optind]);
+        eeprom_write_flag( EEPROM_PATH, flag_nr, flag_value);
+      } else {
+        goto not_ok;
+      }
+    } else {
+      goto not_ok;
+    }
+  } else if (mode == e_dump) {
+    if (pru_nr >= 0 && flag_nr < 0 && optind == argc) {
+      eeprom_code_dump( EEPROM_PATH, pru_nr);
+   } else if (flag_nr >= 0 && pru_nr < 0 && optind == argc) {
+      eeprom_flag_dump( EEPROM_PATH, flag_nr);
+    } else {
+      goto not_ok;
+    }
+  } else {
+    goto not_ok;
   }
-  if (*fname) {
-    printf( "Writing code from file '%s' for PRU%d to EEPROM.\n(this may take a while!\n", fname, pru_nr);
-    int result = eeprom_write_pru_code( EEPROM_PATH, pru_nr, fname);
-  }
-
-#if 0
-  int result = eeprom_get_step_io_config( EEPROM_PATH);
-  printf( "Current EEPROM step_io_config value is: 0x%02x (%d)\n", result, result);
-  result = eeprom_set_step_io_config( EEPROM_PATH, TB6560_DRIVERS);
-  result = eeprom_get_step_io_config( EEPROM_PATH);
-  printf( "New EEPROM step_io_config value is: 0x%02x (%d)\n", result, result);
-#endif
   return 0;
+
+not_ok:
+  usage();
 }
 
 #endif
