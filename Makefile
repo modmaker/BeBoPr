@@ -147,6 +147,14 @@ install:	all
 		echo "INSTALL: no destination specified" ; \
 	fi
 
+eeprom-tool:	eeprom.c eeprom.h
+	$(CC) eeprom.c -DSTANDALONE -o eeprom-tool
+
+eeprom-tool-install:	eeprom-tool
+	if [ -n "$(TARGET_DIR)" ] ; then \
+		sudo cp eeprom-tool $(TARGET_DIR)/ ; \
+	fi
+
 .PHONY:	all build elf hex eep lss sym program coff extcoff clean depend applet_files install
 
 # DO NOT DELETE THIS LINE -- make depend depends on it.
@@ -172,9 +180,9 @@ pwm.o: pwm.c pwm.h beaglebone.h debug.h
 temp.o: temp.c temp.h beaglebone.h analog.h debug.h mendel.h
 thermistor.o: thermistor.c beaglebone.h thermistor.h
 traject.o: traject.c bebopr.h traject.h pruss_stepper.h algo2cmds.h \
- debug.h beaglebone.h mendel.h limit_switches.h
+ debug.h beaglebone.h mendel.h limit_switches.h timestamp.h
 comm.o: comm.c comm.h mendel.h bebopr.h debug.h beaglebone.h
-eeprom.o: eeprom.c beaglebone.h eeprom.h
+eeprom.o: eeprom.c bebopr.h eeprom.h
 timestamp.o: timestamp.c timestamp.h
 mendel.o: mendel.c heater.h temp.h beaglebone.h pwm.h bebopr.h mendel.h \
  gcode_process.h gcode_parse.h limit_switches.h traject.h pruss_stepper.h \
