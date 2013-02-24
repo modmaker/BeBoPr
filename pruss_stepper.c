@@ -249,7 +249,7 @@ int pruss_stepper_init( void)
       int result = eeprom_write_pru_code( ee_fname, PRU_NR, fs_fname);
       if (result == 0) {
         if (debug_flags & DEBUG_PRUSS) {
-          printf( "*** EEPROM updated successfull, restart the application! ****\n");
+          printf( "*** EEPROM updated successfully, restart the application! ****\n");
 	}
       } else {
 	fprintf( stderr, "*** ERROR: EEPROM code update failed! ****\n");
@@ -257,7 +257,7 @@ int pruss_stepper_init( void)
       return -1;		// Don't commence, require a restart
     }
   }
-
+  // At this point we should have valid PRUSS code (somewhere)...
   const char* code_fname;
   int code_offset;
   if (ee_sig_state == 0) {
