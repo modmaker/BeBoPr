@@ -36,7 +36,7 @@
 DEFS ?=
 #DEFS += -DLASER_CUTTER
 ARCH ?= arm
-CROSS_COMPILE ?= arm-arago-linux-gnueabi-
+CROSS_COMPILE ?= arm-angstrom-linux-gnueabi-
 
 # Name of this Makefile (used for "make depend").
 MAKEFILE = Makefile
