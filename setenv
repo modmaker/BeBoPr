@@ -26,7 +26,7 @@ INIT_DEBUG_FLAGS="DEBUG_TRAJECT + DEBUG_GCODE_PROCESS + DEBUG_PRUSS + DEBUG_COMM
 # Define 'CROSS_PATH' to point to the cross-compiler toolchain or set
 # it to the empty string for native compilation.
 #
-CROSS_PATH=/home/bas/ti-sdk-am335x-evm-05.03.00.00/linux-devkit/bin
+CROSS_PATH=/home/bas/BeagleBone/oe/build/tmp-angstrom_2010_x-eglibc/sysroots/i686-linux/usr/bin/armv7a-angstrom-linux-gnueabi/
 
 #
 # Define 'CROSS_COMPILE' with the cross compiler prefix for gcc.
@@ -34,8 +34,8 @@ CROSS_PATH=/home/bas/ti-sdk-am335x-evm-05.03.00.00/linux-devkit/bin
 # set this to 'arm-arago-linux-gnueabi-'
 # For native compilation set this to an empty string
 #
+export CROSS_COMPILE=arm-angstrom-linux-gnueabi-
 
-export CROSS_COMPILE=arm-arago-linux-gnueabi-
 #
 # Leave the ARCH setting as is, unless you know what you're doing.
 #
