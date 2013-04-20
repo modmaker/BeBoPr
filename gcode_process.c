@@ -81,7 +81,6 @@ static void enqueue_pos( TARGET* target)
       printf( "enqueue_pos( TARGET={%d, %d, %d, %d, %u})\n",
 	       target->X, target->Y, target->Z, target->E, target->F);
     }
-#ifdef PRU_ABS_COORDS
     /* integer positions are in nm ! */ 
     traject5D traj = {
       .x0 = (double)1.0E-9 * (gcode_home_pos.X + gcode_current_pos.X),
@@ -94,16 +93,6 @@ static void enqueue_pos( TARGET* target)
       .e1 = (double)1.0E-9 * (gcode_home_pos.E + target->E),
       .feed = target->F,
     };
-#else
-    /* integer positions are in nm ! */ 
-    traject5D traj = {
-      .dx = (double)1.0E-9 * (target->X - gcode_current_pos.X),
-      .dy = (double)1.0E-9 * (target->Y - gcode_current_pos.Y),
-      .dz = (double)1.0E-9 * (target->Z - gcode_current_pos.Z),
-      .de = (double)1.0E-9 * (target->E - gcode_current_pos.E),
-      .feed = target->F,
-    };
-#endif
     /* make the move */
     traject_delta_on_all_axes( &traj);
     /*
