@@ -364,14 +364,16 @@ void traject_delta_on_all_axes( traject5D* traject)
     }
   }
 
-  int v_change = 0;
+//=====================================================================================
+
+  int v_clipped = 0;
   double vx = dx * recipr_dt;
   if (vx > vx_max) {	  // clip feed !
     if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
       printf( "*** clipping vx (%1.6lf) to vx_max (%1.6lf)\n", vx, vx_max);
     }
     recipr_dt = vx_max / dx;
-    v_change = 1;
+    v_clipped = 1;
   }
   double vy = dy * recipr_dt;
   if (vy > vy_max) {	  // clip feed !
@@ -379,7 +381,7 @@ void traject_delta_on_all_axes( traject5D* traject)
       printf( "*** clipping vy (%1.6lf) to vy_max (%1.6lf)\n", vy, vy_max);
     }
     recipr_dt = vy_max / dy;
-    v_change = 1;
+    v_clipped = 1;
   }
   double vz = dz * recipr_dt;
   if (vz > vz_max) {	  // clip feed !
@@ -387,7 +389,7 @@ void traject_delta_on_all_axes( traject5D* traject)
       printf( "*** clipping vz (%1.6lf) to vz_max (%1.6lf)\n", vz, vz_max);
     }
     recipr_dt = vz_max / dz;
-    v_change = 1;
+    v_clipped = 1;
   }
   double ve = de * recipr_dt;
   if (ve > ve_max) {	  // clip feed !
@@ -395,13 +397,13 @@ void traject_delta_on_all_axes( traject5D* traject)
       printf( "*** clipping ve (%1.6lf) to ve_max (%1.6lf)\n", ve, ve_max);
     }
     recipr_dt = ve_max / de;
-    v_change = 1;
+    v_clipped = 1;
   }
  /*
   * If one or more velocity were limited by its maximum,
   * some of the other values may be incorrect. Recalculate all.
   */
-  if (v_change) {
+  if (v_clipped) {
     if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
       printf( "Velocity changed to %1.3lf [mm/s] and duration to %1.3lf [ms] due to this clipping\n",
 	      SI2MM( distance * recipr_dt), SI2MS( RECIPR( recipr_dt)));
@@ -415,6 +417,11 @@ void traject_delta_on_all_axes( traject5D* traject)
     printf( "Velocities - X: %1.3lf, Y: %1.3lf, Z %1.3lf, E: %1.3lf [mm/s]\n",
 	    SI2MM( vx), SI2MM( vy), SI2MM( vz), SI2MM( ve));
   }
+
+//=====================================================================================
+
+  // TODO: implement global / vector acceleration limit ?
+
  /*
   * For a neat linear move, all ramps must start and end at the same moment
   * and have constant (or at least synchronized) accelation.
