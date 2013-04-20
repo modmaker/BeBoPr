@@ -106,7 +106,7 @@ static inline int queue_dwell( const char* axis_name, double v, double ramp, dou
 static inline int queue_decel( const char* axis_name, double a, double v, double ramp_up, double dwell, double ramp_down,
 			uint32_t nmin, uint32_t c0, uint32_t cmin, double origin)
 {
-  if (v != 0.0 && ramp_up != 0.0) {
+  if (v != 0.0 && ramp_down != 0.0) {
     char aname = *axis_name;
     if (islower( aname)) {
       aname = toupper( aname);
