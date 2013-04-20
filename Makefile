@@ -35,7 +35,6 @@
 
 DEFS ?=
 #DEFS += -DLASER_CUTTER
-#DEFS += -DPRU_ABS_COORDS -DLASER_CUTTER
 ARCH ?= arm
 CROSS_COMPILE ?= arm-arago-linux-gnueabi-
 
