@@ -69,9 +69,6 @@ typedef struct {
   uint8_t		checksum_calculated;	///< checksum we calculated
 } GCODE_COMMAND;
 
-/// the command being processed
-extern GCODE_COMMAND next_target;
-
 /// accept the next character and process it
 void gcode_parse_char(uint8_t c);
 

@@ -39,7 +39,7 @@
 decfloat read_digit;
 
 /// this is where we store all the data for the current command before we work out what to do with it
-GCODE_COMMAND next_target;
+static GCODE_COMMAND next_target;
 
 
 /*
@@ -340,7 +340,7 @@ void gcode_parse_char(uint8_t c) {
 				) {
 				// process
 				serial_writestr_P( "ok ");
-				process_gcode_command();
+				process_gcode_command( &next_target);
 				serial_writechar('\n');
 
 				// expect next line number

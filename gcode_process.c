@@ -155,7 +155,10 @@ void clip_move( axis_e axis, int32_t* pnext_target, int32_t current_pos, int32_t
 	}
 }
 
-void process_gcode_command() {
+static GCODE_COMMAND next_target;
+
+void do_process_gcode_command( void)
+{
 	uint32_t	backup_f;
 
 	if (next_target.seen_F) {
@@ -1092,6 +1095,12 @@ void process_gcode_command() {
 		} // switch (next_target.M)
 	} // else if (next_target.seen_M)
 } // process_gcode_command()
+
+void process_gcode_command( GCODE_COMMAND* target)
+{
+  next_target = *target;	// copy
+  do_process_gcode_command();
+}
 
 int gcode_process_init( void)
 {
