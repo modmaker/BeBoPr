@@ -34,9 +34,8 @@
 ##############################################################################
 
 DEFS ?=
-#DEFS += -DPRU_ABS_COORDS
+#DEFS += -DLASER_CUTTER
 #DEFS += -DPRU_ABS_COORDS -DLASER_CUTTER
-DEFS += -DPRU_ABS_COORDS -DFORCE_STEPPER_CODE_FROM_FILE
 ARCH ?= arm
 CROSS_COMPILE ?= arm-arago-linux-gnueabi-
 

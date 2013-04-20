@@ -9,7 +9,8 @@
 #
 # DEFS passes settings, e.g. '-g' to the compiler.
 #
-export DEFS="-pg -DDEBUG"
+# comment out the following line for non-development systems
+export DEFS="-pg -DDEBUG -DFORCE_STEPPER_CODE_FROM_FILE"
 
 #
 # TARGET_DIR is where you want 'make install' to store the binary.

@@ -6,7 +6,6 @@
 #include "bebopr.h"
 
 typedef struct {
-#ifdef PRU_ABS_COORDS
   double		x0;
   double		y0;
   double		z0;
@@ -15,12 +14,6 @@ typedef struct {
   double		y1;
   double		z1;
   double		e1;
-#else
-  double		dx;
-  double		dy;
-  double		dz;
-  double		de;
-#endif
   uint32_t		feed;
 } traject5D;
 

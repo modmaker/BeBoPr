@@ -76,11 +76,7 @@ static inline int queue_accel( const char* axis_name, double ramp, double a, dou
   return 0;
 }
 
-#ifdef PRU_ABS_COORDS
 #define QUEUE_ACCEL( axis) queue_accel( #axis, ramp_up_d##axis, a##axis, v##axis, n0##axis, c0##axis, cmin##axis, axis##0)
-#else
-#define QUEUE_ACCEL( axis) queue_accel( #axis, ramp_up_d##axis, a##axis, v##axis, n0##axis, c0##axis, cmin##axis, 0)
-#endif
 
 /* ---------------------------------- */
 
@@ -103,11 +99,7 @@ static inline int queue_dwell( const char* axis_name, double v, double ramp, dou
   return 0;
 }
 
-#ifdef PRU_ABS_COORDS
 #define QUEUE_DWELL( axis) queue_dwell( #axis, v##axis, ramp_up_d##axis, dwell_d##axis, cdwell##axis, axis##0)
-#else
-#define QUEUE_DWELL( axis) queue_dwell( #axis, v##axis, ramp_up_d##axis, dwell_d##axis, cdwell##axis, 0)
-#endif
 
 /* ---------------------------------- */
 
@@ -140,13 +132,8 @@ static inline int queue_decel( const char* axis_name, double a, double v, double
   return 0;
 }
 
-#ifdef PRU_ABS_COORDS
 #define QUEUE_DECEL( axis) queue_decel( #axis, a##axis, v##axis, ramp_up_d##axis, dwell_d##axis, ramp_down_d##axis, \
 					nmin##axis, c0##axis, cmin##axis, axis##0)
-#else
-#define QUEUE_DECEL( axis) queue_decel( #axis, a##axis, v##axis, ramp_up_d##axis, dwell_d##axis, ramp_down_d##axis, \
-					nmin##axis, c0##axis, cmin##axis, 0)
-#endif
 
 /* ---------------------------------- */
 
@@ -264,17 +251,10 @@ void traject_delta_on_all_axes( traject5D* traject)
     calc_start_old = timestamp_get();
   }
 
-#ifdef PRU_ABS_COORDS
   double dx = traject->x1 - traject->x0;
   double dy = traject->y1 - traject->y0;
   double dz = traject->z1 - traject->z0;
   double de = traject->e1 - traject->e0;
-#else
-  double dx = traject->dx;
-  double dy = traject->dy;
-  double dz = traject->dz;
-  double de = traject->de;
-#endif
 
   double move_start = timestamp_get();
   if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
@@ -536,12 +516,10 @@ void traject_delta_on_all_axes( traject5D* traject)
 	    SI2MS( queued_time), SI2MS( RECIPR( recipr_t_move)));
   }
 
-#ifdef PRU_ABS_COORDS
   double x0 = traject->x0;
   double y0 = traject->y0;
   double z0 = traject->z0;
   double e0 = traject->e0;
-#endif
 
   int any_move;
 
