@@ -260,6 +260,9 @@ int pruss_stepper_init( void)
   // At this point we should have valid PRUSS code (somewhere)...
   const char* code_fname;
   int code_offset;
+#ifdef FORCE_STEPPER_CODE_FROM_FILE
+  ee_sig_state = 9;
+#endif
   if (ee_sig_state == 0) {
     // use code from EEPROM
     code_fname = ee_fname;
