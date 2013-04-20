@@ -175,18 +175,22 @@ int main ( int argc, const char* argv[])
   printf( "start\nok\n");
   fprintf( stderr, "Starting main loop...\n");
 
+  unsigned int cnt_in = 0;
   for (;;) {
     char s[ 100];
 
-    if (fgets( s, sizeof( s), stdin) == NULL) {
-      fprintf( stderr, "main loop - EOF on input, terminating.\n");
-      normal_exit = 1;
-      exit( EXIT_SUCCESS);
-    } else {
+    if (fgets( s, sizeof( s), stdin)) {
       char* p = s;
       while (*p) {
         gcode_parse_char( *p++);
+        ++cnt_in;
       }
+    } else if (feof( stdin)) {
+      fprintf( stderr, "main loop - EOF on input, terminating after %u characters.\n", cnt_in);
+      normal_exit = 1;
+      exit( EXIT_SUCCESS);
+    } else if (ferror( stdin)) {
+      fprintf( stderr, "main loop - error on input, ignoring.\n");
     }
   }
 }

@@ -23,8 +23,6 @@
  * how to keep the socat connection alive otherwise
  */
 
-static struct pollfd fds[ 4];
-
 static int fd_stdin;
 static int fd_stdout;
 static int alt_stdin;
@@ -39,6 +37,10 @@ typedef enum {
 
 static void* comm_thread( void* arg)
 {
+  struct pollfd fds[ 4];
+  unsigned int cnt_in = 0;
+  unsigned int cnt_out = 0;
+
   if (DEBUG_COMM && (debug_flags & DEBUG_COMM)) {
     printf( "Socket connection keep-alive thread: started.");
   }
@@ -110,6 +112,7 @@ static void* comm_thread( void* arg)
               fds[ e_stdin_readside].events = 0;
               fds[ e_stdin_writeside].events = POLLOUT;
               input_pending = 1;
+              ++cnt_in;
             } else if (cnt == 0) {
               // EOF
               fprintf( stderr, "comm_thread: EOF on STDIN, closing input pipe.\n");
@@ -123,7 +126,8 @@ static void* comm_thread( void* arg)
           if (fds[ e_stdin_readside].events & POLLIN) {
             // write end was closed (EOF)
             if (DEBUG_COMM && (debug_flags & DEBUG_COMM)) {
-              fprintf( stderr, "comm_thread: HUP on STDIN, closing input pipe.\n");
+              fprintf( stderr, "comm_thread: HUP on STDIN, closing input pipe after forwarding %u of %u chars.\n",
+		      cnt_out, cnt_in);
             }
             close( alt_stdin); 
             eof_on_input = 1;
@@ -139,6 +143,7 @@ static void* comm_thread( void* arg)
           if (input_pending) {
             int cnt = write( alt_stdin, &pending_input, 1);
             if (cnt == 1) {
+              ++cnt_out;
               input_pending = 0;
               fds[ e_stdin_readside].events = POLLIN;
               fds[ e_stdin_writeside].events = 0;
