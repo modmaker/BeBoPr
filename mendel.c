@@ -134,8 +134,15 @@ int mendel_sub_init( const char* name, int (*subsys)( void))
   return result;
 }
 
+static int normal_exit = 0;
+
 void mendel_exit( void)
 {
+  if (normal_exit) {
+    while (!pruss_queue_empty() || pruss_stepper_busy()) {
+      sched_yield();
+    }
+  }
   pruss_queue_exit();
   fprintf( stderr, "mendel_exit called, waiting for output buffers to be flushed\n");
   usleep( 2 * 1000000);
@@ -173,6 +180,7 @@ int main ( int argc, const char* argv[])
 
     if (fgets( s, sizeof( s), stdin) == NULL) {
       fprintf( stderr, "main loop - EOF on input, terminating.\n");
+      normal_exit = 1;
       exit( EXIT_SUCCESS);
     } else {
       char* p = s;
