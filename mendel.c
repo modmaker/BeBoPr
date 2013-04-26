@@ -186,6 +186,7 @@ int main ( int argc, const char* argv[])
         ++cnt_in;
       }
     } else if (feof( stdin)) {
+      process_gcode_command( NULL);	// flush last command
       fprintf( stderr, "main loop - EOF on input, terminating after %u characters.\n", cnt_in);
       normal_exit = 1;
       exit( EXIT_SUCCESS);

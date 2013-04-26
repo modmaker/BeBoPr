@@ -33,7 +33,7 @@ static TARGET gcode_current_pos;
 //  Home Position holds the offset set by G92, it is used to convert the
 //  gcode coordinates to machine / PRUSS coordinates.
 static TARGET gcode_home_pos;
-static double gcode_initial_feed;
+static double gcode_current_feed;
 /*
  * Local copy of channel tags to prevent a lookup with each access.
  */
@@ -56,7 +56,7 @@ static void wait_for_slow_signals( void)
     printf( "defer move until temperature is stable!\n");
   }
   while ( (extruder_temp_wait && !heater_temp_reached( heater_extruder)) ||
-	  (bed_temp_wait && !heater_temp_reached( heater_bed)) )
+          (bed_temp_wait && !heater_temp_reached( heater_bed)) )
   {
     usleep( 100000);
   }
@@ -68,45 +68,90 @@ static void wait_for_slow_signals( void)
 }
 
 /*
+ *  Generate unique serial numbers for moves
+ */
+static inline long unsigned int get_serno( void)
+{
+  static long unsigned int serno = 0;
+  return ++serno;
+}
+
+/*
+ *  Calculate traject for move to 'target' position and store result in 'move'
+ * 
+ *  Move from 'gcode_current_pos' to 'target', using 'gcode_home_pos' as offset
+ *  with feed from 'target'.
+ *  
+ *  Calling this routine should have no side effects!!!
+ *  (exception: global serial number increment in traject.c)
+ */
+static void move_calc( const TARGET* target, TARGET* current_pos, move5D* move)
+{
+  move->serno = get_serno();
+  if (DEBUG_GCODE_PROCESS && (debug_flags & DEBUG_GCODE_PROCESS)) {
+    printf( "\nMOVE[ %lu] move_calc() for TARGET=( %d, %d, %d, %d, %u)\n",
+            move->serno, target->X, target->Y, target->Z, target->E, target->F);
+  }
+ /*
+  * The traject code requires SI coordinates.
+  * The integer TARGET position coordinates are in nm !
+  */
+  traject5D traject = {
+          .s0x = POS2SI( gcode_home_pos.X + current_pos->X),
+          .s0y = POS2SI( gcode_home_pos.Y + current_pos->Y),
+          .s0z = POS2SI( gcode_home_pos.Z + current_pos->Z),
+          .s0e = POS2SI( gcode_home_pos.E + current_pos->E),
+          .s1x = POS2SI( gcode_home_pos.X + target->X),
+          .s1y = POS2SI( gcode_home_pos.Y + target->Y),
+          .s1z = POS2SI( gcode_home_pos.Z + target->Z),
+          .s1e = POS2SI( gcode_home_pos.E + target->E),
+          .feed = (double)target->F,
+  };
+ /*
+  * Calculate the trajectory details (e.g. velocities)) and store these in 'move'
+  */
+  traject_calc_all_axes( &traject, move);
+}
+
+/*
+ *  Execute actual move to new position as specified in 'move'
+ * 
+ *  Synchronize with slow signals.
+ *  
+ */
+static void move_execute( move5D* move)
+{
+  if (extruder_temp_wait || bed_temp_wait) {
+    if (DEBUG_GCODE_PROCESS && (debug_flags & DEBUG_GCODE_PROCESS)) {
+      printf( "\nMOVE[ %lu] move_execute() - waiting for slow signals)\n",
+              move->serno);
+    }
+    wait_for_slow_signals();
+  }
+  if (DEBUG_GCODE_PROCESS && (debug_flags & DEBUG_GCODE_PROCESS)) {
+    printf( "MOVE[ %lu] move_execute() from ( %1.6lf, %1.6lf, %1.6lf, %1.6lf) [m] with feed %1.3lf [m/s]\n"
+            "MOVE ............ over ( %1.6lf, %1.6lf, %1.6lf, %1.6lf) [m]\n"
+            "MOVE ........ velocity ( %1.6lf, %1.6lf, %1.6lf, %1.6lf) [m/s]\n"
+            "MOVE .... acceleration ( %1.6lf, %1.6lf, %1.6lf, %1.6lf) [m/s^2]\n",
+            move->serno, move->s0x, move->s0y, move->s0z, move->s0e,
+            move->feed, move->dx, move->dy, move->dz, move->de,
+            move->vx, move->vy, move->vz, move->ve,
+            move->ax, move->ay, move->az, move->ae);
+  }
+  /* actually make the move */
+  traject_move_all_axes( move);
+}
+
+/*
  *  make a move to new 'target' position, at the end of this move 'target'
  *  should reflect the actual position.
  */
-static void enqueue_pos( TARGET* target)
+static void enqueue_pos( const TARGET* target)
 {
-  if (target != NULL) {
-    if (extruder_temp_wait || bed_temp_wait) {
-      wait_for_slow_signals();
-    }
-    if (DEBUG_GCODE_PROCESS && (debug_flags & DEBUG_GCODE_PROCESS)) {
-      printf( "enqueue_pos( TARGET={%d, %d, %d, %d, %u})\n",
-	       target->X, target->Y, target->Z, target->E, target->F);
-    }
-    /* integer positions are in nm ! */ 
-    traject5D traj = {
-      .x0 = (double)1.0E-9 * (gcode_home_pos.X + gcode_current_pos.X),
-      .y0 = (double)1.0E-9 * (gcode_home_pos.Y + gcode_current_pos.Y),
-      .z0 = (double)1.0E-9 * (gcode_home_pos.Z + gcode_current_pos.Z),
-      .e0 = (double)1.0E-9 * (gcode_home_pos.E + gcode_current_pos.E),
-      .x1 = (double)1.0E-9 * (gcode_home_pos.X + target->X),
-      .y1 = (double)1.0E-9 * (gcode_home_pos.Y + target->Y),
-      .z1 = (double)1.0E-9 * (gcode_home_pos.Z + target->Z),
-      .e1 = (double)1.0E-9 * (gcode_home_pos.E + target->E),
-      .feed = target->F,
-    };
-    /* make the move */
-    traject_delta_on_all_axes( &traj);
-    /*
-     * For a 3D printer, the E-axis controls the extruder and for that axis
-     * the +/- 2000 mm operating range is not sufficient as this axis moves
-     * mostly into one direction.
-     * If this axis is configured to use relative coordinates only, after
-     * each move the origin is shifted to the current position restoring the
-     * full +/- 2000 mm operating range.
-     */
-    if (config_e_axis_is_always_relative()) {
-      pruss_queue_adjust_origin( 4, gcode_home_pos.E + target->E);
-      target->E = 0;	// target->E -= target->E;
-    }
+  if (target) {
+    move5D move;
+    move_calc( target, &gcode_current_pos, &move);
+    move_execute( &move);
   }
 }
 
@@ -122,83 +167,81 @@ static void enqueue_pos( TARGET* target)
 *//*************************************************************************/
 
 
-void clip_move( axis_e axis, int32_t* pnext_target, int32_t current_pos, int32_t home_pos)
+static void clip_move( axis_e axis, int32_t* pnext_target, int32_t current_pos, int32_t home_pos)
 {
-	static const char axisNames[] = { 'X', 'Y', 'Z', 'E' };	// FIXME: this uses knowledge of axis_e
-	double limit;
-	if (*pnext_target >= current_pos) {
-		// forward move or no move
-		if (config_max_soft_limit( axis, &limit)) {
-			int32_t pos_limit = MM2POS( limit);
-			if (home_pos + current_pos > pos_limit) {
-				pos_limit = home_pos + current_pos;
-			}
-			if (home_pos + *pnext_target > pos_limit) {
-				printf( "WARNING: Clipping target.%c (%d) to %d due to upper soft limit= %d (home= %d)\n",
-					axisNames[ axis], *pnext_target, pos_limit, MM2POS( limit), home_pos);
-				*pnext_target = pos_limit - home_pos;
-			}
-		}	
-	} else {
-		// backward move
-		if (config_min_soft_limit( axis, &limit)) {
-			int32_t pos_limit = MM2POS( limit);
-			if (home_pos + current_pos < pos_limit) {
-				pos_limit = home_pos + current_pos;
-			}
-			if (home_pos + *pnext_target < pos_limit) {
-				printf( "WARNING: Clipping target.%c (%d) to %d due to lower soft limit= %d (home= %d)\n",
-					axisNames[ axis], *pnext_target, pos_limit, MM2POS( limit), home_pos);
-				*pnext_target = pos_limit - home_pos;
-			}
-		}	
-	}
+  static const char axisNames[] = { 'X', 'Y', 'Z', 'E' }; // FIXME: this uses knowledge of axis_e
+  double limit;
+  if (*pnext_target >= current_pos) {
+    // forward move or no move
+    if (config_max_soft_limit( axis, &limit)) {
+      int32_t pos_limit = MM2POS( limit);
+      if (home_pos + current_pos > pos_limit) {
+        pos_limit = home_pos + current_pos;
+      }
+      if (home_pos + *pnext_target > pos_limit) {
+        printf( "WARNING: Clipping target.%c (%d) to %d due to upper soft limit= %d (home= %d)\n",
+                axisNames[ axis], *pnext_target, pos_limit, MM2POS( limit), home_pos);
+        *pnext_target = pos_limit - home_pos;
+      }
+    }       
+  } else {
+    // backward move
+    if (config_min_soft_limit( axis, &limit)) {
+      int32_t pos_limit = MM2POS( limit);
+      if (home_pos + current_pos < pos_limit) {
+        pos_limit = home_pos + current_pos;
+      }
+      if (home_pos + *pnext_target < pos_limit) {
+        printf( "WARNING: Clipping target.%c (%d) to %d due to lower soft limit= %d (home= %d)\n",
+                axisNames[ axis], *pnext_target, pos_limit, MM2POS( limit), home_pos);
+        *pnext_target = pos_limit - home_pos;
+      }
+    }       
+  }
 }
 
-static GCODE_COMMAND next_target;
-
-void do_process_gcode_command( void)
+static void process_non_move_command( GCODE_COMMAND* target)
 {
 	uint32_t	backup_f;
 
-	if (next_target.seen_F) {
-		gcode_initial_feed = next_target.target.F;
+	if (target->seen_F) {
+		gcode_current_feed = target->target.F;
 	} else {
-		next_target.target.F = gcode_initial_feed;
+		target->target.F = gcode_current_feed;
 	}
 	// convert relative to absolute
-	if (next_target.option_relative) {
-		next_target.target.X += gcode_current_pos.X;
-		next_target.target.Y += gcode_current_pos.Y;
-		next_target.target.Z += gcode_current_pos.Z;
-		next_target.target.E += gcode_current_pos.E;
+	if (target->option_relative) {
+		target->target.X += gcode_current_pos.X;
+		target->target.Y += gcode_current_pos.Y;
+		target->target.Z += gcode_current_pos.Z;
+		target->target.E += gcode_current_pos.E;
 	}
 	// The GCode documentation was taken from http://reprap.org/wiki/Gcode .
 
-	if (next_target.seen_T) {
+	if (target->seen_T) {
 	    //? ==== T: Select Tool ====
 	    //?
 	    //? Example: T1
 	    //?
 	    //? Select extruder number 1 to build with.  Extruder numbering starts at 0.
 
-	    next_tool = next_target.T;
+	    next_tool = target->T;
 	}
 
 	// if we didn't see an axis word, set it to gcode_current_pos. this fixes incorrect moves after homing TODO: fix homing ???
 //TODO: fix this ???
-	if (next_target.seen_X == 0)
-		next_target.target.X = gcode_current_pos.X;
-	if (next_target.seen_Y == 0)
-		next_target.target.Y = gcode_current_pos.Y;
-	if (next_target.seen_Z == 0)
-		next_target.target.Z = gcode_current_pos.Z;
-	if (next_target.seen_E == 0)
-		next_target.target.E = gcode_current_pos.E;
+	if (target->seen_X == 0)
+		target->target.X = gcode_current_pos.X;
+	if (target->seen_Y == 0)
+		target->target.Y = gcode_current_pos.Y;
+	if (target->seen_Z == 0)
+		target->target.Z = gcode_current_pos.Z;
+	if (target->seen_E == 0)
+		target->target.E = gcode_current_pos.E;
 
-	if (next_target.seen_G) {
+	if (target->seen_G) {
 		uint8_t axisSelected = 0;
-		switch (next_target.G) {
+		switch (target->G) {
 			// 	G0 - rapid, unsynchronised motion
 			// since it would be a major hassle to force the dda to not synchronise, just provide a fast feedrate and hope it's close enough to what host expects
 			case 0:
@@ -209,6 +252,9 @@ void do_process_gcode_command( void)
 				//? In this case move rapidly to X = 12 mm.  In fact, the RepRap firmware uses exactly the same code for rapid as it uses for controlled moves (see G1 below), as - for the RepRap machine - this is just as efficient as not doing so.  (The distinction comes from some old machine tools that used to move faster if the axes were not driven in a straight line.  For them G0 allowed any movement in space to get to the destination as fast as possible.)
 			case 1:
 			{
+#if 1
+				printf( "\n\n\nOOPS\n\nThis shouldn't happen!!!!\n\n\n");
+#else
 				//? ==== G1: Controlled move ====
 				//?
 				//? Example: G1 X90.6 Y13.8 E22.4
@@ -222,31 +268,32 @@ void do_process_gcode_command( void)
 				 *  from the inside to the outside of the safe operating zone. All moves from outside
 				 *  the safe operating zone directed towards the inside of the zone are allowed!
 				 */
-				if (next_target.seen_X) {
-					clip_move( x_axis, &next_target.target.X, gcode_current_pos.X, gcode_home_pos.X);
+				if (target->seen_X) {
+					clip_move( x_axis, &target->target.X, gcode_current_pos.X, gcode_home_pos.X);
 				}
-				if (next_target.seen_Y) {
-					clip_move( y_axis, &next_target.target.Y, gcode_current_pos.Y, gcode_home_pos.Y);
+				if (target->seen_Y) {
+					clip_move( y_axis, &target->target.Y, gcode_current_pos.Y, gcode_home_pos.Y);
 				}
-				if (next_target.seen_Z) {
-					clip_move( z_axis, &next_target.target.Z, gcode_current_pos.Z, gcode_home_pos.Z);
+				if (target->seen_Z) {
+					clip_move( z_axis, &target->target.Z, gcode_current_pos.Z, gcode_home_pos.Z);
 				}
 
-				if (next_target.G == 0) {
-					backup_f = next_target.target.F;
-					next_target.target.F = 100000;	// will be limited by the limitations of the individual axes
-					enqueue_pos( &next_target.target);
-					next_target.target.F = backup_f;
+				if (target->G == 0) {
+					backup_f = target->target.F;
+					target->target.F = 100000;	// will be limited by the limitations of the individual axes
+					enqueue_pos( &target->target);
+					target->target.F = backup_f;
 				} else {
 					// synchronised motion
-					enqueue_pos( &next_target.target);
+					enqueue_pos( &target->target);
 				}
 				/* update our sense of position */
-				gcode_current_pos.X = next_target.target.X;
-				gcode_current_pos.Y = next_target.target.Y;
-				gcode_current_pos.Z = next_target.target.Z;
-				gcode_current_pos.E = next_target.target.E;
-				gcode_current_pos.F = next_target.target.F;
+				gcode_current_pos.X = target->target.X;
+				gcode_current_pos.Y = target->target.Y;
+				gcode_current_pos.Z = target->target.Z;
+				gcode_current_pos.E = target->target.E;
+				gcode_current_feed = target->target.F;
+#endif
 				break;
 			}
 				//	G2 - Arc Clockwise
@@ -265,7 +312,7 @@ void do_process_gcode_command( void)
 				//?
 
 				traject_wait_for_completion();
-				usleep( 1000* next_target.P);
+				usleep( 1000* target->P);
 				break;
 
 				//	G20 - inches as units
@@ -276,7 +323,7 @@ void do_process_gcode_command( void)
 				//?
 				//? Units from now on are in inches.
 				//?
-				next_target.option_inches = 1;
+				target->option_inches = 1;
 				break;
 
 				//	G21 - mm as units
@@ -287,7 +334,7 @@ void do_process_gcode_command( void)
 				//?
 				//? Units from now on are in millimeters.  (This is the RepRap default.)
 				//?
-				next_target.option_inches = 0;
+				target->option_inches = 0;
 				break;
 
 				//	G30 - go home via point
@@ -295,7 +342,7 @@ void do_process_gcode_command( void)
 				//? ==== G30: Go home via point ====
 				//?
 				//? Undocumented.
-				enqueue_pos( &next_target.target);
+				enqueue_pos( &target->target);
 				// no break here, G30 is move and then go home
 
 				//	G28 - Move to Origin
@@ -309,27 +356,27 @@ void do_process_gcode_command( void)
 				// Implementation: G0 like move with as destination the origin (x,y,z=0,0,0).
 				// The (absolute) origin is set at startup (current position) or by executing
 				// a calibration command (G161/G162) for one or more axes.
-				if (next_target.seen_X) {
-					next_target.target.X = 0;
+				if (target->seen_X) {
+					target->target.X = 0;
 					axisSelected = 1;
 				}
-				if (next_target.seen_Y) {
-					next_target.target.Y = 0;
+				if (target->seen_Y) {
+					target->target.Y = 0;
 					axisSelected = 1;
 				}
-				if (next_target.seen_Z) {
-					next_target.target.Z = 0;
+				if (target->seen_Z) {
+					target->target.Z = 0;
 					axisSelected = 1;
 				}
 				if (axisSelected != 1) {
-					next_target.target.X = 0;
-					next_target.target.Y = 0;
-					next_target.target.Z = 0;
+					target->target.X = 0;
+					target->target.Y = 0;
+					target->target.Z = 0;
 				}
-				backup_f = next_target.target.F;
-				next_target.target.F = 99999;		// let the software clip this to the maximum allowed rate
-				enqueue_pos( &next_target.target);
-				next_target.target.F = backup_f;
+				backup_f = target->target.F;
+				target->target.F = 99999;		// let the software clip this to the maximum allowed rate
+				enqueue_pos( &target->target);
+				target->target.F = backup_f;
 				break;
 
 			//	G90 - absolute positioning
@@ -339,7 +386,7 @@ void do_process_gcode_command( void)
 				//? Example: G90
 				//?
 				//? All coordinates from now on are absolute relative to the origin of the machine.  (This is the RepRap default.)
-				next_target.option_relative = 0;
+				target->option_relative = 0;
 				break;
 
 				//	G91 - relative positioning
@@ -349,7 +396,7 @@ void do_process_gcode_command( void)
 				//? Example: G91
 				//?
 				//? All coordinates from now on are relative to the last position.
-				next_target.option_relative = 1;
+				target->option_relative = 1;
 				break;
 
 				//	G92 - set home
@@ -362,25 +409,25 @@ void do_process_gcode_command( void)
 
 				traject_wait_for_completion();
 
-				if (next_target.seen_X) {
-					gcode_home_pos.X += gcode_current_pos.X - next_target.target.X;
-					gcode_current_pos.X = next_target.target.X;
+				if (target->seen_X) {
+					gcode_home_pos.X += gcode_current_pos.X - target->target.X;
+					gcode_current_pos.X = target->target.X;
 					axisSelected = 1;
 				}
-				if (next_target.seen_Y) {
-					gcode_home_pos.Y += gcode_current_pos.Y - next_target.target.Y;
-					gcode_current_pos.Y = next_target.target.Y;
+				if (target->seen_Y) {
+					gcode_home_pos.Y += gcode_current_pos.Y - target->target.Y;
+					gcode_current_pos.Y = target->target.Y;
 					axisSelected = 1;
 				}
-				if (next_target.seen_Z) {
-					gcode_home_pos.Z += gcode_current_pos.Z - next_target.target.Z;
-					gcode_current_pos.Z = next_target.target.Z;
+				if (target->seen_Z) {
+					gcode_home_pos.Z += gcode_current_pos.Z - target->target.Z;
+					gcode_current_pos.Z = target->target.Z;
 					axisSelected = 1;
 				}
 				// TODO: this is exceptional, check wheter this doesn't clash 
 				// with relative E axis operation !!!!
-				if (next_target.seen_E) {
-					if (!config_e_axis_is_always_relative() && next_target.target.E == 0) {
+				if (target->seen_E) {
+					if (!config_e_axis_is_always_relative() && target->target.E == 0) {
 						// slicers use this te adjust the origin to prevent running
 						// out of E range, adjust the PRUSS internal origin too.
 						pruss_queue_adjust_origin( 4, gcode_home_pos.E + gcode_current_pos.E);
@@ -388,20 +435,20 @@ void do_process_gcode_command( void)
 						// now doesn't behave like a normal (absolute) axis anymore!
 						gcode_home_pos.E = 0;
 					} else {
-						gcode_home_pos.E += gcode_current_pos.E - next_target.target.E;
+						gcode_home_pos.E += gcode_current_pos.E - target->target.E;
 					}
-					gcode_current_pos.E = next_target.target.E;
+					gcode_current_pos.E = target->target.E;
 					axisSelected = 1;
 				}
 				if (axisSelected == 0) {
 					gcode_home_pos.X += gcode_current_pos.X;
-					gcode_current_pos.X = next_target.target.X = 0;
+					gcode_current_pos.X = target->target.X = 0;
 					gcode_home_pos.Y += gcode_current_pos.Y;
-					gcode_current_pos.Y = next_target.target.Y = 0;
+					gcode_current_pos.Y = target->target.Y = 0;
 					gcode_home_pos.Z += gcode_current_pos.Z;
-					gcode_current_pos.Z = next_target.target.Z = 0;
+					gcode_current_pos.Z = target->target.Z = 0;
 					gcode_home_pos.E += gcode_current_pos.E;
-					gcode_current_pos.E = next_target.target.E = 0;
+					gcode_current_pos.E = target->target.E = 0;
 				}
 				break;
 
@@ -409,7 +456,7 @@ void do_process_gcode_command( void)
 	do {								\
 		axis_xyz = axis_lc##_axis;				\
 		pruss_axis_xyz = axis_i;				\
-		next_target_seen_xyz = next_target.seen_##axis_uc;	\
+		next_target_seen_xyz = target->seen_##axis_uc;	\
 		current_pos_xyz = gcode_current_pos.axis_uc;		\
 		home_pos_xyz = gcode_home_pos.axis_uc;			\
 		code							\
@@ -419,7 +466,7 @@ void do_process_gcode_command( void)
 
 #define FOR_EACH_AXIS_IN_XYZ( code) \
 	do {								\
-		uint32_t feed = next_target.target.F;			\
+		uint32_t feed = target->target.F;			\
 		axis_e axis_xyz;					\
 		int pruss_axis_xyz;		   			\
 		int next_target_seen_xyz;				\
@@ -443,11 +490,11 @@ void do_process_gcode_command( void)
 				double pos;
 				if (DEBUG_GCODE_PROCESS && (debug_flags & DEBUG_GCODE_PROCESS)) {
 					fprintf( stderr, "G161: X(%d)=%d, Y(%d)=%d, Z(%d)=%d, E(%d)=%d, F(%d)=%d\n",
-						next_target.seen_X, next_target.target.X,
-						next_target.seen_Y, next_target.target.Y,
-						next_target.seen_Z, next_target.target.Z,
-						next_target.seen_E, next_target.target.E,
-						next_target.seen_F, next_target.target.F );
+						target->seen_X, target->target.X,
+						target->seen_Y, target->target.Y,
+						target->seen_Z, target->target.Z,
+						target->seen_E, target->target.E,
+						target->seen_F, target->target.F );
 				}
 				FOR_EACH_AXIS_IN_XYZ(
 					if (next_target_seen_xyz) {
@@ -475,11 +522,11 @@ void do_process_gcode_command( void)
 				double pos;
 				if (DEBUG_GCODE_PROCESS && (debug_flags & DEBUG_GCODE_PROCESS)) {
 					fprintf( stderr, "G162: X(%d)=%d, Y(%d)=%d, Z(%d)=%d, E(%d)=%d, F(%d)=%d\n",
-						next_target.seen_X, next_target.target.X,
-						next_target.seen_Y, next_target.target.Y,
-						next_target.seen_Z, next_target.target.Z,
-						next_target.seen_E, next_target.target.E,
-						next_target.seen_F, next_target.target.F );
+						target->seen_X, target->target.X,
+						target->seen_Y, target->target.Y,
+						target->seen_Z, target->target.Z,
+						target->seen_E, target->target.E,
+						target->seen_F, target->target.F );
 				}
 				FOR_EACH_AXIS_IN_XYZ(
 					if (next_target_seen_xyz) {
@@ -501,7 +548,7 @@ void do_process_gcode_command( void)
 				// === G255: Dump PRUSS state ====
 				// The (optional) parameter S0, will disable waiting
 				// for the current command to complete, before dumping.
-				if (!next_target.seen_S || next_target.S != 0) {
+				if (!target->seen_S || target->S != 0) {
 				  traject_wait_for_completion();
 				}
 				pruss_stepper_dump_state();
@@ -509,7 +556,7 @@ void do_process_gcode_command( void)
 
 				// unknown gcode: spit an error
 			default:
-				printf("E: Bad G-code %d", next_target.G);
+				printf("E: Bad G-code %d", target->G);
 				// newline is sent from gcode_parse after we return
 				return;
 		}
@@ -519,8 +566,8 @@ void do_process_gcode_command( void)
 		}
 #endif
 	}
-	else if (next_target.seen_M) {
-		switch (next_target.M) {
+	else if (target->seen_M) {
+		switch (target->M) {
 			// M0- machine stop
 			case 0:
 			// M2- program end
@@ -592,10 +639,10 @@ void do_process_gcode_command( void)
 				#elif E_STARTSTOP_STEPS > 0
 					do {
 						// backup feedrate, move E very quickly then restore feedrate
-						backup_f = gcode_current_pos.F;
-						gcode_current_pos.F = MAXIMUM_FEEDRATE_E;
+						backup_f = gcode_current_feed;
+						gcode_current_feed = MAXIMUM_FEEDRATE_E;
 						SpecialMoveE( E_STARTSTOP_STEPS, MAXIMUM_FEEDRATE_E);
-						gcode_current_pos.F = backup_f;
+						gcode_current_feed = backup_f;
 					} while (0);
 				#endif
 				break;
@@ -613,10 +660,10 @@ void do_process_gcode_command( void)
 				#elif E_STARTSTOP_STEPS > 0
 					do {
 						// backup feedrate, move E very quickly then restore feedrate
-						backup_f = gcode_current_pos.F;
-						gcode_current_pos.F = MAXIMUM_FEEDRATE_E;
+						backup_f = gcode_current_feed;
+						gcode_current_feed = MAXIMUM_FEEDRATE_E;
 						SpecialMoveE( E_STARTSTOP_STEPS, MAXIMUM_FEEDRATE_E);
-						gcode_current_pos.F = backup_f;
+						gcode_current_feed = backup_f;
 					} while (0);
 				#endif
 				break;
@@ -632,26 +679,26 @@ void do_process_gcode_command( void)
 				//? ==== M190: Set Bed Temperature (Wait)  ====
 			{
 				channel_tag heater;
-				if (next_target.M == 140 || next_target.M == 190) {
+				if (target->M == 140 || target->M == 190) {
 					heater = heater_bed;
 				} else {
-					if (next_target.seen_P && next_target.P == 1) {
+					if (target->seen_P && target->P == 1) {
 						heater = heater_bed;
 					} else {
 						heater = heater_extruder;
 					}
 				}
-				if (next_target.seen_S) {
-					heater_set_setpoint( heater, next_target.S);
+				if (target->seen_S) {
+					heater_set_setpoint( heater, target->S);
 					// if setpoint is not null, turn power on
-					if (next_target.S > 0) {
+					if (target->S > 0) {
 						power_on();
 						heater_enable( heater_extruder, 1);
 					} else {
 						heater_enable( heater_extruder, 0);
 					}
 				}
-				if (next_target.M == 109 || next_target.M == 190) {
+				if (target->M == 109 || target->M == 190) {
 					if (heater == heater_bed) {
 						bed_temp_wait = 1;
 					} else {
@@ -676,9 +723,9 @@ void do_process_gcode_command( void)
 					// wait for all moves to complete
 					traject_wait_for_completion();
 #				endif
-				if (next_target.seen_P) {
+				if (target->seen_P) {
 					channel_tag temp_source;
-					switch (next_target.P) {
+					switch (target->P) {
 					case 0:  temp_source = heater_extruder; break;
 					case 1:  temp_source = heater_bed; break;
 					default: temp_source = NULL;
@@ -757,7 +804,7 @@ void do_process_gcode_command( void)
 				//?
 				//? This command is only available in DEBUG builds of Teacup.
 
-				debug_flags = next_target.S;
+				debug_flags = target->S;
 				printf( "New debug_flags setting: 0x%04x\n", debug_flags);
 				break;
 			#endif
@@ -769,8 +816,8 @@ void do_process_gcode_command( void)
 				//?
 				//? Set the (raw) extruder heater output to the specified value: 0.0-1.0 gives 0-100% duty cycle.
 				//? Should only be used when there is no heater control loop configured for this output!!!
-				if (next_target.seen_S) {
-					pwm_set_output( pwm_extruder, next_target.S);
+				if (target->seen_S) {
+					pwm_set_output( pwm_extruder, target->S);
 				}
 				break;
 			}
@@ -789,10 +836,10 @@ void do_process_gcode_command( void)
 					// wait for all moves to complete
 					traject_wait_for_completion();
 #				endif
-				printf(  "current: X=%1.6lf, Y=%1.6lf, Z=%1.6lf, E=%1.6lf, F=%d\n",
+				printf(  "current: X=%1.6lf, Y=%1.6lf, Z=%1.6lf, E=%1.6lf, F=%1.6lf\n",
 					POS2MM( gcode_current_pos.X), POS2MM( gcode_current_pos.Y),
 					POS2MM( gcode_current_pos.Z), POS2MM( gcode_current_pos.E),
-					gcode_current_pos.F);
+					gcode_current_feed);
 				// newline is sent from gcode_parse after we return
 
 				break;
@@ -848,11 +895,11 @@ void do_process_gcode_command( void)
 				//? P0: set for extruder
 				//? P1: set for bed
 				//? Snnn.nn: factor to set
-				if (next_target.seen_S) {
+				if (target->seen_S) {
 					pid_settings pid;
 					channel_tag channel;
-					if (next_target.seen_P) {
-						switch (next_target.P) {
+					if (target->seen_P) {
+						switch (target->P) {
 						case 0:  channel = heater_extruder; break;
 						case 1:  channel = heater_bed; break;
 						default: channel = NULL;
@@ -861,18 +908,18 @@ void do_process_gcode_command( void)
 						channel = heater_extruder;
 					}
 					heater_get_pid_values( channel, &pid);
-					switch (next_target.M) {
+					switch (target->M) {
 					case 130:	// M130- heater P factor
-						pid.P = next_target.S;
+						pid.P = target->S;
 						break;
 					case 131:	// M131- heater I factor
-						pid.I = next_target.S;
+						pid.I = target->S;
 						break;
 					case 132:	// M132- heater D factor
-						pid.D = next_target.S;
+						pid.D = target->S;
 						break;
 					case 133:	// M133- heater I limit
-						pid.I_limit = next_target.S;
+						pid.I_limit = target->S;
 						break;
 					}
 					heater_set_pid_values( channel, &pid);
@@ -888,14 +935,14 @@ void do_process_gcode_command( void)
 			case 135:
 				//? ==== M135: set heater output ====
 				//? Undocumented.
-				if (next_target.seen_S) {
+				if (target->seen_S) {
 					channel_tag heater;
-					switch (next_target.P) {
+					switch (target->P) {
 					case 0:  heater = heater_extruder; break;
 					case 1:  heater = heater_bed; break;
 					default: heater = NULL;
 					}
-					heater_set_raw_pwm( heater, next_target.S);
+					heater_set_raw_pwm( heater, target->S);
 					power_on();
 				}
 				break;
@@ -907,8 +954,8 @@ void do_process_gcode_command( void)
 				//? This comand is only available in DEBUG builds.
 				pid_settings pid;
 				channel_tag heater;
-				if (next_target.seen_P) {
-					switch (next_target.P) {
+				if (target->seen_P) {
+					switch (target->P) {
 					case 0:  heater = heater_extruder; break;
 					case 1:  heater = heater_bed; break;
 					default: heater = NULL;
@@ -985,8 +1032,8 @@ void do_process_gcode_command( void)
 				// NOTE: the calculations that follow use home_pos (that is set to zero),
 				//       do not optimize them as this shows the correct calculations!
 				gcode_home_pos.Z = 0;
-				if (next_target.seen_Z) {
-					gcode_current_pos.Z = next_target.target.Z;
+				if (target->seen_Z) {
+					gcode_current_pos.Z = target->target.Z;
 				} else {
 					gcode_current_pos.Z = 0;
 				}
@@ -994,10 +1041,10 @@ void do_process_gcode_command( void)
 				// use machine coordinates during homing
 				gcode_current_pos.Z += gcode_home_pos.Z;
 				if (config_max_switch_pos( z_axis, &pos)) {
-					home_axis_to_max_limit_switch( z_axis, &gcode_current_pos.Z, next_target.target.F);
+					home_axis_to_max_limit_switch( z_axis, &gcode_current_pos.Z, target->target.F);
 					min_max = 1;
 				} else if (config_min_switch_pos( z_axis, &pos)) {
-					home_axis_to_min_limit_switch( z_axis, &gcode_current_pos.Z, next_target.target.F);
+					home_axis_to_min_limit_switch( z_axis, &gcode_current_pos.Z, target->target.F);
 					min_max = -1;
 				}
 				// restore gcode coordinates
@@ -1018,20 +1065,20 @@ void do_process_gcode_command( void)
 				//? ==== M220: speed override factor ====
 			case 221:
 				//? ==== M221: extruder override factor ====
-				if (next_target.seen_S) {
+				if (target->seen_S) {
 					double old;
-					double factor = 0.001 * next_target.S;
+					double factor = 0.001 * target->S;
 					if (factor < 0.001) {
 						factor = 0.001;
 					}
-					if (next_target.M == 220) {
+					if (target->M == 220) {
 						old = traject_set_speed_override( factor);
 					} else {
 						old = traject_set_extruder_override( factor);
 					}
 					if (DEBUG_GCODE_PROCESS && (debug_flags & DEBUG_GCODE_PROCESS)) {
 						fprintf( stderr, "M%d: set %s override factor to %1.3lf, old value was %1.3lf\n",
-							next_target.M, (next_target.M == 221) ? "extruder" : "speed", factor, old);
+							target->M, (target->M == 221) ? "extruder" : "speed", factor, old);
 					}
 				}
 				break;
@@ -1060,10 +1107,10 @@ void do_process_gcode_command( void)
 				//? ==== M250: return current position, end position, queue ====
 				//? Undocumented
 				//? This command is only available in DEBUG builds.
-				printf(  "current: X=%1.6lf, Y=%1.6lf, Z=%1.6lf, E=%1.6lf, F=%d\n",
+				printf(  "current: X=%1.6lf, Y=%1.6lf, Z=%1.6lf, E=%1.6lf, F=%1.6lf\n",
 					POS2MM( gcode_current_pos.X), POS2MM( gcode_current_pos.Y),
 					POS2MM( gcode_current_pos.Z), POS2MM( gcode_current_pos.E),
-					gcode_current_pos.F);
+					gcode_current_feed);
 				printf(  "origin: X=%1.6lf, Y=%1.6lf, Z=%1.6lf, E=%1.6lf\n",
 					POS2MM( gcode_home_pos.X), POS2MM( gcode_home_pos.Y),
 					POS2MM( gcode_home_pos.Z), POS2MM( gcode_home_pos.E));
@@ -1090,17 +1137,233 @@ void do_process_gcode_command( void)
 			#endif /* DEBUG */
 				// unknown mcode: spit an error
 			default:
-				printf("E: Bad M-code %d", next_target.M);
+				printf("E: Bad M-code %d", target->M);
 				// newline is sent from gcode_parse after we return
-		} // switch (next_target.M)
-	} // else if (next_target.seen_M)
+		} // switch (target->M)
+	} // else if (target->seen_M)
 } // process_gcode_command()
 
-void process_gcode_command( GCODE_COMMAND* target)
+
+struct move_target {
+  TARGET target;
+  TARGET current_pos;
+  uint32_t current_feed;
+  int data_valid;
+  move5D data;
+};
+
+/*
+ *  Move from current_pos to new position, update current_pos
+ *
+ *  Base actual move velocities on current 'move' and 'next_move'
+ */
+static void process_move_command( struct move_target* move, struct move_target* next_move)
 {
-  next_target = *target;	// copy
-  do_process_gcode_command();
+  if (next_move /* && next_move->data_valid*/) {
+   /*
+    * move to resume
+    */
+    move5D* p0 = &move->data;
+    move5D* p1 = &next_move->data;
+    printf( "MOVE[ %lu] process_move_command() - starting chainable move\n"
+            "MOVE ... current move velocity ( %1.6lf, %1.6lf, %1.6lf, %1.6lf) [m/s]\n"
+            "MOVE ...... next move velocity ( %1.6lf, %1.6lf, %1.6lf, %1.6lf) [m/s]\n",
+            p0->serno, p0->vx, p0->vy, p0->vz, p0->ve, p1->vx, p1->vy, p1->vz, p1->ve);
+
+  } else {
+   /*
+    * move to stop
+    */
+    printf( "MOVE[ %lu] process_move_command()  - starting ending move\n", move->data.serno);
+  }
+
+  if (!move->data.null_move) {
+
+    move_execute( &move->data);
+
+   /*
+    * For a 3D printer, the E-axis controls the extruder and for that axis
+    * the +/- 2000 mm operating range is not sufficient as this axis moves
+    * mostly into one direction.
+    * If this axis is configured to use relative coordinates only, after
+    * each move the origin is shifted to the current position restoring the
+    * full +/- 2000 mm operating range.
+    */
+    if (config_e_axis_is_always_relative()) {
+      if (DEBUG_GCODE_PROCESS && (debug_flags & DEBUG_GCODE_PROCESS)) {
+        printf( "MOVE[ %lu] process_move_command() - E compensation over %d, origin to %d\n",
+                move->data.serno, move->target.E, gcode_home_pos.E + move->target.E);
+      }
+      pruss_queue_adjust_origin( 4, gcode_home_pos.E + move->target.E);
+      move->target.E = 0;       // target->E -= target->E;
+    }
+
+   /*
+    * Update global sense of position and feed
+    */
+    gcode_current_pos.X = move->target.X;
+    gcode_current_pos.Y = move->target.Y;
+    gcode_current_pos.Z = move->target.Z;
+    gcode_current_pos.E = move->target.E;
+    gcode_current_feed = move->target.F;        // ???
+
+  } else {
+
+    if (DEBUG_GCODE_PROCESS && (debug_flags & DEBUG_GCODE_PROCESS)) {
+      printf( "*** MOVE[ %lu] - Null move encountered, ignored ***\n",
+              move->data.serno);
+    }
+    // TODO: is any global variable update necessary ???
+
+  }
 }
+
+/*
+ * Calculate move details from new 'command' and store these in 'move'
+ *
+ * Should have no side effects except on move contents !!!
+ */
+static void preprocess_move_command( GCODE_COMMAND* command, TARGET* start_pos, struct move_target* move)
+{
+ /*
+  *  At entry, move->current_pos and move->current_feed shall be initialized
+  */
+  move->target = command->target;
+
+ /*
+  *  This routine will only be called for G-code 0,1,2 or 3.
+  *  The G0 command will run as G1, always at maximum allowed feed.
+  */
+  if (command->G == 0) {
+    move->target.F = 999999;    // will be limited by the limitations of the individual axes
+  } else {
+    if (command->seen_F) {
+      move->target.F = command->target.F;
+    } else {
+      move->target.F = move->current_feed;
+    }
+  }
+
+ /*
+  *  convert relative to absolute
+  */
+  if (command->option_relative) {
+    move->target.X += move->current_pos.X;
+    move->target.Y += move->current_pos.Y;
+    move->target.Z += move->current_pos.Z;
+    move->target.E += move->current_pos.E;
+  }
+
+ /*
+  *  Implement soft axis limits:
+  *
+  *  The soft axis limits define a safe operating zone.
+  *  Coordinates are clipped in such a way that no moves are generate that would move
+  *  from the inside to the outside of the safe operating zone. All moves from outside
+  *  the safe operating zone directed towards the inside of the zone are allowed!
+  */
+  if (command->seen_X) {
+    clip_move( x_axis, &move->target.X, move->current_pos.X, gcode_home_pos.X);
+  } else {
+    move->target.X = move->current_pos.X;
+  }
+  if (command->seen_Y) {
+    clip_move( y_axis, &move->target.Y, move->current_pos.Y, gcode_home_pos.Y);
+  } else {
+    move->target.Y = move->current_pos.Y;
+  }
+  if (command->seen_Z) {
+    clip_move( z_axis, &move->target.Z, move->current_pos.Z, gcode_home_pos.Z);
+  } else {
+    move->target.Z = move->current_pos.Z;
+  }
+  if (!command->seen_E) {
+    move->target.E = move->current_pos.E;
+  }
+
+ /*
+  *  Calculate trajectory speed etc.
+  */
+  move_calc( &move->target, start_pos, &move->data);
+
+ /*
+  *  Update our sense of (end) position
+  */
+  move->current_pos = move->target;
+  if (command->G != 0) {
+    move->current_feed = move->target.F;
+  }
+
+}
+
+/*
+ * After the last (non-null) target, one more call (with a null argument)
+ * should be made to process the last (buffered) target !!! This call is
+ * made from mendel.c after detection of EOF on the input stream.
+ * TODO: gcode_parse now sends an "ok" on buffering a command, not on
+ *       execution. determine if this leads to problems.
+ */
+void process_gcode_command( GCODE_COMMAND* command)
+{
+  static int move_pending = 0;
+  static struct move_target pending_move;
+  if (command) {
+    if (command->seen_G && (command->G >= 0 && command->G <= 3)) {
+      struct move_target next_move;
+
+      if (move_pending) {
+       /*
+        *  'next_move' will start with the end position from the pending move.
+        *  The end position is the target position of that move, but the
+        *  E coordinate requires special treatment if it is always relative.
+        */
+        TARGET start_pos = {
+          .X = pending_move.target.X,
+          .Y = pending_move.target.Y,
+          .Z = pending_move.target.Z,
+          .E = (config_e_axis_is_always_relative()) ? 0 : pending_move.target.E,
+        };
+       /*
+        *  Make 'command' the next move, starting from full stop
+        *  at gcode_current_pos and with gcode_current_feed.
+        */
+        next_move.current_pos = pending_move.current_pos;
+        next_move.current_feed = pending_move.current_feed;
+        preprocess_move_command( command, &start_pos, &next_move);
+       /*
+        * Execute the current pending move
+        */
+        process_move_command( &pending_move, &next_move);
+      } else {
+       /*
+        *  Make 'command' the next move, starting from full stop
+        *  at gcode_current_pos and with gcode_current_feed.
+        */
+        next_move.current_pos = gcode_current_pos;
+        next_move.current_feed = gcode_current_feed;
+        preprocess_move_command( command, &gcode_current_pos, &next_move);
+      }
+     /*
+      * 'next_move' becomes the new pending move
+      */
+      pending_move = next_move;
+      move_pending = 1;
+    } else {
+      // execute non-G0123 move
+      process_non_move_command( command);
+    }
+  } else if (move_pending) {
+   /*
+    * Execute the current pending move
+    */
+    process_move_command( &pending_move, NULL);
+    move_pending = 0;
+  } else {
+    // NOP
+    move_pending = 0;
+  }
+}
+
 
 int gcode_process_init( void)
 {
@@ -1114,9 +1377,9 @@ int gcode_process_init( void)
   temp_bed        = temp_lookup_by_name( "temp_bed");
   if (debug_flags & DEBUG_GCODE_PROCESS) {
     printf( "tag_name( heater_extruder) = '%s',  tag_name( heater_bed) = '%s',\n"
-	    "tag_name( temp_extruder) = '%s',  tag_name( temp_bed) = '%s'\n",
-	    tag_name( heater_extruder), tag_name( heater_bed),
-	    tag_name( temp_extruder), tag_name( temp_bed));
+            "tag_name( temp_extruder) = '%s',  tag_name( temp_bed) = '%s'\n",
+            tag_name( heater_extruder), tag_name( heater_bed),
+            tag_name( temp_extruder), tag_name( temp_bed));
   }
   pwm_extruder    = pwm_lookup_by_name( "pwm_laser_power");
   // If there's no extruder, or no laser power there's probably a configuration error!
@@ -1127,6 +1390,6 @@ int gcode_process_init( void)
   gcode_current_pos.Y = gcode_home_pos.Y = 0;
   gcode_current_pos.Z = gcode_home_pos.Z = 0;
   gcode_current_pos.E = gcode_home_pos.E = 0;
-  gcode_initial_feed  = 3000;
+  gcode_current_feed  = 3000;
   return 0;
 }

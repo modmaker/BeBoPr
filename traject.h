@@ -6,18 +6,29 @@
 #include "bebopr.h"
 
 typedef struct {
-  double		x0;
-  double		y0;
-  double		z0;
-  double		e0;
-  double		x1;
-  double		y1;
-  double		z1;
-  double		e1;
-  uint32_t		feed;
+  double                s0x, s0y, s0z, s0e;
+  double                s1x, s1y, s1z, s1e;
+  uint32_t              feed;
 } traject5D;
 
-extern void traject_delta_on_all_axes( traject5D* delta);
+typedef struct {
+  double                s0x, s0y, s0z, s0e;
+  double                dx, dy, dz, de;
+  double                vx, vy, vz, ve;
+  double                ax, ay, az, ae;
+  double                double_sx, double_sy, double_sz, double_se;
+  int                   reverse_x, reverse_y, reverse_z, reverse_e;
+  int                   chainable;
+  double                recipr_t_acc;
+  double                queued_time;
+  int                   null_move;
+  long unsigned int     serno;
+  double                feed;
+} move5D;
+
+extern void traject_delta_on_all_axes( const traject5D* delta);
+extern void traject_calc_all_axes( const traject5D* delta, move5D* move);
+extern void traject_move_all_axes( move5D* move);
 
 extern int traject_wait_for_completion( void);
 extern int traject_abort( void);

@@ -35,6 +35,7 @@
 
 DEFS ?=
 #DEFS += -DLASER_CUTTER
+DEFS += -DEXPERIMENT
 ARCH ?= arm
 CROSS_COMPILE ?= arm-angstrom-linux-gnueabi-
 
@@ -169,7 +170,7 @@ gcode_process.o: gcode_process.c bebopr.h gcode_process.h gcode_parse.h \
 gpio.o: gpio.c gpio.h
 heater.o: heater.c heater.h temp.h beaglebone.h pwm.h debug.h mendel.h
 home.o: home.c beaglebone.h home.h bebopr.h limit_switches.h traject.h \
- pruss_stepper.h algo2cmds.h gcode_process.h debug.h
+ pruss_stepper.h algo2cmds.h gcode_process.h gcode_parse.h debug.h
 limit_switches.o: limit_switches.c limit_switches.h traject.h bebopr.h \
  mendel.h gpio.h debug.h beaglebone.h
 pruss.o: pruss.c pruss.h algo2cmds.h beaglebone.h debug.h

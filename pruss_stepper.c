@@ -494,7 +494,11 @@ int pruss_stepper_halted( void)
 
 int pruss_wait_for_queue_space( void)
 {
+  int timeout = 30000;	// set to 30 seconds
   while (pruss_queue_full()) {
+    if (timeout <= 0) {
+      return -1;
+    }
     if (pruss_is_halted()) {
       return -1;
     }
@@ -504,6 +508,7 @@ int pruss_wait_for_queue_space( void)
      * cpu load and number of poll cycles by sleeping part of the time.
      */
     usleep( 1000);
+    --timeout;
   }
   return 0;
 }

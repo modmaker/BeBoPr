@@ -18,28 +18,28 @@
 /*
  *  Settings that are changed during initialization.
  */
-static double step_size_x;	/* [m] */
+static double step_size_x;      /* [m] */
 static double step_size_y;
 static double step_size_z;
 static double step_size_e;
 
-static double recipr_a_max_x;	/* [s^2/m] */
+static double recipr_a_max_x;   /* [s^2/m] */
 static double recipr_a_max_y;
 static double recipr_a_max_z;
 static double recipr_a_max_e;
 
-static double vx_max;		/* [m/s] */
+static double vx_max;           /* [m/s] */
 static double vy_max;
 static double vz_max;
 static double ve_max;
 
 static const double fclk = 200000000.0;
-static const double c_acc = 282842712.5;	// = fclk * sqrt( 2.0);
+static const double c_acc = 282842712.5;        // = fclk * sqrt( 2.0);
 
 static double speed_override_factor = 1.0;
 static double extruder_override_factor = 1.0;
 
-static unsigned int moveNrs[ 1 + 5];	/* 5 axes, 1-based */
+static unsigned int moveNrs[ 1 + 5];    /* 5 axes, 1-based */
 
 void incMoveNr( unsigned int pruss_axis)
 {
@@ -60,14 +60,14 @@ static inline int queue_accel( const char* axis_name, double ramp, double a, dou
     if (c0 > cmin) {
       if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
         printf( "Queue ACCEL %c%u: ramping up to v=%1.3lf [mm/s] with a=%1.3lf [m/s^2] to %1.6lf [mm]"
-		" (from n0=%u, c0=%u up to cmin=%u)\n",
-		aname, moveNrs[ pruss_axis], SI2MM( v), a, SI2MM( origin + ramp), n0, c0, cmin);
+                " (from n0=%u, c0=%u up to cmin=%u)\n",
+                aname, moveNrs[ pruss_axis], SI2MM( v), a, SI2MM( origin + ramp), n0, c0, cmin);
       }
       pruss_queue_accel( pruss_axis, n0, c0, cmin, SI2POS( origin + ramp));
     } else {
       if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
         printf( "Queue ACCEL %c%u: running at v=%1.3lf [mm/s] to %1.6lf [mm] (at c=%u)\n",
-		aname, moveNrs[ pruss_axis], SI2MM( v), SI2MM( origin + ramp), cmin);
+                aname, moveNrs[ pruss_axis], SI2MM( v), SI2MM( origin + ramp), cmin);
       }
       pruss_queue_dwell( pruss_axis, cmin, SI2POS( origin + ramp));
     }
@@ -76,7 +76,7 @@ static inline int queue_accel( const char* axis_name, double ramp, double a, dou
   return 0;
 }
 
-#define QUEUE_ACCEL( axis) queue_accel( #axis, ramp_up_d##axis, a##axis, v##axis, n0##axis, c0##axis, cmin##axis, axis##0)
+#define QUEUE_ACCEL( axis) queue_accel( #axis, ramp_up_d##axis, a##axis, v##axis, n0##axis, c0##axis, cmin##axis, s0##axis)
 
 /* ---------------------------------- */
 
@@ -91,7 +91,7 @@ static inline int queue_dwell( const char* axis_name, double v, double ramp, dou
     ++moveNrs[ pruss_axis];
     if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
       printf( "Queue DWELL %c%u: running at v=%1.3lf [mm/s] to %1.6lf [mm] (at c=%u)\n",
-	      aname, moveNrs[ pruss_axis], SI2MM( v), SI2MM( origin + ramp + dwell), cdwell);
+              aname, moveNrs[ pruss_axis], SI2MM( v), SI2MM( origin + ramp + dwell), cdwell);
     }
     pruss_queue_dwell( pruss_axis, cdwell, SI2POS( origin + ramp + dwell));
     return 1;
@@ -99,12 +99,12 @@ static inline int queue_dwell( const char* axis_name, double v, double ramp, dou
   return 0;
 }
 
-#define QUEUE_DWELL( axis) queue_dwell( #axis, v##axis, ramp_up_d##axis, dwell_d##axis, cdwell##axis, axis##0)
+#define QUEUE_DWELL( axis) queue_dwell( #axis, v##axis, ramp_up_d##axis, dwell_d##axis, cdwell##axis, s0##axis)
 
 /* ---------------------------------- */
 
 static inline int queue_decel( const char* axis_name, double a, double v, double ramp_up, double dwell, double ramp_down,
-			uint32_t nmin, uint32_t c0, uint32_t cmin, double origin)
+                        uint32_t nmin, uint32_t c0, uint32_t cmin, double origin)
 {
   if (v != 0.0 && ramp_down != 0.0) {
     char aname = *axis_name;
@@ -116,14 +116,14 @@ static inline int queue_decel( const char* axis_name, double a, double v, double
     if (c0 > cmin) {
       if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
         printf( "Queue DECEL %c%u: ramping down from v=%1.3lf [mm/s] with a=%1.3lf [m/s^2] to %1.6lf [mm]"
-		" (down from nmin=%u, cmin=%u)\n",
-		aname, moveNrs[ pruss_axis], SI2MM( v), a, SI2MM( origin + ramp_up + dwell + ramp_down), nmin, cmin);
+                " (down from nmin=%u, cmin=%u)\n",
+                aname, moveNrs[ pruss_axis], SI2MM( v), a, SI2MM( origin + ramp_up + dwell + ramp_down), nmin, cmin);
       }
       pruss_queue_decel( pruss_axis, nmin, cmin, SI2POS( origin + ramp_up + dwell + ramp_down));
     } else {
       if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
         printf( "Queue DECEL %c%u: running at v=%1.3lf [mm/s] to %1.6lf [mm] (at c=%u)\n",
-		aname, moveNrs[ pruss_axis], SI2MM( v), SI2MM( origin + ramp_up + dwell + ramp_down), cmin);
+                aname, moveNrs[ pruss_axis], SI2MM( v), SI2MM( origin + ramp_up + dwell + ramp_down), cmin);
       }
       pruss_queue_dwell( pruss_axis, cmin, SI2POS( origin + ramp_up + dwell + ramp_down));
     }
@@ -133,13 +133,13 @@ static inline int queue_decel( const char* axis_name, double a, double v, double
 }
 
 #define QUEUE_DECEL( axis) queue_decel( #axis, a##axis, v##axis, ramp_up_d##axis, dwell_d##axis, ramp_down_d##axis, \
-					nmin##axis, c0##axis, cmin##axis, axis##0)
+                                        nmin##axis, c0##axis, cmin##axis, s0##axis)
 
 /* ---------------------------------- */
 
 static inline void axis_calc( const char* axis_name, double step_size_, double d, double double_s, double* ramp_up_d, double* ramp_down_d,
-			double a, double* v, double* dwell_d, uint32_t* n0, uint32_t* nmin,
-			uint32_t* c0, uint32_t* cmin, uint32_t* cdwell, double* recipr_t_acc, double* recipr_t_move)
+                        double a, double* v, double* dwell_d, uint32_t* n0, uint32_t* nmin,
+                        uint32_t* c0, uint32_t* cmin, uint32_t* cdwell, double* recipr_t_acc, double* recipr_t_move)
 {
   if (d == 0.0) {
    /*
@@ -191,13 +191,13 @@ static inline void axis_calc( const char* axis_name, double step_size_, double d
     * Update the time it takes for the entire move to complete.
     * (All axes should generate the same duration, so only do this once).
     */
-    if (*recipr_t_move == 0.0) {
+//    if (*recipr_t_move == 0.0) {
       *recipr_t_move = *v / (2 * (*ramp_up_d + *ramp_down_d) + *dwell_d);
       if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
         printf( "(set move duration to %1.3lf [ms]) ",
-		SI2MS( RECIPR( *recipr_t_move)));
+                SI2MS( RECIPR( *recipr_t_move)));
       }
-    }
+//    }
 
    /*
     * Calculate timing parameters for stepper
@@ -222,82 +222,112 @@ static inline void axis_calc( const char* axis_name, double step_size_, double d
     }
     if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
       printf( "\n   ramp-up= %3.6lf [mm], dwell= %3.6lf [mm], ramp-down= %3.6lf [mm], velocity= %3.3lf [mm/s], duration= %1.3lf [ms]\n",
-	      SI2MM( *ramp_up_d), SI2MM( *dwell_d), SI2MM( *ramp_down_d), SI2MM( *v),
-	      SI2MS( (2 * (*ramp_up_d + *ramp_down_d) + *dwell_d) / *v));
+              SI2MM( *ramp_up_d), SI2MM( *dwell_d), SI2MM( *ramp_down_d), SI2MM( *v),
+              SI2MS( (2 * (*ramp_up_d + *ramp_down_d) + *dwell_d) / *v));
     }
-    *n0 = 0;	// start acceleration from zero speed
-    *nmin = 0;	// zero will use the end value from the acceleration phase
+    *n0 = 0;    // start acceleration from zero speed
+    *nmin = 0;  // zero will use the end value from the acceleration phase
   }
 }
 
 #define AXIS_CALC( axis) axis_calc( #axis, step_size_##axis, d##axis, double_s##axis, &ramp_up_d##axis, &ramp_down_d##axis, \
-					a##axis, &v##axis, &dwell_d##axis, &n0##axis, &nmin##axis, \
-					&c0##axis, &cmin##axis, &cdwell##axis, &recipr_t_acc, &recipr_t_move)
+                                        a##axis, &v##axis, &dwell_d##axis, &n0##axis, &nmin##axis, \
+                                        &c0##axis, &cmin##axis, &cdwell##axis, &recipr_t_acc, &recipr_t_move)
 
-/*
- * All dimensions are in SI units and relative
- */
-void traject_delta_on_all_axes( traject5D* traject)
+///////////////////////////////////////////////////////////////////////////
+
+static double queued_time = 0;
+
+void traject_calc_all_axes( const traject5D* traject, move5D* move)
 {
-  static unsigned long int serno = 0;
-  static double queued_time = 0;
-  static double calc_start_old;
-  double feed = speed_override_factor * traject->feed;
+ /*
+  *  Preparation
+  */
+  move->chainable = 0;
 
-  if (traject == NULL) {
-    return;
-  }
-  if (serno++ == 0) {
+#ifdef SLOW_DOWN_HACK
+  static double calc_start_old;
+  if (move->serno == 1) {
     calc_start_old = timestamp_get();
   }
+#endif
 
-  double dx = traject->x1 - traject->x0;
-  double dy = traject->y1 - traject->y0;
-  double dz = traject->z1 - traject->z0;
-  double de = traject->e1 - traject->e0;
+// BEGIN DEBUG
+#if 0
+  if (serno == 51545) {
+    usleep( 10 * 1000 * 1000);
+    pruss_stepper_dump_state();
+    usleep( 10 * 1000 * 1000);
+  }
+#endif
+// END DEBUG
 
+ /*
+  *  Fetch trajectory coordinates and determine actual feed
+  */
+  move->s0x = traject->s0x;
+  move->s0y = traject->s0y;
+  move->s0z = traject->s0z;
+  move->s0e = traject->s0e;
+
+  move->dx = traject->s1x - move->s0x;
+  move->dy = traject->s1y - move->s0y;
+  move->dz = traject->s1z - move->s0z;
+  move->de = traject->s1e - move->s0e;
+
+  double feed = move->feed = speed_override_factor * traject->feed;
+
+ /*
+  *
+  */
   double move_start = timestamp_get();
   if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
-    printf( "\nMOVE[ #%lu %1.3fs] traject_delta_on_all_axes( traject( %0.9lf, %1.9lf, %1.9lf, %1.9lf, F=%1.3lf) [m])\n",
-	    serno, move_start, dx, dy, dz, de, feed);
+    printf( "\nMOVE[ #%lu %1.3fs] traject_delta_on_all_axes( traject( %0.9lf, %1.9lf, %1.9lf, %1.9lf, F=%1.3lf%s) [m])\n",
+            move->serno, move_start, move->dx, move->dy, move->dz, move->de, feed, (move->chainable) ? ", chain to next" : "");
   }
 
-  int reverse_x = 0;
-  if (dx < 0.0) {
-    dx = -dx;
-    reverse_x = 1;
+ /*
+  *  Split each vector into direction and magnitude
+  */
+  move->reverse_x = 0;
+  if (move->dx < 0.0) {
+    move->dx = -move->dx;
+    move->reverse_x = 1;
   }
-  int reverse_y = 0;
-  if (dy < 0.0) {
-    dy = -dy;
-    reverse_y = 1;
+  move->reverse_y = 0;
+  if (move->dy < 0.0) {
+    move->dy = -move->dy;
+    move->reverse_y = 1;
   }
-  int reverse_z = 0;
-  if (dz < 0.0) {
-    dz = -dz;
-    reverse_z = 1;
+  move->reverse_z = 0;
+  if (move->dz < 0.0) {
+    move->dz = -move->dz;
+    move->reverse_z = 1;
   }
-  int reverse_e = 0;
-  if (de < 0.0) {
-    de = -de;
-    reverse_e = 1;
+  move->reverse_e = 0;
+  if (move->de < 0.0) {
+    move->de = -move->de;
+    move->reverse_e = 1;
   }
  /*
   * The E-axis is not part of the (3D) movement vector. The velocity
   * of the E-axis is directly determined by the feed of the G1 move,
   * unless reduced by an axis velocity above its limit.
   */
-  double distance = sqrt( dx * dx + dy * dy + dz * dz);
+  double distance = sqrt( move->dx * move->dx + move->dy * move->dy + move->dz * move->dz);
   if (distance < 2.0E-9) {
-    if (de == 0.0) {
+    if (move->de == 0.0) {
       if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
         printf( "*** Null move, distance = %1.9lf\n", distance);
       }
-      return;	// TODO: will this suffice ?
+      move->null_move = 1;
+      return;   // TODO: will this suffice ?
     }
     // If E is only moving axis, set distance from E
-    distance = de;
+    distance = move->de;
   }
+  move->null_move = 0;
+
  /*
   * Travel distance and requested velocity are now known.
   * Determine the velocities for the individual axes
@@ -305,11 +335,14 @@ void traject_delta_on_all_axes( traject5D* traject)
   * If a calculated velocity is higher than the maximum
   * allowed, slow down the entire move.
   */
-  double recipr_dt = feed / ( 60000.0 * distance);	/* [m/s] / [m] */
+  double recipr_dt = feed / ( 60000.0 * distance);      /* [m/s] / [m] */
   if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
     printf( "Request: total distance = %1.6lf [mm], vector velocity = %1.3lf [mm/s] => est. time = %1.3lf [ms]\n",
-	    SI2MM( distance), SI2MS( feed / 60000.0), SI2MS( RECIPR( recipr_dt)));
+            SI2MM( distance), SI2MS( feed / 60000.0), SI2MS( RECIPR( recipr_dt)));
   }
+
+#ifdef SLOW_DOWN_HACK
+// TODO: fix code, not tested
  /*
   * FIXME: Either the calculations, Linux scheduling or (?) causes some large gaps here:
   * Sometimes it takes up to 50 ms before a new move is ready to be queued here. To
@@ -327,7 +360,7 @@ void traject_delta_on_all_axes( traject5D* traject)
   double slack = queued_time - est_calc_time;
   if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
     printf( "%sElapsed_time= %1.3lfms slack= %1.3fms, duration of moves in queue= %1.3fms\n",
-	    (slack < 0) ? "GAP - " : "", SI2MS( elapsed_time), SI2MS( slack), SI2MS( queued_time));
+            (slack < 0) ? "GAP - " : "", SI2MS( elapsed_time), SI2MS( slack), SI2MS( queued_time));
   }
   if (slack < 0) {
    /*
@@ -339,46 +372,48 @@ void traject_delta_on_all_axes( traject5D* traject)
       recipr_dt = RECIPR( -slack);
       if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
         printf( "*** Short move requested, slowing down average velocity to %1.3lf [mm/s], duration %1.3lf [ms] to prevent gap\n",
-		SI2MS( recipr_dt * distance), SI2MS( RECIPR( recipr_dt)));
+                SI2MS( recipr_dt * distance), SI2MS( RECIPR( recipr_dt)));
       }
     }
   }
+#endif
 
 //=====================================================================================
 
   int v_clipped = 0;
-  double vx = dx * recipr_dt;
-  if (vx > vx_max) {	  // clip feed !
+  move->vx = move->dx * recipr_dt;
+  if (move->vx > vx_max) {        // clip feed !
     if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
-      printf( "*** clipping vx (%1.6lf) to vx_max (%1.6lf)\n", vx, vx_max);
+      printf( "*** clipping vx (%1.6lf) to vx_max (%1.6lf)\n", move->vx, vx_max);
     }
-    recipr_dt = vx_max / dx;
+    recipr_dt = vx_max / move->dx;
     v_clipped = 1;
   }
-  double vy = dy * recipr_dt;
-  if (vy > vy_max) {	  // clip feed !
+  move->vy = move->dy * recipr_dt;
+  if (move->vy > vy_max) {        // clip feed !
     if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
-      printf( "*** clipping vy (%1.6lf) to vy_max (%1.6lf)\n", vy, vy_max);
+      printf( "*** clipping vy (%1.6lf) to vy_max (%1.6lf)\n", move->vy, vy_max);
     }
-    recipr_dt = vy_max / dy;
+    recipr_dt = vy_max / move->dy;
     v_clipped = 1;
   }
-  double vz = dz * recipr_dt;
-  if (vz > vz_max) {	  // clip feed !
+  move->vz = move->dz * recipr_dt;
+  if (move->vz > vz_max) {        // clip feed !
     if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
-      printf( "*** clipping vz (%1.6lf) to vz_max (%1.6lf)\n", vz, vz_max);
+      printf( "*** clipping vz (%1.6lf) to vz_max (%1.6lf)\n", move->vz, vz_max);
     }
-    recipr_dt = vz_max / dz;
+    recipr_dt = vz_max / move->dz;
     v_clipped = 1;
   }
-  double ve = de * recipr_dt;
-  if (ve > ve_max) {	  // clip feed !
+  move->ve = move->de * recipr_dt;
+  if (move->ve > ve_max) {        // clip feed !
     if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
-      printf( "*** clipping ve (%1.6lf) to ve_max (%1.6lf)\n", ve, ve_max);
+      printf( "*** clipping ve (%1.6lf) to ve_max (%1.6lf)\n", move->ve, ve_max);
     }
-    recipr_dt = ve_max / de;
+    recipr_dt = ve_max / move->de;
     v_clipped = 1;
   }
+
  /*
   * If one or more velocity were limited by its maximum,
   * some of the other values may be incorrect. Recalculate all.
@@ -386,16 +421,16 @@ void traject_delta_on_all_axes( traject5D* traject)
   if (v_clipped) {
     if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
       printf( "Velocity changed to %1.3lf [mm/s] and duration to %1.3lf [ms] due to this clipping\n",
-	      SI2MM( distance * recipr_dt), SI2MS( RECIPR( recipr_dt)));
+              SI2MM( distance * recipr_dt), SI2MS( RECIPR( recipr_dt)));
     }
-    vx = dx * recipr_dt;
-    vy = dy * recipr_dt;
-    vz = dz * recipr_dt;
-    ve = de * recipr_dt;
+    move->vx = move->dx * recipr_dt;
+    move->vy = move->dy * recipr_dt;
+    move->vz = move->dz * recipr_dt;
+    move->ve = move->de * recipr_dt;
   }
   if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
     printf( "Velocities - X: %1.3lf, Y: %1.3lf, Z %1.3lf, E: %1.3lf [mm/s]\n",
-	    SI2MM( vx), SI2MM( vy), SI2MM( vz), SI2MM( ve));
+            SI2MM( move->vx), SI2MM( move->vy), SI2MM( move->vz), SI2MM( move->ve));
   }
 
 //=====================================================================================
@@ -409,40 +444,82 @@ void traject_delta_on_all_axes( traject5D* traject)
   * how long it takes for that axis to reach its target speed using maximum
   * acceleration. The slowest axis then scales the acceleration used for all axes.
   */
-  double tx_acc = vx * recipr_a_max_x;
-  double ty_acc = vy * recipr_a_max_y;
-  double tz_acc = vz * recipr_a_max_z;
-  double te_acc = ve * recipr_a_max_e;
+  double tx_acc = move->vx * recipr_a_max_x;
+  double ty_acc = move->vy * recipr_a_max_y;
+  double tz_acc = move->vz * recipr_a_max_z;
+  double te_acc = move->ve * recipr_a_max_e;
  /*
   * determine the largest period and scale the acceleration for all axes.
   */
   double t_acc = fmax( fmax( tx_acc, ty_acc), fmax( tz_acc, te_acc));
   if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
     printf( "Time needed to reach velocity: X= %1.3lf, Y= %1.3lf, Z= %1.3lf, E= %1.3lf => MAX= %1.3lf [ms]\n",
-	   SI2MS( tx_acc), SI2MS( ty_acc), SI2MS( tz_acc), SI2MS( te_acc), SI2MS( t_acc));
+           SI2MS( tx_acc), SI2MS( ty_acc), SI2MS( tz_acc), SI2MS( te_acc), SI2MS( t_acc));
   }
   double recipr_t_acc = 1.0 / t_acc;
-  double ax = vx * recipr_t_acc;
-  double ay = vy * recipr_t_acc;
-  double az = vz * recipr_t_acc;
-  double ae = ve * recipr_t_acc;
+  move->ax = move->vx * recipr_t_acc;
+  move->ay = move->vy * recipr_t_acc;
+  move->az = move->vz * recipr_t_acc;
+  move->ae = move->ve * recipr_t_acc;
   if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
     printf( "Synchronized acceleration constants: X= %1.3lf, Y= %1.3lf, Z= %1.3lf, E= %1.3lf [m/s^2]\n", 
-	    ax, ay, az, ae);
+            move->ax, move->ay, move->az, move->ae);
   }
  /*
   *  Length of acceleration/deceleration traject:
   *    s = v^2/2a or s = a.t^2/2
   */
   double t_square  = t_acc * t_acc;
-  double double_sx = ax * t_square;
-  double double_sy = ay * t_square;
-  double double_sz = az * t_square;
-  double double_se = ae * t_square;
+  move->double_sx = move->ax * t_square;
+  move->double_sy = move->ay * t_square;
+  move->double_sz = move->az * t_square;
+  move->double_se = move->ae * t_square;
   if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
     printf( "Distance to reach full speed: X= %1.6lf Y= %1.6lf Z= %1.6lf E= %1.6lf [mm]\n",
-	    SI2MM( 0.5 * double_sx), SI2MM( 0.5 * double_sy), SI2MM( 0.5 * double_sz), SI2MM( 0.5 * double_se));
+            SI2MM( 0.5 * move->double_sx), SI2MM( 0.5 * move->double_sy),
+            SI2MM( 0.5 * move->double_sz), SI2MM( 0.5 * move->double_se));
   }
+
+}
+
+/*
+ * All dimensions are in SI units and relative
+ */
+void traject_move_all_axes( move5D* m)
+{
+  double dx = m->dx;
+  double dy = m->dy;
+  double dz = m->dz;
+  double de = m->de;
+
+  int reverse_x = m->reverse_x;
+  int reverse_y = m->reverse_y;
+  int reverse_z = m->reverse_z;
+  int reverse_e = m->reverse_e;
+
+  int chainable = m->chainable;
+  double recipr_t_acc = m->recipr_t_acc;
+
+  double vx = m->vx;
+  double vy = m->vy;
+  double vz = m->vz;
+  double ve = m->ve;
+
+  double ax = m->ax;
+  double ay = m->ay;
+  double az = m->az;
+  double ae = m->ae;
+
+  double s0x = m->s0x;
+  double s0y = m->s0y;
+  double s0z = m->s0z;
+  double s0e = m->s0e;
+
+  double double_sx = m->double_sx;
+  double double_sy = m->double_sy;
+  double double_sz = m->double_sz;
+  double double_se = m->double_se;
+
   double ramp_up_dx, ramp_up_dy, ramp_up_dz, ramp_up_de;
   double ramp_down_dx, ramp_down_dy, ramp_down_dz, ramp_down_de;
   double dwell_dx, dwell_dy, dwell_dz, dwell_de;
@@ -452,7 +529,8 @@ void traject_delta_on_all_axes( traject5D* traject)
   uint32_t cdwellx, cdwelly, cdwellz, cdwelle;
   uint32_t n0x, n0y, n0z, n0e;
   uint32_t nminx, nminy, nminz, nmine;
-  double recipr_t_move = 0.0;	// means: not set
+  double recipr_t_move = 0.0;   // means: not set
+
  /*
   * Calculate the timing for all axes
   */
@@ -485,8 +563,8 @@ void traject_delta_on_all_axes( traject5D* traject)
   }
   if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
     printf( "Ramps: X= %1.6lf/%1.6lf, Y= %1.6lf/%1.6lf, Z= %1.6lf/%1.6lf, E= %1.6lf/%1.6lf [mm], ramp duration= %1.3lf [ms]\n",
-	    SI2MM( ramp_up_dx), SI2MM( ramp_down_dx), SI2MM( ramp_up_dy), SI2MM( ramp_down_dy), SI2MM( ramp_up_dz), SI2MM( ramp_down_dz),
-	    SI2MM( ramp_up_de), SI2MM( ramp_down_de), SI2MS( RECIPR( recipr_t_acc)));
+            SI2MM( ramp_up_dx), SI2MM( ramp_down_dx), SI2MM( ramp_up_dy), SI2MM( ramp_down_dy), SI2MM( ramp_up_dz), SI2MM( ramp_down_dz),
+            SI2MM( ramp_up_de), SI2MM( ramp_down_de), SI2MS( RECIPR( recipr_t_acc)));
   }
 
 // If for at least one axis, there is a move but no dwell,
@@ -508,18 +586,13 @@ void traject_delta_on_all_axes( traject5D* traject)
 
   double queue_start = timestamp_get();
   if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
-    printf( "Calculations took %1.3lf ms\n", SI2MS( queue_start - calc_start));
+//    printf( "Calculations took %1.3lf ms\n", SI2MS( queue_start - calc_start));
   }
   queued_time += RECIPR( recipr_t_move);
   if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
     printf( "Duration of moves in queue= %1.3lf [ms] after adding move of %1.3lf [ms]\n",
-	    SI2MS( queued_time), SI2MS( RECIPR( recipr_t_move)));
+            SI2MS( queued_time), SI2MS( RECIPR( recipr_t_move)));
   }
-
-  double x0 = traject->x0;
-  double y0 = traject->y0;
-  double z0 = traject->z0;
-  double e0 = traject->e0;
 
   int any_move;
 
@@ -547,6 +620,14 @@ void traject_delta_on_all_axes( traject5D* traject)
     pruss_queue_execute();
   }
 
+  if (chainable) {
+    c0x = cminx;
+    c0y = cminy;
+    c0z = cminz;
+    c0e = cmine;
+    printf( "Suppressing ramp down\n");
+  }
+
 // RAMP DOWN
   any_move = 0;
   any_move += QUEUE_DECEL( x);
@@ -557,8 +638,10 @@ void traject_delta_on_all_axes( traject5D* traject)
     pruss_queue_execute();
   }
 
+  if (!chainable) {
   // this command act as NOP that will generate a sync point for the axes !
   pruss_queue_set_pulse_length( 4, 20 * 200);
+  }
 
   double end_time = timestamp_get();
   if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
@@ -566,13 +649,15 @@ void traject_delta_on_all_axes( traject5D* traject)
   }
 }
 
+////////////////////////////////////////////////////////////////////////////
+
 static void pruss_axis_config( int axis, double step_size, int reverse)
 {
-  uint32_t ssi = (int) SI2NM( step_size) & ~1;	// make even for symetry
+  uint32_t ssi = (int) SI2NM( step_size) & ~1;  // make even for symetry
 
   if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
     printf( "Set axis nr %d step size to %u [nm] and %s direction\n",
-	    axis, ssi, (reverse) ? "reversed" : "normal");
+            axis, ssi, (reverse) ? "reversed" : "normal");
   }
   pruss_queue_config_axis( axis, ssi, reverse);
 }
@@ -637,12 +722,12 @@ int traject_init( void)
 
   if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
     printf( "  step: X = %9.3lf, Y = %9.3lf, Z = %9.3lf, E = %9.3lf [um]\n",
-	    SI2UM( step_size_x), SI2UM( step_size_y), SI2UM( step_size_z), SI2UM( step_size_e)); 
+            SI2UM( step_size_x), SI2UM( step_size_y), SI2UM( step_size_z), SI2UM( step_size_e)); 
     printf( "  amax: X = %9.3lf, Y = %9.3lf, Z = %9.3lf, E = %9.3lf [mm/s^2]\n",
-	    SI2MM( RECIPR( recipr_a_max_x)), SI2MM( RECIPR( recipr_a_max_y)),
-	    SI2MM( RECIPR( recipr_a_max_z)), SI2MM( RECIPR( recipr_a_max_e)));
+            SI2MM( RECIPR( recipr_a_max_x)), SI2MM( RECIPR( recipr_a_max_y)),
+            SI2MM( RECIPR( recipr_a_max_z)), SI2MM( RECIPR( recipr_a_max_e)));
     printf( "  vmax: X = %9.3lf, Y = %9.3lf, Z = %9.3lf, E = %9.3lf [mm/s]\n",
-	    SI2MM( vx_max), SI2MM( vy_max), SI2MM( vz_max), SI2MM( ve_max)); 
+            SI2MM( vx_max), SI2MM( vy_max), SI2MM( vz_max), SI2MM( ve_max)); 
   }
   /*
    *  Configure PRUSS and propagate stepper configuration
@@ -665,7 +750,7 @@ int traject_init( void)
   * Setting a value less than the cycletime will generate zero-length
   * step pulses!
   */
-  const int step_pulse_time = 16;	/* [us] */
+  const int step_pulse_time = 16;       /* [us] */
   /* Set the duration of the active part of the step pulse */
   pruss_queue_set_pulse_length( 1, step_pulse_time * 200);
   pruss_queue_set_pulse_length( 2, step_pulse_time * 200);
@@ -679,12 +764,12 @@ int traject_init( void)
   pruss_queue_set_origin( 4);
 
   /* Configure limit switches in the PRUSS */
-#define CONFIG_AXIS_LIMSW( axis, prussaxis, gpiomin, gpiomax)	\
-  do {									\
+#define CONFIG_AXIS_LIMSW( axis, prussaxis, gpiomin, gpiomax)   \
+  do {                                                                  \
     uint8_t min_gpio = (config_axis_has_min_limit_switch( axis)) ? gpiomin : 255; \
-    uint8_t max_gpio = (config_axis_has_max_limit_switch( axis)) ? gpiomax : 255;	\
-    uint8_t min_invert = config_min_limit_switch_is_active_low( axis);	\
-    uint8_t max_invert = config_max_limit_switch_is_active_low( axis);	\
+    uint8_t max_gpio = (config_axis_has_max_limit_switch( axis)) ? gpiomax : 255;       \
+    uint8_t min_invert = config_min_limit_switch_is_active_low( axis);  \
+    uint8_t max_invert = config_max_limit_switch_is_active_low( axis);  \
     pruss_queue_config_limsw( prussaxis, min_gpio, min_invert, max_gpio, max_invert); \
   } while (0)
 
@@ -692,7 +777,6 @@ int traject_init( void)
   CONFIG_AXIS_LIMSW( y_axis, 2, YMIN_GPIO, YMAX_GPIO);
   CONFIG_AXIS_LIMSW( z_axis, 3, ZMIN_GPIO, ZMAX_GPIO);
 
-  pruss_queue_set_idle_timeout( 30);	// set a 3 seconds timeout
+  pruss_queue_set_idle_timeout( 30);    // set a 3 seconds timeout
   return 0;
 }
-
