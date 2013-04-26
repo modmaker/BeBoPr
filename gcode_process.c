@@ -1163,18 +1163,21 @@ static void process_move_command( struct move_target* move, struct move_target* 
    /*
     * move to resume
     */
-    move5D* p0 = &move->data;
-    move5D* p1 = &next_move->data;
-    printf( "MOVE[ %lu] process_move_command() - starting chainable move\n"
-            "MOVE ... current move velocity ( %1.6lf, %1.6lf, %1.6lf, %1.6lf) [m/s]\n"
-            "MOVE ...... next move velocity ( %1.6lf, %1.6lf, %1.6lf, %1.6lf) [m/s]\n",
-            p0->serno, p0->vx, p0->vy, p0->vz, p0->ve, p1->vx, p1->vy, p1->vz, p1->ve);
-
+    if (DEBUG_GCODE_PROCESS && (debug_flags & DEBUG_GCODE_PROCESS)) {
+      move5D* p0 = &move->data;
+      move5D* p1 = &next_move->data;
+      printf( "MOVE[ %lu] process_move_command() - starting chainable move\n"
+	      "MOVE ... current move velocity ( %1.6lf, %1.6lf, %1.6lf, %1.6lf) [m/s]\n"
+	      "MOVE ...... next move velocity ( %1.6lf, %1.6lf, %1.6lf, %1.6lf) [m/s]\n",
+	      p0->serno, p0->vx, p0->vy, p0->vz, p0->ve, p1->vx, p1->vy, p1->vz, p1->ve);
+    }
   } else {
    /*
     * move to stop
     */
-    printf( "MOVE[ %lu] process_move_command()  - starting ending move\n", move->data.serno);
+    if (DEBUG_GCODE_PROCESS && (debug_flags & DEBUG_GCODE_PROCESS)) {
+      printf( "MOVE[ %lu] process_move_command()  - starting ending move\n", move->data.serno);
+    }
   }
 
   if (!move->data.null_move) {
