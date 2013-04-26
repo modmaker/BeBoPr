@@ -8,6 +8,8 @@
 #include <time.h>
 #include <pthread.h>
 #include <signal.h>
+#include <poll.h>
+#include <errno.h>
 
 #include "heater.h"
 #include "bebopr.h"
@@ -175,23 +177,50 @@ int main ( int argc, const char* argv[])
   printf( "start\nok\n");
   fprintf( stderr, "Starting main loop...\n");
 
-  unsigned int cnt_in = 0;
-  for (;;) {
-    char s[ 100];
+  /* Watch stdin (fd 0) to see when it has input. */
+  struct pollfd fds[] = {
+    { .fd = fileno( stdin),
+      .events = POLLIN,
+    }
+  };
 
-    if (fgets( s, sizeof( s), stdin)) {
-      char* p = s;
-      while (*p) {
-        gcode_parse_char( *p++);
-        ++cnt_in;
+  unsigned int cnt_in = 0;
+  int may_need_flush = 0;
+  char s[ 100];
+  for (;;) {
+
+    /* Wait up to 0.3 seconds. */
+    const int timeout = 500; /* ms */
+    int retval = poll( fds, 1, timeout);
+    if (retval < 0 && errno != EINTR) {
+      perror( "select()");
+      exit( EXIT_FAILURE);
+    } else if (retval == 0 || (retval < 0 && errno == EINTR)) {
+      // timeout generates flush
+      if (may_need_flush) {
+        fprintf( stderr, "main loop - flushing pending command.\n");
+        process_gcode_command( NULL);	// flush last command
+        may_need_flush = 0;
       }
-    } else if (feof( stdin)) {
-      process_gcode_command( NULL);	// flush last command
-      fprintf( stderr, "main loop - EOF on input, terminating after %u characters.\n", cnt_in);
-      normal_exit = 1;
-      exit( EXIT_SUCCESS);
-    } else if (ferror( stdin)) {
-      fprintf( stderr, "main loop - error on input, ignoring.\n");
+    } else {
+      /* data is available */
+      if (fgets( s, sizeof( s), stdin)) {
+        char* p = s;
+	while (*p) {
+          gcode_parse_char( *p++);
+	  ++cnt_in;
+	}
+        may_need_flush = 1;
+      } else if (feof( stdin)) {
+        if (may_need_flush) {
+          process_gcode_command( NULL);	// flush last command
+	}
+	fprintf( stderr, "main loop - EOF on input, terminating after %u characters.\n", cnt_in);
+	normal_exit = 1;
+	exit( EXIT_SUCCESS);
+      } else if (ferror( stdin)) {
+        fprintf( stderr, "main loop - error on input, ignoring.\n");
+      }
     }
   }
 }
