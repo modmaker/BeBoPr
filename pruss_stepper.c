@@ -344,9 +344,11 @@ int pruss_stepper_init( void)
   if (pruss_command( &pruCmd) < 0) {
     return -1;
   }
+#if 0
   if (DEBUG_PRUSS) {
     debug_flags &= ~DEBUG_PRUSS;
   }
+#endif
   return 0;
 }
 
