@@ -609,7 +609,7 @@ static void process_non_move_command( GCODE_COMMAND* target)
 			case 82: {
 				int old_mode = config_set_e_axis_mode( 0);
 				if (old_mode != 0 && DEBUG_GCODE_PROCESS && (debug_flags & DEBUG_GCODE_PROCESS)) {
-					fprintf( stderr, "G82: switching to absolute extruder coordinates\n");
+					fprintf( stderr, "M82: switching to absolute extruder coordinates\n");
 				}
 				break;
 			}
@@ -617,7 +617,7 @@ static void process_non_move_command( GCODE_COMMAND* target)
 			case 83: {
 				int old_mode = config_set_e_axis_mode( 1);
 				if (old_mode == 0 && DEBUG_GCODE_PROCESS && (debug_flags & DEBUG_GCODE_PROCESS)) {
-					fprintf( stderr, "G83: switching to relative extruder coordinates\n");
+					fprintf( stderr, "M83: switching to relative extruder coordinates\n");
 				}
 				break;
 			}
