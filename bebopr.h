@@ -11,6 +11,12 @@ typedef enum {
   x_axis, y_axis, z_axis, e_axis
 } axis_e;
 
+static inline char axisName( axis_e axis)
+{
+  char names[] = { 'X', 'Y', 'Z', 'E', };
+  return names[ axis];
+}
+
 // Early init that pushes configuration to subsystems
 extern int bebopr_pre_init( void);
 

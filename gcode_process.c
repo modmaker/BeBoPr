@@ -169,7 +169,6 @@ static void enqueue_pos( const TARGET* target)
 
 static void clip_move( axis_e axis, int32_t* pnext_target, int32_t current_pos, int32_t home_pos)
 {
-  static const char axisNames[] = { 'X', 'Y', 'Z', 'E' }; // FIXME: this uses knowledge of axis_e
   double limit;
   if (*pnext_target >= current_pos) {
     // forward move or no move
@@ -180,7 +179,7 @@ static void clip_move( axis_e axis, int32_t* pnext_target, int32_t current_pos, 
       }
       if (home_pos + *pnext_target > pos_limit) {
         printf( "WARNING: Clipping target.%c (%d) to %d due to upper soft limit= %d (home= %d)\n",
-                axisNames[ axis], *pnext_target, pos_limit, MM2POS( limit), home_pos);
+                axisName( axis), *pnext_target, pos_limit, MM2POS( limit), home_pos);
         *pnext_target = pos_limit - home_pos;
       }
     }       
@@ -193,7 +192,7 @@ static void clip_move( axis_e axis, int32_t* pnext_target, int32_t current_pos, 
       }
       if (home_pos + *pnext_target < pos_limit) {
         printf( "WARNING: Clipping target.%c (%d) to %d due to lower soft limit= %d (home= %d)\n",
-                axisNames[ axis], *pnext_target, pos_limit, MM2POS( limit), home_pos);
+                axisName( axis), *pnext_target, pos_limit, MM2POS( limit), home_pos);
         *pnext_target = pos_limit - home_pos;
       }
     }       

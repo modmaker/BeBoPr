@@ -20,7 +20,6 @@
 
 
 static const double fclk = PRUSS_CLOCK;
-static const char axisNames[] = { '?', 'X', 'Y', 'Z', 'E' };
 
 // new_state is 1 when running towards the switch, 0 when running away from the switch!
 static int step_until_switch_change( axis_e axis, int reverse, int new_state, int pruss_axis,
@@ -77,7 +76,7 @@ static int step_until_switch_change( axis_e axis, int reverse, int new_state, in
     int32_t delta_pos = virtPosI_new - virtPosI;
     if (DEBUG_HOME && (debug_flags & DEBUG_HOME)) {
       printf( "  %c: limit switch %s detected after %1.6lf [mm]\n",
-	      axisNames[ pruss_axis], (new_state) ? "activation" : "release", POS2MM( delta_pos));
+	      axisName( axis), (new_state) ? "activation" : "release", POS2MM( delta_pos));
     }
     *position += delta_pos;
   }
@@ -111,7 +110,7 @@ static int run_home_one_axis( axis_e axis, int reverse, int32_t* position, uint3
   if (feed > config_get_home_max_feed( axis)) {
     feed = config_get_home_max_feed( axis);
     if (debug_flags & DEBUG_HOME) {
-      printf( "  %c: limiting home speed to %d\n", axisNames[ pruss_axis], feed);
+      printf( "  %c: limiting home speed to %d\n", axisName( axis), feed);
     }
   }
   /*
@@ -153,7 +152,7 @@ static int run_home_one_axis( axis_e axis, int reverse, int32_t* position, uint3
   }
   int32_t new_position = *position;
   fprintf( stderr, "Home operation on %c-axis resulted in netto move of %1.6lf [mm]\n",
-	  axisNames[ pruss_axis], POS2MM( new_position - old_position));
+	  axisName( axis), POS2MM( new_position - old_position));
   return 1;
 }
 
