@@ -1348,7 +1348,14 @@ void process_gcode_command( GCODE_COMMAND* command)
       */
       pending_move = next_move;
       move_pending = 1;
-    } else {
+    } else {  /* not G0123 */
+      if (move_pending) {
+       /*
+        * Execute the current pending move
+        */
+        process_move_command( &pending_move, NULL);
+        move_pending = 0;
+      }
       // execute non-G0123 move
       process_non_move_command( command);
     }
