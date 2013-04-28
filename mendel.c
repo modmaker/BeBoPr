@@ -198,7 +198,6 @@ int main ( int argc, const char* argv[])
     } else if (retval == 0 || (retval < 0 && errno == EINTR)) {
       // timeout generates flush
       if (may_need_flush) {
-        fprintf( stderr, "main loop - flushing pending command.\n");
         process_gcode_command( NULL);	// flush last command
         may_need_flush = 0;
       }
