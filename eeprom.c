@@ -59,6 +59,11 @@ struct pru_code_block {
 
 struct eeprom {
   union bone_cape_io_config cape_io_config;
+ /*
+  *  Current flag assignment:
+  *   flag 0 - stepper kind configuration (Pololu)
+  *   flag 1 - bebopr configuration id
+  */
   uint8_t                   flags[ 12];
   struct pru_code_block     pru0_code;
   struct pru_code_block     pru1_code;
@@ -243,19 +248,19 @@ int eeprom_read_flag( const char* eeprom_path, unsigned int flag_nr, uint8_t* va
 
 //----------------------------------------------------------------
 
-int eeprom_get_step_io_config( const char* eeprom_path)
+/*
+ *  Application specific interface, these map the assigned flags
+ *  Only read calls are provided, writing is done with the eeprom-tool!
+ */
+
+int eeprom_get_flag( const char* eeprom_path, int flagno)
 {
-  uint8_t step_io_config;
-  int result = eeprom_read_flag( eeprom_path, 0, &step_io_config);	// (old) io_config is (new) flag[ 0]
+  uint8_t flag;
+  int result = eeprom_read_flag( eeprom_path, flagno, &flag);
   if (result < 0) {
     return result;
   }
-  return step_io_config;
-}
-
-int eeprom_set_step_io_config( const char* eeprom_path, uint8_t step_io_config)
-{
-  return eeprom_write_flag( eeprom_path, 0, step_io_config);		// (old) io_config is (new) flag[ 0]
+  return flag;
 }
 
 //----------------------------------------------------------------
@@ -397,4 +402,6 @@ not_ok:
   usage();
 }
 
+//----------------------------------------------------------------
 #endif
+//----------------------------------------------------------------
