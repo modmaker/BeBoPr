@@ -157,20 +157,22 @@ static int convert_using_table( const struct conversion_entry* table, int entrie
 	  double rc              = delta_celsius / delta_adc;
 	  *celsius = celsius_ix - (adc - adc_ix) * rc;
 	} else {
-          // before first entry, must be very cold ;)
-	  *celsius = -273.15;
-	}
-	break;
+         /*
+          *  Before first entry, assume open circuit (sensor fault)
+          *  Return very high temperature to turn heaters off
+          */
+          *celsius = 777.0;     // lll (low)
+        }
+        break;
       } else if (delta_adc == 0) {
         *celsius = table[ ix].celsius;
-	break;
+        break;
       } else if (ix == entries) {
-        if (adc < 50) {
-          // assume short circuit
-	  *celsius = 999.9;
-	} else {
-	  *celsius = 500.0;
-	}
+       /*
+        *  After last entry, assume short circuit (sensor fault)
+        *  Return very high temperature to turn heaters off
+        */
+        *celsius = 444.0;       // hhh (high)
       }
     }
     return 0;
