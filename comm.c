@@ -87,7 +87,9 @@ static void* comm_thread( void* arg)
       // timeout, send dummy character to keep connection alive
       if (++prescaler > keep_alive_timeout / timeout) {
         printf( "%c", keep_alive_char);
-        fprintf( stderr, "<KEEP ALIVE SENT>");
+        if (DEBUG_COMM && (debug_flags & DEBUG_COMM)) {
+          fprintf( stderr, "<KEEP ALIVE SENT>");
+	}
         prescaler = 0;
       }
 #if LL_DEBUG
