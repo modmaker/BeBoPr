@@ -50,10 +50,15 @@ static int bed_temp_wait = 0;
 	private functions
 */
 
-static void wait_for_slow_signals( void)
+static void wait_for_slow_signals( move5D* move)
 {
   if (DEBUG_GCODE_PROCESS && (debug_flags & DEBUG_GCODE_PROCESS)) {
-    printf( "defer move until temperature is stable!\n");
+    if (move) {
+      printf( "\nMOVE[ %lu] - defer move(s) until temperature are stable\n",
+	      move->serno);
+    } else {
+      printf( "\nnon-MOVE - defer processing until temperatures are stable\n");
+    }
   }
   while ( (extruder_temp_wait && !heater_temp_reached( heater_extruder)) ||
           (bed_temp_wait && !heater_temp_reached( heater_bed)) )
@@ -63,7 +68,7 @@ static void wait_for_slow_signals( void)
   extruder_temp_wait = 0;
   bed_temp_wait = 0;
   if (DEBUG_GCODE_PROCESS && (debug_flags & DEBUG_GCODE_PROCESS)) {
-    printf( "resume with move because temperature is stable!\n");
+    printf( "Resume after waiting for temperatures to stabilize\n");
   }
 }
 
@@ -126,7 +131,7 @@ static void move_execute( move5D* move)
       printf( "\nMOVE[ %lu] move_execute() - waiting for slow signals)\n",
               move->serno);
     }
-    wait_for_slow_signals();
+    wait_for_slow_signals( move);
   }
   if (DEBUG_GCODE_PROCESS && (debug_flags & DEBUG_GCODE_PROCESS)) {
     printf( "MOVE[ %lu] move_execute() from ( %1.6lf, %1.6lf, %1.6lf, %1.6lf) [m] with feed %1.3lf [m/s]\n"
@@ -886,7 +891,7 @@ static void process_non_move_command( GCODE_COMMAND* target)
 						bed_temp_wait = 1;
 					}
 				}
-				wait_for_slow_signals();
+				wait_for_slow_signals( NULL);
 				break;
 			}
 			case 130:
