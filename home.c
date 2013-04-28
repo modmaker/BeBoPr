@@ -169,7 +169,7 @@ static void home_one_axis( axis_e axis, int reverse, int32_t* position, uint32_t
 /// assigning a home position.
 /// If the switch is configured as home / reference, set the current position
 /// from the reference value. Otherwise the current position is not changed.
-void home_axis_to_min_limit_switch( axis_e axis, int32_t* position, uint32_t feed)
+static void home_axis_to_min_limit_switch( axis_e axis, int32_t* position, uint32_t feed)
 {
   if (config_axis_has_min_limit_switch( axis)) {
     uint32_t max_feed = (uint32_t) config_get_max_feed( axis);
@@ -180,7 +180,7 @@ void home_axis_to_min_limit_switch( axis_e axis, int32_t* position, uint32_t fee
   }
 }
 
-void home_axis_to_max_limit_switch( axis_e axis, int32_t* position, uint32_t feed)
+static void home_axis_to_max_limit_switch( axis_e axis, int32_t* position, uint32_t feed)
 {
   if (config_axis_has_max_limit_switch( axis)) {
     uint32_t max_feed = (uint32_t) config_get_max_feed( axis);
@@ -188,5 +188,14 @@ void home_axis_to_max_limit_switch( axis_e axis, int32_t* position, uint32_t fee
       feed = max_feed;
     }
     home_one_axis( axis, 0 /* forward */, position, feed);
+  }
+}
+
+void home_axis_to_limit_switch( axis_e axis, int32_t* position, uint32_t feed, int reverse)
+{
+  if (reverse) {
+    home_axis_to_min_limit_switch( axis, position, feed);
+  } else {
+    home_axis_to_max_limit_switch( axis, position, feed);
   }
 }

@@ -423,8 +423,7 @@ static void process_non_move_command( GCODE_COMMAND* target)
 					gcode_current_pos.Z = target->target.Z;
 					axisSelected = 1;
 				}
-				// TODO: this is exceptional, check wheter this doesn't clash 
-				// with relative E axis operation !!!!
+				// Have to handle E-axis specially because it may be a relative-only axis
 				if (target->seen_E) {
 					if (!config_e_axis_is_always_relative() && target->target.E == 0) {
 						// slicers use this te adjust the origin to prevent running
@@ -476,19 +475,31 @@ static void process_non_move_command( GCODE_COMMAND* target)
 		FOR_ONE_AXIS( y, Y, 2, code);				\
 		FOR_ONE_AXIS( z, Z, 3, code);				\
 	} while (0)
+#define MIN_LIMIT_SWITCH	1
+#define MAX_LIMIT_SWITCH	0
 
 			// G161 - Home negative
 			case 161:
+			// G162 - Home positive
+			case 162:
 			{
 				//? ==== G161: Home negative ====
+				//? ==== G162: Home positive ====
 				//?
-				//? Find the minimum limit of the specified axes by searching for the limit switch.
+				//? Find the corresponding limit of the specified axes by searching for the limit switch.
 				// reference 'home' position to (then) current position
+
+				// Also used feed override for homing
+				double factor = traject_set_speed_override( 0.0);	// get old value
+				traject_set_speed_override( factor);			// restore
+				target->target.F *= factor;
+				fprintf( stdout, "Homing feed = %u (factor=%1.3lf)\n", target->target.F, factor);
 
 				// NOTE: G161/G162 clears any G92 offset !
 				double pos;
 				if (DEBUG_GCODE_PROCESS && (debug_flags & DEBUG_GCODE_PROCESS)) {
-					fprintf( stderr, "G161: X(%d)=%d, Y(%d)=%d, Z(%d)=%d, E(%d)=%d, F(%d)=%d\n",
+					fprintf( stderr, "G16%c: X(%d)=%d, Y(%d)=%d, Z(%d)=%d, E(%d)=%d, F(%d)=%d\n",
+						(target->G == 162) ? '2' : '1',
 						target->seen_X, target->target.X,
 						target->seen_Y, target->target.Y,
 						target->seen_Z, target->target.Z,
@@ -497,12 +508,23 @@ static void process_non_move_command( GCODE_COMMAND* target)
 				}
 				FOR_EACH_AXIS_IN_XYZ(
 					if (next_target_seen_xyz) {
-						// use machine coordinates during homing
+						int limit_switch = (target->G == 161) ? MIN_LIMIT_SWITCH : MAX_LIMIT_SWITCH;
+						/*
+						 * Temporarily use machine coordinates during homing
+						 */
 						current_pos_xyz += home_pos_xyz;
-						home_axis_to_min_limit_switch( axis_xyz, &current_pos_xyz, feed);
-						// restore gcode coordinates
+						home_axis_to_limit_switch( axis_xyz, &current_pos_xyz, feed, limit_switch);
 						current_pos_xyz -= home_pos_xyz;
-						if (config_min_switch_pos( axis_xyz, &pos)) {
+						/*
+						 *  If the limit switch is also a calibration switch, set the origin
+						 */
+						int is_reference_switch;
+						if (limit_switch == MIN_LIMIT_SWITCH) {
+							is_reference_switch = config_min_switch_pos( axis_xyz, &pos);
+						} else {
+							is_reference_switch = config_max_switch_pos( axis_xyz, &pos);
+						}
+						if (is_reference_switch) {
 							home_pos_xyz = 0;
 							current_pos_xyz = SI2POS( pos);
 							pruss_queue_set_position( pruss_axis_xyz, home_pos_xyz + current_pos_xyz);
@@ -511,37 +533,7 @@ static void process_non_move_command( GCODE_COMMAND* target)
 
 				break;
 			}
-			// G162 - Home positive
-			case 162:
-			{
-				//? ==== G162: Home positive ====
-				//?
-				//? Find the maximum limit of the specified axes by searching for the limit switch.
-				// reference 'home' position to (then) current position
-				double pos;
-				if (DEBUG_GCODE_PROCESS && (debug_flags & DEBUG_GCODE_PROCESS)) {
-					fprintf( stderr, "G162: X(%d)=%d, Y(%d)=%d, Z(%d)=%d, E(%d)=%d, F(%d)=%d\n",
-						target->seen_X, target->target.X,
-						target->seen_Y, target->target.Y,
-						target->seen_Z, target->target.Z,
-						target->seen_E, target->target.E,
-						target->seen_F, target->target.F );
-				}
-				FOR_EACH_AXIS_IN_XYZ(
-					if (next_target_seen_xyz) {
-						// use machine coordinates during homing
-						current_pos_xyz += home_pos_xyz;
-						home_axis_to_max_limit_switch( axis_xyz, &current_pos_xyz, feed);
-						// restore gcode coordinates
-						current_pos_xyz -= home_pos_xyz;
-						if (config_max_switch_pos( axis_xyz, &pos)) {
-							home_pos_xyz = 0;
-							current_pos_xyz = SI2POS( pos);
-							pruss_queue_set_position( pruss_axis_xyz, home_pos_xyz + current_pos_xyz);
-						}
-					} );
-				break;
-			}
+
 			// G255 - Dump PRUSS state
 			case 255:
 				// === G255: Dump PRUSS state ====
@@ -1027,9 +1019,11 @@ static void process_non_move_command( GCODE_COMMAND* target)
 				if (DEBUG_GCODE_PROCESS && (debug_flags & DEBUG_GCODE_PROCESS)) {
 					fprintf( stderr, "M207: Z axis known position <-> reference switch calibration\n");
 				}
-				// Clear home offset, specifief current_pos is in machine coordinates (???)
-				// NOTE: the calculations that follow use home_pos (that is set to zero),
-				//       do not optimize them as this shows the correct calculations!
+				/*
+				 *  Clear home offset, specifief current_pos is in machine coordinates (???)
+				 *  NOTE: the calculations that follow use home_pos (that is set to zero),
+				 *        do not optimize the code as this shows the correct calculations!
+				 */
 				gcode_home_pos.Z = 0;
 				if (target->seen_Z) {
 					gcode_current_pos.Z = target->target.Z;
@@ -1037,17 +1031,21 @@ static void process_non_move_command( GCODE_COMMAND* target)
 					gcode_current_pos.Z = 0;
 				}
 				pruss_queue_set_position( 3, gcode_home_pos.Z + gcode_current_pos.Z);
-				// use machine coordinates during homing
+				/*
+				 * Temporarily use machine coordinates during homing
+				 */
 				gcode_current_pos.Z += gcode_home_pos.Z;
 				if (config_max_switch_pos( z_axis, &pos)) {
-					home_axis_to_max_limit_switch( z_axis, &gcode_current_pos.Z, target->target.F);
+					home_axis_to_limit_switch( z_axis, &gcode_current_pos.Z, target->target.F, MAX_LIMIT_SWITCH);
 					min_max = 1;
 				} else if (config_min_switch_pos( z_axis, &pos)) {
-					home_axis_to_min_limit_switch( z_axis, &gcode_current_pos.Z, target->target.F);
+					home_axis_to_limit_switch( z_axis, &gcode_current_pos.Z, target->target.F, MIN_LIMIT_SWITCH);
 					min_max = -1;
 				}
-				// restore gcode coordinates
 				gcode_current_pos.Z -= gcode_home_pos.Z;
+				/*
+				 *  If we found a calibration limit switch, set the origin
+				 */
 				if (min_max) {
 					if (DEBUG_GCODE_PROCESS && (debug_flags & DEBUG_GCODE_PROCESS)) {
 						fprintf( stderr, "M207: update Z calibration switch position to: %lf [mm]\n",
