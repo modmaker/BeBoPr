@@ -166,6 +166,18 @@ static void enqueue_pos( const TARGET* target)
 
 *//*************************************************************************/
 
+void dump_position_info( void)
+{
+  printf(  "current: X=%1.6lf, Y=%1.6lf, Z=%1.6lf, E=%1.6lf, F=%1.6lf\n",
+	  POS2MM( gcode_current_pos.X), POS2MM( gcode_current_pos.Y),
+	  POS2MM( gcode_current_pos.Z), POS2MM( gcode_current_pos.E),
+	  gcode_current_feed);
+  printf(  "origin: X=%1.6lf, Y=%1.6lf, Z=%1.6lf, E=%1.6lf\n",
+	  POS2MM( gcode_home_pos.X), POS2MM( gcode_home_pos.Y),
+	  POS2MM( gcode_home_pos.Z), POS2MM( gcode_home_pos.E));
+  pruss_dump_position();
+}
+
 
 static void clip_move( axis_e axis, int32_t* pnext_target, int32_t current_pos, int32_t home_pos)
 {
@@ -553,7 +565,10 @@ static void process_non_move_command( GCODE_COMMAND* target)
 		}
 #ifdef	DEBUG
 		if (DEBUG_POSITION && (debug_flags & DEBUG_POSITION)) {
+			dump_position_info();
+#  if 0
 			traject_status_print();
+#  endif
 		}
 #endif
 	}
@@ -1104,14 +1119,7 @@ static void process_non_move_command( GCODE_COMMAND* target)
 				//? ==== M250: return current position, end position, queue ====
 				//? Undocumented
 				//? This command is only available in DEBUG builds.
-				printf(  "current: X=%1.6lf, Y=%1.6lf, Z=%1.6lf, E=%1.6lf, F=%1.6lf\n",
-					POS2MM( gcode_current_pos.X), POS2MM( gcode_current_pos.Y),
-					POS2MM( gcode_current_pos.Z), POS2MM( gcode_current_pos.E),
-					gcode_current_feed);
-				printf(  "origin: X=%1.6lf, Y=%1.6lf, Z=%1.6lf, E=%1.6lf\n",
-					POS2MM( gcode_home_pos.X), POS2MM( gcode_home_pos.Y),
-					POS2MM( gcode_home_pos.Z), POS2MM( gcode_home_pos.E));
-				pruss_dump_position();
+				dump_position_info();
 				break;
 
 			// DEBUG: read arbitrary memory location
@@ -1173,7 +1181,7 @@ static void process_move_command( struct move_target* move, struct move_target* 
     * move to stop
     */
     if (DEBUG_GCODE_PROCESS && (debug_flags & DEBUG_GCODE_PROCESS)) {
-      printf( "MOVE[ %lu] process_move_command()  - starting ending move\n", move->data.serno);
+      printf( "MOVE[ %lu] process_move_command()  - starting terminating move\n", move->data.serno);
     }
   }
 
