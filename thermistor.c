@@ -110,7 +110,8 @@ static const struct conversion_entry epcos_b5760g104f[] = {
  * and the BeBoPr Cape schematics.
  */
 static const struct conversion_entry my_330k_bed_thermistor[] = {
-{ 3619, 21.0 },
+{ 3650,  0.0 },	// forged value to prevent out of range result
+{ 3626, 21.0 },
 { 3601, 35.0 },
 { 3597, 37.0 },
 { 3571, 47.0 },
