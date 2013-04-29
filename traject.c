@@ -750,7 +750,7 @@ int traject_init( void)
   * Setting a value less than the cycletime will generate zero-length
   * step pulses!
   */
-  const int step_pulse_time = 16;       /* [us] */
+  const int step_pulse_time = 8;       /* [us] */
   /* Set the duration of the active part of the step pulse */
   pruss_queue_set_pulse_length( 1, step_pulse_time * 200);
   pruss_queue_set_pulse_length( 2, step_pulse_time * 200);
