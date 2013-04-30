@@ -616,6 +616,72 @@ void pruss_start_pruss( void)
   } while (retries-- > 0 && (pruss_ctrl & PRUSS_PRU_CTRL_CONTROL_RUNSTATE) == 0);
 }
 
+void pruss_single_step_pruss( void)
+{
+  uint32_t pruss_ctrl = pruss_rd32( PRUSS_PRU_CTRL_CONTROL);
+  if ((pruss_ctrl & PRUSS_PRU_CTRL_CONTROL_RUNSTATE) == 0) {
+    uint16_t pc = pruss_rd16( PRUSS_PRU_CTRL_STATUS);
+    uint32_t opcode = pruss_rd32( PRUSS_IRAM_OFFSET + 4 * pc);
+    printf( "PRUSS found halted at PC=%06x, OPCODE=%08x\n", pc, opcode);
+    pruss_ctrl |= PRUSS_PRU_CTRL_CONTROL_ENABLE;
+    pruss_ctrl |= PRUSS_PRU_CTRL_CONTROL_NRESET;
+    pruss_ctrl |= PRUSS_PRU_CTRL_CONTROL_SINGLE_STEP;
+    pruss_wr32( PRUSS_PRU_CTRL_CONTROL, pruss_ctrl);		// STEP
+    pruss_ctrl = pruss_rd32( PRUSS_PRU_CTRL_CONTROL);
+    if ((pruss_ctrl & PRUSS_PRU_CTRL_CONTROL_RUNSTATE) == 0) {
+      pruss_ctrl &= ~PRUSS_PRU_CTRL_CONTROL_SINGLE_STEP;
+      pruss_ctrl &= ~PRUSS_PRU_CTRL_CONTROL_ENABLE;
+      pruss_wr32( PRUSS_PRU_CTRL_CONTROL, pruss_ctrl);
+    } else {
+      fprintf( stderr, "Single step failure, PRUSS not halted after step.\n");
+    }
+  } else {
+    fprintf( stderr, "Single step failure, PRUSS not halted at entry.\n");
+  }
+}
+
+/*
+ *  Resume stopped PRUSS
+ */
+void pruss_resume_pruss( void)
+{
+  if (pruss_is_halted()) {
+    uint32_t pruss_ctrl = pruss_rd32( PRUSS_PRU_CTRL_CONTROL);
+    uint16_t pc = pruss_rd16( PRUSS_PRU_CTRL_STATUS);
+    uint32_t opcode = pruss_rd32( PRUSS_IRAM_OFFSET + 4 * pc);
+    if (opcode == 0x2a000000) {
+      printf( "PRUSS found halted with PC=%06x, OPCODE=%08x (HALT)\n", pc, opcode);
+      pruss_wr32( PRUSS_IRAM_OFFSET + 4 * pc, 0x12e0e0e0);	// NOP
+      pruss_ctrl |= PRUSS_PRU_CTRL_CONTROL_ENABLE;
+      pruss_ctrl |= PRUSS_PRU_CTRL_CONTROL_NRESET;
+      pruss_ctrl |= PRUSS_PRU_CTRL_CONTROL_SINGLE_STEP;
+      pruss_wr32( PRUSS_PRU_CTRL_CONTROL, pruss_ctrl);		// STEP
+      usleep( 100);
+      pruss_wait_for_halt();
+      /*
+       * We've stepped over the inserted NOP, now restore the HALT
+       */
+      pruss_wr32( PRUSS_IRAM_OFFSET + 4 * pc, 0x2a000000);	// restore HALT
+      uint16_t pc1 = pruss_rd16( PRUSS_PRU_CTRL_STATUS);
+      if (pc1 == pc) {
+          fprintf( stderr, "Single step failure 1\n");
+	  return;
+      }
+    } else {
+      printf( "PRUSS found halted with PC=%06x, OPCODE=%08x\n", pc, opcode);
+    }
+    /*
+     *  Resume, keep reset PC, counter enable and #reset bits, assert pruss (run) enable
+     */
+    pruss_ctrl = pruss_rd32( PRUSS_PRU_CTRL_CONTROL);
+    pruss_ctrl &= ~PRUSS_PRU_CTRL_CONTROL_SINGLE_STEP;
+    pruss_ctrl |= PRUSS_PRU_CTRL_CONTROL_ENABLE;
+    pruss_wr32( PRUSS_PRU_CTRL_CONTROL, pruss_ctrl);		// RUN
+  } else {
+    printf( "PRUSS resume called while running!\n");
+  }
+}
+
 /*
  * Dump PRUSS state (if needed, halt PRUSS first).
  * Exit with PRUSS halted, return original running state.

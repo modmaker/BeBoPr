@@ -551,6 +551,23 @@ static void process_non_move_command( GCODE_COMMAND* target)
 				break;
 			}
 
+			// G244 - Resume halted PRUSS
+			case 244: {
+				int i = 1;
+				if (!target->seen_S || target->S > 1) {
+					i = target->S;	// number of iterations
+				}
+				do {
+					pruss_stepper_resume();
+					if (i > 1) {
+						while (!pruss_stepper_halted()) {
+//							sched_yield();
+							usleep( 10);
+						}
+					}
+				} while (--i > 0);
+				break;
+			}
 			// G255 - Dump PRUSS state
 			case 255:
 				// === G255: Dump PRUSS state ====

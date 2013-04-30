@@ -52,6 +52,7 @@
 #define PRUSS_PRU_CTRL_CONTROL_NRESET           (1 <<  0)
 #define PRUSS_PRU_CTRL_CONTROL_ENABLE           (1 <<  1)
 #define PRUSS_PRU_CTRL_CONTROL_COUNTER_ENABLE   (1 <<  3)
+#define PRUSS_PRU_CTRL_CONTROL_SINGLE_STEP      (1 <<  8)
 
 struct ucode_signature {
 	uint32_t	pruss_magic;
@@ -82,6 +83,8 @@ extern int pruss_halt_pruss( void);
 extern int pruss_stop_pruss( void);
 extern void pruss_start_pruss( void);
 extern int pruss_is_halted( void);
+extern void pruss_resume_pruss( void);
+extern void pruss_single_step_pruss( void);
 
 
 #endif

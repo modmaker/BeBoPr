@@ -494,6 +494,18 @@ int pruss_stepper_halted( void)
   return pruss_is_halted();
 }
 
+// Simple wrapper prevents need for pruss.h inclusion
+void pruss_stepper_resume( void)
+{
+  pruss_resume_pruss();
+}
+
+// Simple wrapper prevents need for pruss.h inclusion
+void pruss_stepper_single_step( void)
+{
+  pruss_single_step_pruss();
+}
+
 int pruss_wait_for_queue_space( void)
 {
   int timeout = 30000;	// set to 30 seconds
