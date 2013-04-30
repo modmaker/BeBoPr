@@ -237,6 +237,10 @@ int pruss_stepper_init( void)
 	    fs_sig_state, ee_sig_state);
     return -1;
   }
+#ifdef FORCE_STEPPER_CODE_FROM_FILE
+  // this will force loading from file
+  ee_sig_state = 9;
+#else
   // Overwrite EEPROM code if an update file is present and it differs
   if (fs_sig_state == 0) {
     if (ee_sig_state != 0 || (
@@ -257,12 +261,10 @@ int pruss_stepper_init( void)
       return -1;		// Don't commence, require a restart
     }
   }
+#endif
   // At this point we should have valid PRUSS code (somewhere)...
   const char* code_fname;
   int code_offset;
-#ifdef FORCE_STEPPER_CODE_FROM_FILE
-  ee_sig_state = 9;
-#endif
   if (ee_sig_state == 0) {
     // use code from EEPROM
     code_fname = ee_fname;
