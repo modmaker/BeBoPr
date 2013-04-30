@@ -134,7 +134,7 @@ static void move_execute( move5D* move)
     wait_for_slow_signals( move);
   }
   if (DEBUG_GCODE_PROCESS && (debug_flags & DEBUG_GCODE_PROCESS)) {
-    printf( "MOVE[ %lu] move_execute() from ( %1.6lf, %1.6lf, %1.6lf, %1.6lf) [m] with feed %1.3lf [m/s]\n"
+    printf( "MOVE[ %lu] move_execute() from ( %1.6lf, %1.6lf, %1.6lf, %1.6lf) [m] with feed %1.3lf [mm/min]\n"
             "MOVE ............ over ( %1.6lf, %1.6lf, %1.6lf, %1.6lf) [m]\n"
             "MOVE ........ velocity ( %1.6lf, %1.6lf, %1.6lf, %1.6lf) [m/s]\n"
             "MOVE .... acceleration ( %1.6lf, %1.6lf, %1.6lf, %1.6lf) [m/s^2]\n",
