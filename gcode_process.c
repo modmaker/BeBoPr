@@ -136,12 +136,10 @@ static void move_execute( move5D* move)
   if (DEBUG_GCODE_PROCESS && (debug_flags & DEBUG_GCODE_PROCESS)) {
     printf( "MOVE[ %lu] move_execute() from ( %1.6lf, %1.6lf, %1.6lf, %1.6lf) [m] with feed %1.3lf [mm/min]\n"
             "MOVE ............ over ( %1.6lf, %1.6lf, %1.6lf, %1.6lf) [m]\n"
-            "MOVE ........ velocity ( %1.6lf, %1.6lf, %1.6lf, %1.6lf) [m/s]\n"
-            "MOVE .... acceleration ( %1.6lf, %1.6lf, %1.6lf, %1.6lf) [m/s^2]\n",
+            "MOVE ........ velocity ( %1.6lf, %1.6lf, %1.6lf, %1.6lf) [m/s]\n",
             move->serno, move->s0x, move->s0y, move->s0z, move->s0e,
             move->feed, move->dx, move->dy, move->dz, move->de,
-            move->vx, move->vy, move->vz, move->ve,
-            move->ax, move->ay, move->az, move->ae);
+            move->vx, move->vy, move->vz, move->ve);
   }
   /* actually make the move */
   traject_move_all_axes( move);
@@ -1194,9 +1192,15 @@ static void process_move_command( struct move_target* move, struct move_target* 
       move5D* p0 = &move->data;
       move5D* p1 = &next_move->data;
       printf( "MOVE[ %lu] process_move_command() - starting chainable move\n"
-	      "MOVE ... current move velocity ( %1.6lf, %1.6lf, %1.6lf, %1.6lf) [m/s]\n"
-	      "MOVE ...... next move velocity ( %1.6lf, %1.6lf, %1.6lf, %1.6lf) [m/s]\n",
-	      p0->serno, p0->vx, p0->vy, p0->vz, p0->ve, p1->vx, p1->vy, p1->vz, p1->ve);
+	      "MOVE ... current move velocity ( %1.6lf, %1.6lf, %1.6lf, %1.6lf) F=%1.3lf [mm/s]\n"
+	      "MOVE ...... next move velocity ( %1.6lf, %1.6lf, %1.6lf, %1.6lf) F=%1.3lf [mm/s]\n",
+	      p0->serno,
+	      SI2MM( v0x), SI2MM( v0y), SI2MM( v0z), SI2MM( v0e), SI2MM( FEED2SI( p0->feed)),
+	      SI2MM( v1x), SI2MM( v1y), SI2MM( v1z), SI2MM( v1e), SI2MM( FEED2SI( p1->feed)) );
+      printf( "MOVE[ %lu] delta velocities ( %1.6lf, %1.6lf, %1.6lf, %1.6lf) F=%1.3lf [mm/s]\n",
+	      p0->serno, SI2MM( dvx), SI2MM( dvy), SI2MM( dvz), SI2MM( dve), SI2MM( FEED2SI( dfeed)) );
+      printf( "MOVE[ %lu] distances needed ( %1.6lf, %1.6lf, %1.6lf, %1.6lf) [mm]\n",
+	      p0->serno, SI2MM( dsx), SI2MM( dsy), SI2MM( dsz), SI2MM( dse) );
     }
   } else {
    /*

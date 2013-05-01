@@ -381,51 +381,6 @@ void traject_calc_all_axes( const traject5D* traject, move5D* move)
 
 //=====================================================================================
 
-  // TODO: implement global / vector acceleration limit ?
-
- /*
-  * For a neat linear move, all ramps must start and end at the same moment
-  * and have constant (or at least synchronized) accelation.
-  * Now that the targeted velocity is known for each axis, determine
-  * how long it takes for that axis to reach its target speed using maximum
-  * acceleration. The slowest axis then scales the acceleration used for all axes.
-  */
-  double tx_acc = move->vx * recipr_a_max_x;
-  double ty_acc = move->vy * recipr_a_max_y;
-  double tz_acc = move->vz * recipr_a_max_z;
-  double te_acc = move->ve * recipr_a_max_e;
- /*
-  * determine the largest period and scale the acceleration for all axes.
-  */
-  double t_acc = fmax( fmax( tx_acc, ty_acc), fmax( tz_acc, te_acc));
-  if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
-    printf( "Time needed to reach velocity: X= %1.3lf, Y= %1.3lf, Z= %1.3lf, E= %1.3lf => MAX= %1.3lf [ms]\n",
-           SI2MS( tx_acc), SI2MS( ty_acc), SI2MS( tz_acc), SI2MS( te_acc), SI2MS( t_acc));
-  }
-  double recipr_t_acc = 1.0 / t_acc;
-  move->ax = move->vx * recipr_t_acc;
-  move->ay = move->vy * recipr_t_acc;
-  move->az = move->vz * recipr_t_acc;
-  move->ae = move->ve * recipr_t_acc;
-  if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
-    printf( "Synchronized acceleration constants: X= %1.3lf, Y= %1.3lf, Z= %1.3lf, E= %1.3lf [m/s^2]\n", 
-            move->ax, move->ay, move->az, move->ae);
-  }
- /*
-  *  Length of acceleration/deceleration traject:
-  *    s = v^2/2a or s = a.t^2/2
-  */
-  double t_square  = t_acc * t_acc;
-  move->double_sx = move->ax * t_square;
-  move->double_sy = move->ay * t_square;
-  move->double_sz = move->az * t_square;
-  move->double_se = move->ae * t_square;
-  if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
-    printf( "Distance to reach full speed: X= %1.6lf Y= %1.6lf Z= %1.6lf E= %1.6lf [mm]\n",
-            SI2MM( 0.5 * move->double_sx), SI2MM( 0.5 * move->double_sy),
-            SI2MM( 0.5 * move->double_sz), SI2MM( 0.5 * move->double_se));
-  }
-
 }
 
 /*
@@ -444,27 +399,61 @@ void traject_move_all_axes( move5D* m)
   int reverse_e = m->reverse_e;
 
   int chainable = m->chainable;
-  double recipr_t_acc = m->recipr_t_acc;
 
   double vx = m->vx;
   double vy = m->vy;
   double vz = m->vz;
   double ve = m->ve;
 
-  double ax = m->ax;
-  double ay = m->ay;
-  double az = m->az;
-  double ae = m->ae;
-
   double s0x = m->s0x;
   double s0y = m->s0y;
   double s0z = m->s0z;
   double s0e = m->s0e;
 
-  double double_sx = m->double_sx;
-  double double_sy = m->double_sy;
-  double double_sz = m->double_sz;
-  double double_se = m->double_se;
+  // TODO: implement global / vector acceleration limit ?
+
+ /*
+  * For a neat linear move, all ramps must start and end at the same moment
+  * and have constant (or at least synchronized) accelation.
+  * Now that the targeted velocity is known for each axis, determine
+  * how long it takes for that axis to reach its target speed using maximum
+  * acceleration. The slowest axis then scales the acceleration used for all axes.
+  */
+  double tx_acc = vx * recipr_a_max_x;
+  double ty_acc = vy * recipr_a_max_y;
+  double tz_acc = vz * recipr_a_max_z;
+  double te_acc = ve * recipr_a_max_e;
+ /*
+  * determine the largest period and scale the acceleration for all axes.
+  */
+  double t_acc = fmax( fmax( tx_acc, ty_acc), fmax( tz_acc, te_acc));
+  if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
+    printf( "Time needed to reach velocity: X= %1.3lf, Y= %1.3lf, Z= %1.3lf, E= %1.3lf => MAX= %1.3lf [ms]\n",
+           SI2MS( tx_acc), SI2MS( ty_acc), SI2MS( tz_acc), SI2MS( te_acc), SI2MS( t_acc));
+  }
+  double recipr_t_acc = 1.0 / t_acc;
+  double ax = vx * recipr_t_acc;
+  double ay = vy * recipr_t_acc;
+  double az = vz * recipr_t_acc;
+  double ae = ve * recipr_t_acc;
+  if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
+    printf( "Synchronized acceleration constants: X= %1.3lf, Y= %1.3lf, Z= %1.3lf, E= %1.3lf [m/s^2]\n", 
+            ax, ay, az, ae);
+  }
+ /*
+  *  Length of acceleration/deceleration traject:
+  *    s = v^2/2a or s = a.t^2/2
+  */
+  double t_square  = t_acc * t_acc;
+  double double_sx = ax * t_square;
+  double double_sy = ay * t_square;
+  double double_sz = az * t_square;
+  double double_se = ae * t_square;
+  if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
+    printf( "Distance to reach full speed: X= %1.6lf Y= %1.6lf Z= %1.6lf E= %1.6lf [mm]\n",
+            SI2MM( 0.5 * double_sx), SI2MM( 0.5 * double_sy),
+            SI2MM( 0.5 * double_sz), SI2MM( 0.5 * double_se));
+  }
 
   double ramp_up_dx, ramp_up_dy, ramp_up_dz, ramp_up_de;
   double ramp_down_dx, ramp_down_dy, ramp_down_dz, ramp_down_de;
@@ -508,8 +497,10 @@ void traject_move_all_axes( move5D* m)
     dwell_de = -dwell_de;
   }
   if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
-    printf( "Ramps: X= %1.6lf/%1.6lf, Y= %1.6lf/%1.6lf, Z= %1.6lf/%1.6lf, E= %1.6lf/%1.6lf [mm], ramp duration= %1.3lf [ms]\n",
-            SI2MM( ramp_up_dx), SI2MM( ramp_down_dx), SI2MM( ramp_up_dy), SI2MM( ramp_down_dy), SI2MM( ramp_up_dz), SI2MM( ramp_down_dz),
+    printf( "Ramps: X= %1.6lf/%1.6lf, Y= %1.6lf/%1.6lf, Z= %1.6lf/%1.6lf, "
+	    " E= %1.6lf/%1.6lf [mm], ramp duration= %1.3lf [ms]\n",
+            SI2MM( ramp_up_dx), SI2MM( ramp_down_dx), SI2MM( ramp_up_dy),
+	    SI2MM( ramp_down_dy), SI2MM( ramp_up_dz), SI2MM( ramp_down_dz),
             SI2MM( ramp_up_de), SI2MM( ramp_down_de), SI2MS( RECIPR( recipr_t_acc)));
   }
 

@@ -15,12 +15,8 @@ typedef struct {
   double                s0x, s0y, s0z, s0e;
   double                dx, dy, dz, de;
   double                vx, vy, vz, ve;
-  double                ax, ay, az, ae;
-  double                double_sx, double_sy, double_sz, double_se;
   int                   reverse_x, reverse_y, reverse_z, reverse_e;
   int                   chainable;
-  double                recipr_t_acc;
-  double                queued_time;
   int                   null_move;
   long unsigned int     serno;
   double                feed;
