@@ -245,23 +245,6 @@ void traject_calc_all_axes( const traject5D* traject, move5D* move)
   */
   move->chainable = 0;
 
-#ifdef SLOW_DOWN_HACK
-  static double calc_start_old;
-  if (move->serno == 1) {
-    calc_start_old = timestamp_get();
-  }
-#endif
-
-// BEGIN DEBUG
-#if 0
-  if (serno == 51545) {
-    usleep( 10 * 1000 * 1000);
-    pruss_stepper_dump_state();
-    usleep( 10 * 1000 * 1000);
-  }
-#endif
-// END DEBUG
-
  /*
   *  Fetch trajectory coordinates and determine actual feed
   */
@@ -340,43 +323,6 @@ void traject_calc_all_axes( const traject5D* traject, move5D* move)
     printf( "Request: total distance = %1.6lf [mm], vector velocity = %1.3lf [mm/s] => est. time = %1.3lf [ms]\n",
             SI2MM( distance), SI2MS( feed / 60000.0), SI2MS( RECIPR( recipr_dt)));
   }
-
-#ifdef SLOW_DOWN_HACK
-// TODO: fix code, not tested
- /*
-  * FIXME: Either the calculations, Linux scheduling or (?) causes some large gaps here:
-  * Sometimes it takes up to 50 ms before a new move is ready to be queued here. To
-  * (try to) prevent a gap falling between the two moves, slow down short moves.
-  * NOTE: This is highly experimental and probably the scheduling should be looked at first!
-  */
-  double calc_start = timestamp_get();
-  double elapsed_time = calc_start - calc_start_old;
-  calc_start_old = calc_start;
-  const double est_calc_time = 0.010; /* [s] */
-  queued_time -= elapsed_time;
-  if (!pruss_stepper_busy() || queued_time < 0) {
-    queued_time = 0;
-  }
-  double slack = queued_time - est_calc_time;
-  if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
-    printf( "%sElapsed_time= %1.3lfms slack= %1.3fms, duration of moves in queue= %1.3fms\n",
-            (slack < 0) ? "GAP - " : "", SI2MS( elapsed_time), SI2MS( slack), SI2MS( queued_time));
-  }
-  if (slack < 0) {
-   /*
-    * No slack. If the next move is short one, slow it down to keep the stepper
-    * busy until the next move will be queued. Note: this is not exact science
-    * but based on best guess!
-    */
-    if (-slack * recipr_dt > 1.0) {
-      recipr_dt = RECIPR( -slack);
-      if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
-        printf( "*** Short move requested, slowing down average velocity to %1.3lf [mm/s], duration %1.3lf [ms] to prevent gap\n",
-                SI2MS( recipr_dt * distance), SI2MS( RECIPR( recipr_dt)));
-      }
-    }
-  }
-#endif
 
 //=====================================================================================
 
