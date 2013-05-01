@@ -25,6 +25,7 @@ typedef struct {
 extern void traject_delta_on_all_axes( const traject5D* delta);
 extern void traject_calc_all_axes( const traject5D* delta, move5D* move);
 extern void traject_move_all_axes( move5D* move);
+extern void traject_optimize( move5D* move0, move5D* move1);
 
 extern int traject_wait_for_completion( void);
 extern int traject_abort( void);

@@ -1188,9 +1188,13 @@ static void process_move_command( struct move_target* move, struct move_target* 
    /*
     * move to resume
     */
+#if 0
+    move5D* p0 = &move->data;
+    move5D* p1 = &next_move->data;
+#endif
+    traject_optimize( &move->data, &next_move->data);
+#if 0
     if (DEBUG_GCODE_PROCESS && (debug_flags & DEBUG_GCODE_PROCESS)) {
-      move5D* p0 = &move->data;
-      move5D* p1 = &next_move->data;
       printf( "MOVE[ %lu] process_move_command() - starting chainable move\n"
 	      "MOVE ... current move velocity ( %1.6lf, %1.6lf, %1.6lf, %1.6lf) F=%1.3lf [mm/s]\n"
 	      "MOVE ...... next move velocity ( %1.6lf, %1.6lf, %1.6lf, %1.6lf) F=%1.3lf [mm/s]\n",
@@ -1202,6 +1206,7 @@ static void process_move_command( struct move_target* move, struct move_target* 
       printf( "MOVE[ %lu] distances needed ( %1.6lf, %1.6lf, %1.6lf, %1.6lf) [mm]\n",
 	      p0->serno, SI2MM( dsx), SI2MM( dsy), SI2MM( dsz), SI2MM( dse) );
     }
+#endif
   } else {
    /*
     * move to stop

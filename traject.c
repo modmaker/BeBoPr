@@ -586,6 +586,101 @@ void traject_move_all_axes( move5D* m)
   }
 }
 
+
+void traject_optimize( move5D* move0, move5D* move1)
+{
+    double v0x = (move0->reverse_x) ? -move0->vx : move0->vx;
+    double v0y = (move0->reverse_y) ? -move0->vy : move0->vy;
+    double v0z = (move0->reverse_z) ? -move0->vz : move0->vz;
+    double v0e = (move0->reverse_e) ? -move0->ve : move0->ve;
+
+    double v1x = (move1->reverse_x) ? -move1->vx : move1->vx;
+    double v1y = (move1->reverse_y) ? -move1->vy : move1->vy;
+    double v1z = (move1->reverse_z) ? -move1->vz : move1->vz;
+    double v1e = (move1->reverse_e) ? -move1->ve : move1->ve;
+
+    int reversal_x = move0->reverse_x != move1->reverse_x;
+    int reversal_y = move0->reverse_y != move1->reverse_y;
+    int reversal_z = move0->reverse_z != move1->reverse_z;
+    int reversal_e = move0->reverse_e != move1->reverse_e;
+
+    double dvx = v1x - v0x;
+    double dvy = v1y - v0y;
+    double dvz = v1z - v0z;
+    double dve = v1e - v0e;
+
+    double feed0 = move0->feed;
+    double feed1 = move1->feed;
+    double dfeed = feed1 - feed0;
+
+    if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
+      printf( "MOVE[ #%lu <=> #%lu] traject_optimize()\n"
+	      " ..... current move velocity ( %1.6lf, %1.6lf, %1.6lf, %1.6lf) F=%1.3lf [mm/s]\n"
+	      " ..... next move velocity ( %1.6lf, %1.6lf, %1.6lf, %1.6lf) F=%1.3lf [mm/s]\n",
+              move0->serno, move1->serno,
+	      SI2MM( v0x), SI2MM( v0y), SI2MM( v0z), SI2MM( v0e), SI2MM( FEED2SI( feed0)),
+	      SI2MM( v1x), SI2MM( v1y), SI2MM( v1z), SI2MM( v1e), SI2MM( FEED2SI( feed1)) );
+    }
+
+    double rax = (v1x > v0x) ? recipr_a_max_x : -recipr_a_max_x;
+    double ray = (v1y > v0y) ? recipr_a_max_y : -recipr_a_max_y;
+    double raz = (v1z > v0z) ? recipr_a_max_z : -recipr_a_max_z;
+    double rae = (v1e > v0e) ? recipr_a_max_e : -recipr_a_max_e;
+
+    double dtx = dvx * rax;
+    double dty = dvy * ray;
+    double dtz = dvz * raz;
+    double dte = dve * rae;
+
+    double dt  = fmax( fmax( dtx, dty), fmax( dtz, dte));
+
+    if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
+      printf( " ..... delta velocities ( %1.6lf, %1.6lf, %1.6lf, %1.6lf) F=%1.3lf [mm/s]\n",
+	      SI2MM( dvx), SI2MM( dvy), SI2MM( dvz), SI2MM( dve), SI2MM( FEED2SI( dfeed)) );
+      printf( " ..... delta duration %1.6lf = MAX( %1.6lf, %1.6lf, %1.6lf, %1.6lf) [s]\n",
+	      dt, dtx, dty, dtz, dte);
+    }
+
+    rax = dt / dvx;
+    ray = dt / dvy;
+    raz = dt / dvz;
+    rae = dt / dve;
+
+    if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
+      printf( " ..... acceleration during transition ( %1.6lf, %1.6lf, %1.6lf, %1.6lf) [m/s^2]\n",
+	      RECIPR( rax), RECIPR( ray), RECIPR( raz), RECIPR( rae) );
+    }
+
+    double dsx = 0.5 * (v1x + v0x) * dtx;
+    double dsy = 0.5 * (v1y + v0y) * dty;
+    double dsz = 0.5 * (v1z + v0z) * dtz;
+    double dse = 0.5 * (v1e + v0e) * dte;
+
+    if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
+      printf( " ..... distances needed ( %1.6lf, %1.6lf, %1.6lf, %1.6lf) [mm]\n",
+	      SI2MM( dsx), SI2MM( dsy), SI2MM( dsz), SI2MM( dse) );
+    }
+
+    dsx = 0.5 * (v1x + v0x) * dt;
+    dsy = 0.5 * (v1y + v0y) * dt;
+    dsz = 0.5 * (v1z + v0z) * dt;
+    dse = 0.5 * (v1e + v0e) * dt;
+
+    if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
+      printf( " ..... corr. distances  ( %1.6lf, %1.6lf, %1.6lf, %1.6lf) [mm]\n",
+	      SI2MM( dsx), SI2MM( dsy), SI2MM( dsz), SI2MM( dse) );
+    }
+
+    if (!reversal_x && !reversal_y && !reversal_z && !reversal_e) {
+
+    } else {
+      if (DEBUG_TRAJECT && (debug_flags & DEBUG_TRAJECT)) {
+	      printf( " ..... speed reversal detected, break move into pieces\n");
+      }
+    }
+
+}
+
 ////////////////////////////////////////////////////////////////////////////
 
 static void pruss_axis_config( int axis, double step_size, int reverse)
