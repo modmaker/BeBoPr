@@ -82,11 +82,13 @@ int init( void)
   if (result != 0) {
     return result;
   }
+#ifndef NO_COMM_LAYER
   // keep connection alive
   result = mendel_sub_init( "comm", comm_init);
   if (result != 0) {
     return result;
   }
+#endif
   // set up limit switches
   result = mendel_sub_init( "limsw", limsw_init);
   if (result != 0) {
