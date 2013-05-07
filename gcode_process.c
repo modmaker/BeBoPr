@@ -42,6 +42,7 @@ static channel_tag heater_bed = NULL;
 static channel_tag temp_extruder = NULL;
 static channel_tag temp_bed = NULL;
 static channel_tag pwm_extruder = NULL;
+static channel_tag pwm_fan = NULL;
 
 static int extruder_temp_wait = 0;
 static int bed_temp_wait = 0;
@@ -782,9 +783,7 @@ static void process_non_move_command( GCODE_COMMAND* target)
 					// wait for all moves to complete
 					traject_wait_for_completion();
 #				endif
-#				ifdef HEATER_FAN
-					heater_set(HEATER_FAN, 255);
-#				endif
+				pwm_set_output(pwm_fan, 100);
 				break;
 			// M107- fan off
 			case 9:
@@ -799,9 +798,7 @@ static void process_non_move_command( GCODE_COMMAND* target)
 					// wait for all moves to complete
 					traject_wait_for_completion();
 #				endif
-				#ifdef HEATER_FAN
-					heater_set(HEATER_FAN, 0);
-				#endif
+				pwm_set_output(pwm_fan, 0);
 				break;
 
 			// M110- set line number
@@ -1428,6 +1425,7 @@ int gcode_process_init( void)
             tag_name( temp_extruder), tag_name( temp_bed));
   }
   pwm_extruder    = pwm_lookup_by_name( "pwm_laser_power");
+  pwm_fan         = pwm_lookup_by_name( "pwm_fan");
   // If there's no extruder, or no laser power there's probably a configuration error!
   if ((heater_extruder == NULL || temp_extruder == NULL) && pwm_extruder == NULL) {
     return -1;
