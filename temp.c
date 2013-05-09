@@ -171,11 +171,15 @@ int temp_get_celsius( channel_tag temp_channel, double* pcelsius)
 /// used for M109 and friends
 int temp_achieved( channel_tag temp_channel)
 {
-  int ix = temp_index_lookup( temp_channel);
-  if (ix >= 0) {
-    return temp_channels[ ix].out_of_range == 0;
+  if (temp_channel) {
+    int ix = temp_index_lookup( temp_channel);
+    if (ix >= 0) {
+      return temp_channels[ ix].out_of_range == 0;
+    }
+    return 0;	// unknown sensor has not reached temperature !???
+  } else {	// null -> dummy channel
+    return 1;	// dummy channel has always the right temperature
   }
-  return 0;	// unknown sensor has not reached temperature !???
 }
 
 /*
