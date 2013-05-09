@@ -427,7 +427,7 @@ double config_get_max_accel( axis_e axis)
 {
   switch (axis) {
 //  case x_axis:	return 3.0;
-  case x_axis:	return 1.0;
+  case x_axis:	return 3.0;
   case y_axis:	return 3.0;
   case z_axis:	return 1.0;
   case e_axis:	return 1.0;
@@ -443,18 +443,18 @@ int config_reverse_axis( axis_e axis)
   if (pconfig == 'B') {
     // Prusa has Panucatt drivers that have reversed direction!
     switch (axis) {
-    case x_axis:  return 0;
-    case y_axis:  return 1;
-    case z_axis:  return 1;
-    case e_axis:  return 0;
-    default:      return 0;
-    }
-  } else {
-    switch (axis) {
     case x_axis:  return 1;
     case y_axis:  return 0;
     case z_axis:  return 0;
     case e_axis:  return 1;
+    default:      return 1;
+    }
+  } else {
+    switch (axis) {
+    case x_axis:  return 1;
+    case y_axis:  return 1;
+    case z_axis:  return 1;
+    case e_axis:  return 0;
     default:      return 0;
     }
   }
