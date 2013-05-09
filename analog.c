@@ -90,6 +90,10 @@ void* analog_worker( void* arg)
      * Update all adc values at a fixed rate, determined by ANALOG_CYCLE_TIME.
      * Spread the reads evenly over the cycle.
      */
+    if (num_analog_channels == 0) {
+      usleep( ANALOG_CYCLE_TIME);
+      continue;
+    }
     usleep( ANALOG_CYCLE_TIME / num_analog_channels);
     ret = read( fd[ i], buf, sizeof( buf));
     if (ret > 0) {
