@@ -30,12 +30,10 @@
  * to the one and only string!
  */
 #define GENERATE_TAG( name) static const char name[] = #name
+
 GENERATE_TAG( bed_thermistor);
 GENERATE_TAG( extruder_thermistor);
 GENERATE_TAG( spare_ain);
-#ifdef LASER_CUTTER
-GENERATE_TAG( pwm_laser_power);
-#else
 GENERATE_TAG( temp_extruder);
 GENERATE_TAG( temp_bed);
 GENERATE_TAG( heater_extruder);
@@ -43,9 +41,45 @@ GENERATE_TAG( heater_bed);
 GENERATE_TAG( pwm_extruder);
 GENERATE_TAG( pwm_bed);
 GENERATE_TAG( pwm_fan);
-#endif
+GENERATE_TAG( pwm_laser_power);
 
-static const analog_config_record analog_config_data[] = {
+/*
+ *  This file contains several configurations.
+ *  The configuration used is selected by flag nr 1 in the EEPROM, if that
+ *  flag is not set, the configuration defaults to configuration 'A'.
+ */
+static int pconfig;
+
+/*======================================== configuration 'A' ========================================*/
+/*
+ *  test rig for bebopr
+ */
+
+static const analog_config_record analog_config_A_data[] = {
+};
+
+static const temp_config_record temp_config_A_data[] = {
+  {
+    .tag                = temp_extruder,
+    .source		= 0,		// dummy
+  },
+  {
+    .tag                = temp_bed,
+    .source		= 0,		// dummy
+  },
+};
+
+
+// Make these identical to configuration B
+#define pwm_config_A_data    pwm_config_B_data
+#define heater_config_A_data heater_config_B_data
+
+/*======================================== configuration 'B' ========================================*/
+/*
+ *  PRUSA printer
+ */
+
+static const analog_config_record analog_config_B_data[] = {
   {
     .tag                = bed_thermistor,
     .device_path	= AIN_PATH_PREFIX "ain2",	// BEBOPR_R2_J6 - THRM0 (hardware ain1)
@@ -63,8 +97,7 @@ static const analog_config_record analog_config_data[] = {
   },
 };
 
-static const temp_config_record temp_config_data[] = {
-#ifndef LASER_CUTTER
+static const temp_config_record temp_config_B_data[] = {
   {
     .tag                = temp_extruder,
     .source		= extruder_thermistor,
@@ -77,17 +110,9 @@ static const temp_config_record temp_config_data[] = {
     .in_range_time	= 15000,
     .conversion		= bone_bed_thermistor_330k,
   },
-#endif
 };
 
-static const pwm_config_record pwm_config_data[] = {
-#ifdef LASER_CUTTER
-  {
-    .tag		= pwm_laser_power,
-    .device_path	= PWM_PATH_PREFIX "ehrpwm.2:0",	// BEBOPR_R2_J3 - PWM1
-    .frequency		= 10,
-  },
-#else
+static const pwm_config_record pwm_config_B_data[] = {
   {
     .tag		= pwm_extruder,
     .device_path	= PWM_PATH_PREFIX "ehrpwm.2:0",	// BEBOPR_R2_J3 - PWM1
@@ -103,11 +128,9 @@ static const pwm_config_record pwm_config_data[] = {
     .device_path	= PWM_PATH_PREFIX "ehrpwm.1:0",	// BEBOPR_R2_J4 - PWM2
     .frequency		= 10,
   },
-#endif
 };
 
-static const heater_config_record heater_config_data[] = {
-#ifndef LASER_CUTTER
+static const heater_config_record heater_config_B_data[] = {
   {
     .tag		= heater_extruder,
     .analog_input	= temp_extruder,
@@ -136,41 +159,135 @@ static const heater_config_record heater_config_data[] = {
 	    .I_limit = 0.0,
     },
   },
-#endif
 };
+
+/*======================================== configuration 'C' ========================================*/
+/*
+ *  PRUSA acting as laser cutter
+ */
+
+static const analog_config_record analog_config_C_data[] = {
+  {
+    .tag                = bed_thermistor,
+    .device_path	= AIN_PATH_PREFIX "ain2",	// BEBOPR_R2_J6 - THRM0 (hardware ain1)
+    .filter_length	= 50,
+  },
+  {
+    .tag                = spare_ain,
+    .device_path	= AIN_PATH_PREFIX "ain4",	// BEBOPR_R2_J7 - THRM1 (hardware ain3)
+    .filter_length	= 10,
+  },
+  {
+    .tag                = extruder_thermistor,
+    .device_path	= AIN_PATH_PREFIX "ain6",	// BEBOPR_R2_J8 - THRM2 (hardware ain5)
+    .filter_length	= 50,
+  },
+};
+
+static const temp_config_record temp_config_C_data[] = {
+};
+
+static const pwm_config_record pwm_config_C_data[] = {
+  {
+    .tag		= pwm_laser_power,
+    .device_path	= PWM_PATH_PREFIX "ehrpwm.2:0",	// BEBOPR_R2_J3 - PWM1
+    .frequency		= 10,
+  },
+};
+
+static const heater_config_record heater_config_C_data[] = {
+};
+
+/*==============================================================================================================*/
+
+struct configuration {
+  const void* data;
+  const int entries;
+};
+
+static struct configuration analog_configs[] = {
+  { analog_config_A_data, NR_ITEMS( analog_config_A_data) },
+  { analog_config_B_data, NR_ITEMS( analog_config_B_data) },
+  { analog_config_C_data, NR_ITEMS( analog_config_C_data) },
+};
+
+static struct configuration temp_configs[] = {
+  { temp_config_A_data, NR_ITEMS( temp_config_A_data) },
+  { temp_config_B_data, NR_ITEMS( temp_config_B_data) },
+  { temp_config_C_data, NR_ITEMS( temp_config_C_data) },
+};
+
+static struct configuration pwm_configs[] = {
+  { pwm_config_A_data, NR_ITEMS( pwm_config_A_data) },
+  { pwm_config_B_data, NR_ITEMS( pwm_config_B_data) },
+  { pwm_config_C_data, NR_ITEMS( pwm_config_C_data) },
+};
+
+static struct configuration heater_configs[] = {
+  { heater_config_A_data, NR_ITEMS( heater_config_A_data) },
+  { heater_config_B_data, NR_ITEMS( heater_config_B_data) },
+  { heater_config_C_data, NR_ITEMS( heater_config_C_data) },
+};
+
+/*==============================================================================================================*/
 
 static int use_pololu_drivers = 1;
 
 int bebopr_pre_init( void)
 {
   int result = -1;
+  /*
+   *  Handle multiple printers that may run this software
+   *  The configurations are identified with letters 'A'-'Z'
+   */
+  result = eeprom_get_printer_config( EEPROM_PATH);
+  if (result >= 'A' && result <= 'Z') {
+    pconfig = result; 
+  } else {
+    pconfig = 'A';	// default to configuration 'A'
+  }
+  fprintf( stderr, "Using printer configuration: '%c'\n", pconfig);
+  int ix = pconfig - 'A';
 
-  result = analog_config( analog_config_data, NR_ITEMS( analog_config_data));
+  result = analog_config( analog_configs[ ix].data, analog_configs[ ix].entries);
   if (result < 0) {
     fprintf( stderr, "analog_config failed!\n");
     goto done;
   }
-  result = temp_config( temp_config_data, NR_ITEMS( temp_config_data));
+
+  result = temp_config( temp_configs[ ix].data, temp_configs[ ix].entries);
   if (result < 0) {
     fprintf( stderr, "temp_config failed!\n");
     goto done;
   }
-  result = pwm_config( pwm_config_data, NR_ITEMS( pwm_config_data));
+
+  result = pwm_config( pwm_configs[ ix].data, pwm_configs[ ix].entries);
   if (result < 0) {
     fprintf( stderr, "pwm_config failed!\n");
     goto done;
   }
-  result = heater_config( heater_config_data, NR_ITEMS( heater_config_data));
+
+  result = heater_config( heater_configs[ ix].data, heater_configs[ ix].entries);
   if (result < 0) {
     fprintf( stderr, "heater_config failed!\n");
     goto done;
   }
+
+  /*
+   *  To remain backwards compatible, use the stepper io configuration flag is set,
+   *  but keep the new configuration method when not set.
+   */
   result = eeprom_get_step_io_config( EEPROM_PATH);
   // Only differentiate between Pololu and TB6560, default to Pololu
-  if (result == TB6560_DRIVERS) {
-    use_pololu_drivers = 0;
+  if (result > 0 && result < 255) {
+    if (result == TB6560_DRIVERS) {
+      use_pololu_drivers = 0;
+    } else {
+      use_pololu_drivers = 1;
+    }
   }
   fprintf( stderr, "Using stepper driver configuration: '%s'\n", (use_pololu_drivers) ? "Pololu" : "TB6560");
+
   result = 0;
  done:
   return result;
@@ -180,22 +297,28 @@ int bebopr_pre_init( void)
 // only return 0 or 1
 int config_axis_has_min_limit_switch( axis_e axis)
 {
-  switch (axis) {
-  case x_axis:	return 1;
-  case y_axis:	return 1;
-  case z_axis:	return 1;
-  default:      return 0;
+  if (pconfig == 'B') {
+    switch (axis) {
+    case x_axis:	return 1;
+    case y_axis:	return 1;
+    case z_axis:	return 1;
+    default:		return 0;
+    }
   }
+  return 0;
 }
 
 int config_axis_has_max_limit_switch( axis_e axis)
 {
-  switch (axis) {
-  case x_axis:	return 0;
-  case y_axis:	return 0;
-  case z_axis:	return 1;
-  default:      return 0;
+  if (pconfig == 'B') {
+    switch (axis) {
+    case x_axis:	return 0;
+    case y_axis:	return 0;
+    case z_axis:	return 1;
+    default:		return 0;
+    }
   }
+  return 0;
 }
 
 // Limit switch polarity, return either 0 or 1. Note that the inputs are being
@@ -231,35 +354,38 @@ int config_use_pololu_drivers( void)
  */
 double config_get_step_size( axis_e axis)
 {
-  switch (axis) {
-#if 1
- /*
-  *  TEST RIG
-  *
-  *  X: 1:8  stepping, 1.8' motor, 8t pulley @ 5mm pitch => (8x5)/(8*360/1.8) => 0.0125 mm
-  *  Y: 1:8  stepping, 1.8' motor, 8t pulley @ 5mm pitch => (8x5)/(8*360/1.8) => 0.0125 mm
-  *  Z: 1:8  stepping, 1.8' motor, 1:1 reduction @ 1.25mm /rev => (1.25)/(8*360/1.8) => 0.0007812 mm
-  *  E: 1:8  stepping, 1.8' motor, 11:39 reduction @ ??mm /rev => (11/39*19)/(8*360/1.8) => 0.00335 mm
-  */
-  case x_axis:	return 12.5E-6;
-  case y_axis:	return 12.5E-6;
-  case z_axis:	return 0.7812E-6;
-  case e_axis:	return 3.35E-6;
-#else
- /*
-  *  PRUSA
-  *
-  *  X: 1:8  stepping, 0.9' motor, 16t pulley @ 3mm pitch => (16x3)/(8*360/0.9) => 0.015 mm
-  *  Y: 1:8  stepping, 0.9' motor, 8t pulley @ 5mm pitch => (8x5)/(8*360/0.9) => 0.0125 mm
-  *  Z: 1:32 stepping, 1.8' motor, 1:1 reduction @ 1.25mm /rev => (1.25)/(32*360/1.8) => 0.0001953125 mm
-  *  E: 1:8  stepping, 1.8' motor, 11:39 reduction @ ??mm /rev => (11/39*19)/(8*360/1.8) => 0.003345 mm
-  */
-  case x_axis:	return 15.0E-6;
-  case y_axis:	return 12.5E-6;
-  case z_axis:	return 195.3125E-9;
-  case e_axis:	return 3.345E-6;
-#endif
-  default:	return 0.0;
+  if (pconfig == 'B') {
+   /*
+    *  PRUSA
+    *
+    *  X: 1:8  stepping, 0.9' motor, 16t pulley @ 3mm pitch => (16x3)/(8*360/0.9) => 0.015 mm
+    *  Y: 1:8  stepping, 0.9' motor, 8t pulley @ 5mm pitch => (8x5)/(8*360/0.9) => 0.0125 mm
+    *  Z: 1:32 stepping, 1.8' motor, 1:1 reduction @ 1.25mm /rev => (1.25)/(32*360/1.8) => 0.0001953125 mm
+    *  E: 1:8  stepping, 1.8' motor, 11:39 reduction @ ??mm /rev => (11/39*19)/(8*360/1.8) => 0.003345 mm
+    */
+    switch (axis) {
+    case x_axis: return 15.0E-6;
+    case y_axis: return 12.5E-6;
+    case z_axis: return 195.3125E-9;
+    case e_axis: return 3.345E-6;
+    default:     return 0.0;
+    }
+  } else {
+   /*
+    *  TEST RIG
+    *
+    *  X: 1:32 stepping, 1.8' motor, 8t pulley @ 5mm pitch => (8x5)/(32*360/1.8) => 0.0125 mm
+    *  Y: 1:16 stepping, 1.8' motor, 8t pulley @ 5mm pitch => (8x5)/(16*360/1.8) => 0.0125 mm
+    *  Z: 1:8  stepping, 1.8' motor, 1:1 reduction @ 1.25mm /rev => (1.25)/(8*360/1.8) => 0.0007812 mm
+    *  E: 1:8  stepping, 1.8' motor, 11:39 reduction @ ??mm /rev => (11/39*19)/(8*360/1.8) => 0.00335 mm
+    */
+    switch (axis) {
+    case x_axis: return 3.125E-6;
+    case y_axis: return 6.25E-6;
+    case z_axis: return 0.7812E-6;
+    case e_axis: return 3.35E-6;
+    default:     return 0.0;
+    }
   }
 }
 
@@ -268,12 +394,28 @@ double config_get_step_size( axis_e axis)
  */
 double config_get_max_feed( axis_e axis)
 {
-  switch (axis) {
-  case x_axis:	return 22500.0;	// 0.00625 mm/step @ 60 kHz
-  case y_axis:	return 16000.0;	// 0.00625 mm/step @ 53 kHz
-  case z_axis:	return   300.0; // 0.00039 mm/step @ 13 kHz
-  case e_axis:	return  3000.0; // 0.00198 mm/step @ 25 kHz
-  default:	return 0.0;
+  if (pconfig == 'B') {
+   /*
+    *  PRUSA
+    */
+    switch (axis) {
+    case x_axis:	return 22500.0;	// 0.00625 mm/step @ 60 kHz
+    case y_axis:	return 22500.0;	// 0.00625 mm/step @ 60 kHz
+    case z_axis:	return   300.0; // 0.00078 mm/step @ 13 kHz
+    case e_axis:	return  3000.0; // 0.00198 mm/step @ 25 kHz
+    default:		return 0.0;
+    }
+  } else {
+   /*
+    *  TEST RIG
+    */
+    switch (axis) {
+    case x_axis:	return 11250.0;	// 0.003125 mm/step @ 60 kHz
+    case y_axis:	return 22500.0;	// 0.00625 mm/step @ 60 kHz
+    case z_axis:	return   600.0; // 0.00078 mm/step @ 13 kHz
+    case e_axis:	return  5000.0; // 0.00335 mm/step @ 25 kHz
+    default:		return 0.0;
+    }
   }
 }
 
@@ -283,7 +425,8 @@ double config_get_max_feed( axis_e axis)
 double config_get_max_accel( axis_e axis)
 {
   switch (axis) {
-  case x_axis:	return 3.0;
+//  case x_axis:	return 3.0;
+  case x_axis:	return 1.0;
   case y_axis:	return 3.0;
   case z_axis:	return 1.0;
   case e_axis:	return 1.0;
@@ -296,12 +439,23 @@ double config_get_max_accel( axis_e axis)
  */
 int config_reverse_axis( axis_e axis)
 {
-  switch (axis) {
-  case x_axis:  return 0;
-  case y_axis:	return 1;
-  case z_axis:	return 1;
-  case e_axis:	return 0;
-  default:	return 0;
+  if (pconfig == 'B') {
+    // Prusa has Panucatt drivers that have reversed direction!
+    switch (axis) {
+    case x_axis:  return 0;
+    case y_axis:  return 1;
+    case z_axis:  return 1;
+    case e_axis:  return 0;
+    default:      return 0;
+    }
+  } else {
+    switch (axis) {
+    case x_axis:  return 1;
+    case y_axis:  return 0;
+    case z_axis:  return 0;
+    case e_axis:  return 1;
+    default:      return 0;
+    }
   }
 }
 
@@ -360,24 +514,29 @@ int config_set_cal_pos( axis_e axis, double pos)
 
 int config_min_switch_pos( axis_e axis, double* pos)
 {
-  switch (axis) {
-  case x_axis:	*pos = x_cal_pos; return 1;
-  case y_axis:	*pos = y_cal_pos; return 1;
-  case z_axis:	*pos = z_cal_pos; return 1;
-//case z_axis:	return 0;
-  default:	return 0;
+  if (pconfig == 'B') {
+    switch (axis) {
+    case x_axis:	*pos = x_cal_pos; return 1;
+    case y_axis:	*pos = y_cal_pos; return 1;
+    case z_axis:	*pos = z_cal_pos; return 1;
+    default:	return 0;
+    }
   }
+  return 0;
 }
 
 int config_max_switch_pos( axis_e axis, double* pos)
 {
-  switch (axis) {
-  case x_axis:	return 0;
-  case y_axis:	return 0;
-  case z_axis:	return 0;
-//case z_axis: *pos = z_cal_pos; return 1;
-  default:	return 0;
+  if (pconfig == 'B') {
+    switch (axis) {
+    case x_axis:	return 0;
+    case y_axis:	return 0;
+    case z_axis:	return 0;
+//  case z_axis:	*pos = z_cal_pos; return 1;
+    default:	return 0;
+    }
   }
+  return 0;
 }
 
 /*
