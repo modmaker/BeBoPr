@@ -91,7 +91,7 @@ static const pwm_config_record pwm_config_data[] = {
   {
     .tag		= pwm_extruder,
     .device_path	= PWM_PATH_PREFIX "ehrpwm.2:0",	// BEBOPR_R2_J3 - PWM1
-    .frequency		= 10,
+    .frequency		= 40,
   },
   {
     .tag		= pwm_fan,

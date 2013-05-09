@@ -43,6 +43,7 @@ static channel_tag temp_extruder = NULL;
 static channel_tag temp_bed = NULL;
 static channel_tag pwm_extruder = NULL;
 static channel_tag pwm_fan = NULL;
+static channel_tag pwm_bed = NULL;
 
 static int extruder_temp_wait = 0;
 static int bed_temp_wait = 0;
@@ -770,21 +771,46 @@ static void process_non_move_command( GCODE_COMMAND* target)
 				}
 				break;
 			}
-			// M7/M106- fan on
+			// M7 - cooling mist on
 			case 7:
-			case 106:
-				//? ==== M106: Fan On ====
+				traject_wait_for_completion();
+				pwm_set_output( pwm_fan, 100);
+				break;
+
+			// M106 - pwm device control
+			case 106: {
+				channel_tag pwm_device = pwm_fan;	// unless overridden by P setting
+				int pwm_value  = 100;			// unless overridden by S setting
+				
+				//? ==== M106: output control ====
 				//?
 				//? Example: M106
 				//?
-				//? Turn on the cooling fan (if any).
+				//? General purpose output control, backwards compatible
+				//? with simple FAN control (without P and/or S).
+				//? Sets PWM value for the device selected with P
+				//? to output value as specified by S.
+				//? S value 0..255 maps to 0..100% PWM output.
 
-#				ifdef ENFORCE_ORDER
-					// wait for all moves to complete
-					traject_wait_for_completion();
-#				endif
-				pwm_set_output(pwm_fan, 100);
+				// wait for all moves to complete
+				traject_wait_for_completion();
+				if (target->seen_P) {
+					switch (target->P) {
+					case 0:  pwm_device = pwm_extruder; break;
+					case 1:  pwm_device = pwm_bed; break;
+					case 2:  pwm_device = pwm_fan; break;
+					}
+				}
+				if (target->seen_S) {
+					if (target->S >= 255) {
+						pwm_value = 100;
+					} else {
+						pwm_value = (100 * target->S) / 256;
+					}
+				}
+				pwm_set_output( pwm_device, pwm_value);
 				break;
+			}
 			// M107- fan off
 			case 9:
 			case 107:
@@ -794,11 +820,9 @@ static void process_non_move_command( GCODE_COMMAND* target)
 				//?
 				//? Turn off the cooling fan (if any).
 
-#				ifdef ENFORCE_ORDER
-					// wait for all moves to complete
-					traject_wait_for_completion();
-#				endif
-				pwm_set_output(pwm_fan, 0);
+				// wait for all moves to complete
+				traject_wait_for_completion();
+				pwm_set_output( pwm_fan, 0);
 				break;
 
 			// M110- set line number
@@ -1426,6 +1450,7 @@ int gcode_process_init( void)
   }
   pwm_extruder    = pwm_lookup_by_name( "pwm_laser_power");
   pwm_fan         = pwm_lookup_by_name( "pwm_fan");
+  pwm_bed         = pwm_lookup_by_name( "pwm_bed");
   // If there's no extruder, or no laser power there's probably a configuration error!
   if ((heater_extruder == NULL || temp_extruder == NULL) && pwm_extruder == NULL) {
     return -1;
