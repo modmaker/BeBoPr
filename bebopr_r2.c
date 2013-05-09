@@ -69,10 +69,11 @@ static const temp_config_record temp_config_A_data[] = {
   },
 };
 
-
-// Make these identical to configuration B
+// Make these identical to configuration B so we can actually use the outputs!
 #define pwm_config_A_data    pwm_config_B_data
-#define heater_config_A_data heater_config_B_data
+
+static const heater_config_record heater_config_A_data[] = {
+};
 
 /*======================================== configuration 'B' ========================================*/
 /*
@@ -116,7 +117,7 @@ static const pwm_config_record pwm_config_B_data[] = {
   {
     .tag		= pwm_extruder,
     .device_path	= PWM_PATH_PREFIX "ehrpwm.2:0",	// BEBOPR_R2_J3 - PWM1
-    .frequency		= 40,
+    .frequency		= 400,
   },
   {
     .tag		= pwm_fan,

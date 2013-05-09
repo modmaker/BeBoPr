@@ -56,10 +56,10 @@ static void wait_for_slow_signals( move5D* move)
 {
   if (DEBUG_GCODE_PROCESS && (debug_flags & DEBUG_GCODE_PROCESS)) {
     if (move) {
-      printf( "\nMOVE[ %lu] - defer move(s) until temperature are stable\n",
+      printf( "\nMOVE[ %lu] - defer move(s) until temperature(s) are stable\n",
 	      move->serno);
     } else {
-      printf( "\nnon-MOVE - defer processing until temperatures are stable\n");
+      printf( "\nnon-MOVE - defer processing until temperature(s) are stable\n");
     }
   }
   while ( (extruder_temp_wait && !heater_temp_reached( heater_extruder)) ||
@@ -1453,7 +1453,7 @@ int gcode_process_init( void)
   pwm_bed         = pwm_lookup_by_name( "pwm_bed");
   // If there's no extruder, or no laser power there's probably a configuration error!
   if ((heater_extruder == NULL || temp_extruder == NULL) && pwm_extruder == NULL) {
-    return -1;
+//    return -1;
   }
   gcode_current_pos.X = gcode_home_pos.X = 0;
   gcode_current_pos.Y = gcode_home_pos.Y = 0;

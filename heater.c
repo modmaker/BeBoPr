@@ -453,10 +453,13 @@ channel_tag heater_lookup_by_name( const char* name)
 
 int heater_temp_reached( channel_tag heater)
 {
-  int ix = heater_index_lookup( heater);
-  if (ix >= 0) {
-    return temp_achieved( heaters[ ix].input);
+  if (heater) {
+    int ix = heater_index_lookup( heater);
+    if (ix >= 0) {
+      return temp_achieved( heaters[ ix].input);
+    }
+    return 0;
   }
-  return 0;
+  return 1;	// dummy heater has always the right temperature
 }
 
