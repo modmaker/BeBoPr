@@ -177,9 +177,8 @@ int temp_achieved( channel_tag temp_channel)
       return temp_channels[ ix].out_of_range == 0;
     }
     return 0;	// unknown sensor has not reached temperature !???
-  } else {	// null -> dummy channel
-    return 1;	// dummy channel has always the right temperature
   }
+  return 1;	// dummy channel has always the right temperature
 }
 
 /*
