@@ -39,6 +39,16 @@ static const double c_acc = 282842712.5;        // = fclk * sqrt( 2.0);
 static double speed_override_factor = 1.0;
 static double extruder_override_factor = 1.0;
 
+/*
+ * Duration of active part of step pulse. Note that the real generated
+ * value also depends on the cycletime of the stepper code and can be
+ * less than the value specified here.
+ * actual = FLOOR( setting / cycletime) * cycletime
+ * Setting a value less than the cycletime will generate zero-length
+ * step pulses!
+ */
+static const int step_pulse_time = 8;       /* [us] */
+
 static unsigned int moveNrs[ 1 + 5];    /* 5 axes, 1-based */
 
 void incMoveNr( unsigned int pruss_axis)
@@ -576,8 +586,8 @@ void traject_move_all_axes( move5D* m)
   }
 
   if (!chainable) {
-  // this command act as NOP that will generate a sync point for the axes !
-  pruss_queue_set_pulse_length( 4, 20 * 200);
+    // this command act as NOP that will generate a sync point for the axes !
+    pruss_queue_set_pulse_length( 4, step_pulse_time * 200);
   }
 
   double end_time = timestamp_get();
@@ -774,15 +784,6 @@ int traject_init( void)
   pruss_axis_config( 3, step_size_z, config_reverse_axis( z_axis));
   pruss_axis_config( 4, step_size_e, config_reverse_axis( e_axis));
 
- /*
-  * Duration of active part of step pulse. Note that the real generated
-  * value also depends on the cycletime of the stepper code and can be
-  * less than the value specified here.
-  * actual = FLOOR( setting / cycletime) * cycletime
-  * Setting a value less than the cycletime will generate zero-length
-  * step pulses!
-  */
-  const int step_pulse_time = 8;       /* [us] */
   /* Set the duration of the active part of the step pulse */
   pruss_queue_set_pulse_length( 1, step_pulse_time * 200);
   pruss_queue_set_pulse_length( 2, step_pulse_time * 200);
