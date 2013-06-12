@@ -19,10 +19,15 @@
  * Here one defines where the kernel puts the analog inputs,
  * this happens to change from kernel to kernel :-(
  */
-//#define AIN_PATH_PREFIX "/sys/devices/platform/tsc/"		/* kernel 3.2.0 */
-#define AIN_PATH_PREFIX "/sys/devices/platform/omap/tsc/"	/* kernel 3.2.16 */
-
-#define PWM_PATH_PREFIX "/sys/class/pwm/"
+#ifdef BBB
+// FIXME: get rid of these stupid suffixes in the names !
+# define AIN_PATH_PREFIX "/sys/devices/ocp.2/bebopr_adc.18/"	/* kernel 3.8.13 */
+# define PWM_PATH_PREFIX "/sys/devices/ocp.2/"			/* kernel 3.8.13 */
+#else
+//# define AIN_PATH_PREFIX "/sys/devices/platform/tsc/"		/* kernel 3.2.0 */
+# define AIN_PATH_PREFIX "/sys/devices/platform/omap/tsc/"	/* kernel 3.2.16 */
+# define PWM_PATH_PREFIX "/sys/class/pwm/"			/* kernel 3.2.16 */
+#endif
 
 /*
  * Note, for the ease of implementation, the string addresses are used.
@@ -48,17 +53,29 @@ GENERATE_TAG( pwm_fan);
 static const analog_config_record analog_config_data[] = {
   {
     .tag                = bed_thermistor,
+#ifdef BBB
+    .device_path	= AIN_PATH_PREFIX "AIN1",	// BEBOPR_R2_J6 - THRM0 (hardware ain1)
+#else
     .device_path	= AIN_PATH_PREFIX "ain2",	// BEBOPR_R2_J6 - THRM0 (hardware ain1)
+#endif
     .filter_length	= 50,
   },
   {
     .tag                = spare_ain,
+#ifdef BBB
+    .device_path	= AIN_PATH_PREFIX "AIN3",	// BEBOPR_R2_J7 - THRM1 (hardware ain3)
+#else
     .device_path	= AIN_PATH_PREFIX "ain4",	// BEBOPR_R2_J7 - THRM1 (hardware ain3)
+#endif
     .filter_length	= 10,
   },
   {
     .tag                = extruder_thermistor,
+#ifdef BBB
+    .device_path	= AIN_PATH_PREFIX "AIN5",	// BEBOPR_R2_J8 - THRM2 (hardware ain5)
+#else
     .device_path	= AIN_PATH_PREFIX "ain6",	// BEBOPR_R2_J8 - THRM2 (hardware ain5)
+#endif
     .filter_length	= 50,
   },
 };
@@ -90,18 +107,33 @@ static const pwm_config_record pwm_config_data[] = {
 #else
   {
     .tag		= pwm_extruder,
+#ifdef BBB
+    .device_path	= PWM_PATH_PREFIX "bebopr_pwm_J3.15",	// BEBOPR_R2_J3 - PWM1
+    .frequency		= 0,
+#else
     .device_path	= PWM_PATH_PREFIX "ehrpwm.2:0",	// BEBOPR_R2_J3 - PWM1
     .frequency		= 40,
+#endif
   },
   {
     .tag		= pwm_fan,
+#ifdef BBB
+    .device_path	= PWM_PATH_PREFIX "bebopr_pwm_J2.14",	// BEBOPR_R2_J2 - PWM0
+    .frequency		= 0,         // frequency is determined by ehrpwm.2:0 !
+#else
     .device_path	= PWM_PATH_PREFIX "ehrpwm.2:1",	// BEBOPR_R2_J2 - PWM0
     .frequency		= 0,         // frequency is determined by ehrpwm.2:0 !
+#endif
   },
   {
     .tag		= pwm_bed,
+#ifdef BBB
+    .device_path	= PWM_PATH_PREFIX "bebopr_pwm_J4.16",	// BEBOPR_R2_J4 - PWM2
+    .frequency		= 1,
+#else
     .device_path	= PWM_PATH_PREFIX "ehrpwm.1:0",	// BEBOPR_R2_J4 - PWM2
     .frequency		= 10,
+#endif
   },
 #endif
 };
@@ -232,7 +264,7 @@ int config_use_pololu_drivers( void)
 double config_get_step_size( axis_e axis)
 {
   switch (axis) {
-#if 1
+#if 0
  /*
   *  TEST RIG
   *
@@ -297,10 +329,10 @@ double config_get_max_accel( axis_e axis)
 int config_reverse_axis( axis_e axis)
 {
   switch (axis) {
-  case x_axis:  return 0;
-  case y_axis:	return 1;
-  case z_axis:	return 1;
-  case e_axis:	return 0;
+  case x_axis:  return 1;
+  case y_axis:	return 0;
+  case z_axis:	return 0;
+  case e_axis:	return 1;
   default:	return 0;
   }
 }
@@ -446,6 +478,14 @@ int bebopr_post_init( void)
 {
   int result = -1;
 
+#if BBB
+  /*
+   *  IO_PWR_ON  = R7 / TIMER4 / GPIO2[2] / gpio66
+   */
+  gpio_write_int_value_to_file( "export", 66);
+  gpio_write_value_to_pin_file( 66, "direction", "out");
+  gpio_write_value_to_pin_file( 66, "value", "0");
+#endif
   /*
    *  IO_PWR_ON  = R9 / GPIO1[6] / gpio38 /  gpmc_ad6
    *  !IO_PWR_ON = R8 / GPIO1[2] / gpio34 /  gpmc_ad2
@@ -466,6 +506,9 @@ int bebopr_post_init( void)
 
 void bebopr_exit( void)
 {
+#if BBB
+  gpio_write_value_to_pin_file( 66, "value", "1");
+#endif
   gpio_write_value_to_pin_file( 38, "value", "0");
   gpio_write_value_to_pin_file( 34, "value", "1");
   fprintf( stderr, "Turned BEBOPR I/O power off\n");

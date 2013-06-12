@@ -116,8 +116,16 @@ void* analog_worker( void* arg)
       }
       lseek( fd[ i], 0, SEEK_SET);
     } else if (ret < 0) {
+#ifdef BBB
+      /* FIXME: for now ignore these recoverable errors! */
+      if (debug_flags & DEBUG_ANALOG) {
+        fprintf( stderr, "analog read failed: fd=%d, buf=%p, size=%u, ret=%d\n", fd[ i], buf, sizeof( buf), ret);
+      }
+      continue;
+#else
       perror( "analog thread: ADC read failed -");
       goto failure;
+#endif
     }
     ++i;
     if (i == num_analog_channels) {

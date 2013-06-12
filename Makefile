@@ -114,7 +114,7 @@ clean-subdirs:
 doc: Doxyfile *.c *.h
 	doxygen $<
 
-%.o: %.c Makefile
+%.o: %.c Makefile setenv
 	@echo "  CC        $@"
 	@$(CC) -c $(CFLAGS) -Wa,-adhlns=$(<:.c=.al) -o $@ $(subst .o,.c,$@)
 

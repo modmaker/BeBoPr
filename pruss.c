@@ -232,7 +232,11 @@ static int locate_pruss_device_l2( const char* device_name, char* uio_name, int 
   int  found = 0;
   const char uio_dev_name[] = "uio";
 
+#ifdef BBB
+  snprintf( buffer, sizeof( buffer), "/sys/devices/ocp.2/4a300000.pruss/%s", uio_dev_name);
+#else
   snprintf( buffer, sizeof( buffer), "/sys/bus/platform/devices/%s/%s", device_name, uio_dev_name);
+#endif
   dir = opendir( buffer);
   if (dir <= 0) {
     perror( "Platform device not found");
@@ -265,7 +269,9 @@ int locate_pruss_device( const char* driver_name, char* drv_name, int drv_name_l
 {
   char buffer[ NAME_MAX];
   DIR* dir;
+#ifndef BBB
   struct dirent* de;
+#endif
   int  found = 0;
 
   // for each driver instance of type 'driver_name', scan all subdirs of
@@ -283,6 +289,14 @@ int locate_pruss_device( const char* driver_name, char* drv_name, int drv_name_l
       exit( EXIT_FAILURE);
     }
   }
+#ifdef BBB
+  if (locate_pruss_device_l2( driver_name, uio_name, uio_name_len)) {
+     if (drv_name) {
+	strncpy( drv_name, driver_name, drv_name_len);
+     }
+     found = 1;
+  }
+#else
   for (de = readdir( dir) ; de ; de = readdir( dir)) {
     if (de < 0) {
       perror( "Problem reading directory");
@@ -305,6 +319,7 @@ int locate_pruss_device( const char* driver_name, char* drv_name, int drv_name_l
       }
     }
   }
+#endif
   return found;
 }
 

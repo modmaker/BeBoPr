@@ -1442,15 +1442,17 @@ int gcode_process_init( void)
   heater_bed      = heater_lookup_by_name( "heater_bed");
   temp_extruder   = temp_lookup_by_name( "temp_extruder");
   temp_bed        = temp_lookup_by_name( "temp_bed");
-  if (debug_flags & DEBUG_GCODE_PROCESS) {
-    printf( "tag_name( heater_extruder) = '%s',  tag_name( heater_bed) = '%s',\n"
-            "tag_name( temp_extruder) = '%s',  tag_name( temp_bed) = '%s'\n",
-            tag_name( heater_extruder), tag_name( heater_bed),
-            tag_name( temp_extruder), tag_name( temp_bed));
-  }
-  pwm_extruder    = pwm_lookup_by_name( "pwm_laser_power");
+  pwm_extruder    = pwm_lookup_by_name( "pwm_extruder");
   pwm_fan         = pwm_lookup_by_name( "pwm_fan");
   pwm_bed         = pwm_lookup_by_name( "pwm_bed");
+  if (debug_flags & DEBUG_GCODE_PROCESS) {
+    printf( "tag_name( heater_extruder) = '%s',  tag_name( heater_bed) = '%s',\n",
+            tag_name( heater_extruder), tag_name( heater_bed));
+    printf( "tag_name( temp_extruder) = '%s',  tag_name( temp_bed) = '%s'\n",
+            tag_name( temp_extruder), tag_name( temp_bed));
+    printf( "tag_name( pwm_extruder) = '%s',  tag_name( pwm_fan) = '%s',  tag_name( pwm_bed) = '%s'\n",
+            tag_name( pwm_extruder), tag_name( pwm_fan), tag_name( pwm_bed));
+  }
   // If there's no extruder, or no laser power there's probably a configuration error!
   if ((heater_extruder == NULL || temp_extruder == NULL) && pwm_extruder == NULL) {
 //    return -1;
