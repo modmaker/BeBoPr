@@ -408,7 +408,7 @@ double config_get_home_max_feed( axis_e axis)
   }
 }
 
-static int e_axis_rel_mode = 1;
+static int e_axis_rel_mode = 0;
 
 int config_set_e_axis_mode( int relative)
 {
