@@ -126,7 +126,6 @@ static void ns_sleep( struct timespec* ts, unsigned int ns)
 void* heater_thread( void* arg)
 {
   struct timespec ts;
-  struct timespec old_ts;
   unsigned int timer_period;
   int log_scaler;
   if (num_heater_channels < 1) {
@@ -138,7 +137,6 @@ void* heater_thread( void* arg)
   clock_getres( TIMER_CLOCK, &ts); 
   printf( "  timer resolution is %ld [ns]\n", ts.tv_nsec);
   clock_gettime( TIMER_CLOCK, &ts);
-  old_ts = ts;
   log_scaler = 0;
   while (1) {
     for (int ix = 0 ; ix < num_heater_channels ; ++ix) {
