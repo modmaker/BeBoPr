@@ -809,6 +809,6 @@ int traject_init( void)
   CONFIG_AXIS_LIMSW( y_axis, 2, YMIN_GPIO, YMAX_GPIO);
   CONFIG_AXIS_LIMSW( z_axis, 3, ZMIN_GPIO, ZMAX_GPIO);
 
-  pruss_queue_set_idle_timeout( 30);    // set a 3 seconds timeout
+  pruss_queue_set_idle_timeout( 50);    // set a 5 seconds timeout
   return 0;
 }
