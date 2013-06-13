@@ -158,7 +158,7 @@ eeprom-tool-install:	eeprom-tool
 .PHONY:	all build elf hex eep lss sym program coff extcoff clean depend applet_files install
 
 # DO NOT DELETE THIS LINE -- make depend depends on it.
-analog.o: analog.c analog.h beaglebone.h mendel.h debug.h
+analog.o: analog.c analog.h beaglebone.h mendel.h debug.h bebopr.h
 bebopr_r2.o: bebopr_r2.c analog.h beaglebone.h temp.h thermistor.h \
  bebopr.h heater.h pwm.h traject.h eeprom.h gpio.h
 debug.o: debug.c debug.h
@@ -173,10 +173,10 @@ home.o: home.c beaglebone.h home.h bebopr.h limit_switches.h traject.h \
  pruss_stepper.h algo2cmds.h gcode_process.h gcode_parse.h debug.h
 limit_switches.o: limit_switches.c limit_switches.h traject.h bebopr.h \
  mendel.h gpio.h debug.h beaglebone.h
-pruss.o: pruss.c pruss.h algo2cmds.h beaglebone.h debug.h
+pruss.o: pruss.c pruss.h algo2cmds.h beaglebone.h debug.h bebopr.h
 pruss_stepper.o: pruss_stepper.c pruss_stepper.h algo2cmds.h pruss.h \
  beaglebone.h debug.h bebopr.h timestamp.h eeprom.h
-pwm.o: pwm.c pwm.h beaglebone.h debug.h
+pwm.o: pwm.c pwm.h beaglebone.h debug.h bebopr.h
 temp.o: temp.c temp.h beaglebone.h analog.h debug.h mendel.h
 thermistor.o: thermistor.c beaglebone.h thermistor.h
 traject.o: traject.c bebopr.h traject.h pruss_stepper.h algo2cmds.h \

@@ -9,6 +9,7 @@
 #include "beaglebone.h"
 #include "mendel.h"
 #include "debug.h"
+#include "bebopr.h"
 
 
 struct analog_channel_record {
@@ -116,16 +117,20 @@ void* analog_worker( void* arg)
       }
       lseek( fd[ i], 0, SEEK_SET);
     } else if (ret < 0) {
-#ifdef BBB
-      /* FIXME: for now ignore these recoverable errors! */
-      if (debug_flags & DEBUG_ANALOG) {
-        fprintf( stderr, "analog read failed: fd=%d, buf=%p, size=%u, ret=%d\n", fd[ i], buf, sizeof( buf), ret);
+      if (get_kernel_type() == e_kernel_3_8) {
+       /*
+        * The 3.8.13 kernel ADC driver returns an error once every 10-100 reads.
+        * This seems to be a glich / recoverable error.
+        * FIXME: for now we just ignore these errors (and the read).
+        */
+        if (debug_flags & DEBUG_ANALOG) {
+          fprintf( stderr, "analog thread: ADC read failed: fd=%d, buf=%p, size=%u, ret=%d\n",
+                  fd[ i], buf, sizeof( buf), ret);
+        }
+        continue;
       }
-      continue;
-#else
       perror( "analog thread: ADC read failed -");
       goto failure;
-#endif
     }
     ++i;
     if (i == num_analog_channels) {

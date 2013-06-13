@@ -514,3 +514,16 @@ void bebopr_exit( void)
   gpio_write_value_to_pin_file( 34, "value", "1");
   fprintf( stderr, "Turned BEBOPR I/O power off\n");
 }
+
+kernel_type get_kernel_type( void)
+{
+/*
+ * FIXME: determine at runtime !
+ * also remove the BBB #ifdefs in this file!
+ */
+#ifdef BBB
+  return e_kernel_3_8;
+#else
+  return e_kernel_3_2;
+#endif
+}

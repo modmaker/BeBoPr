@@ -72,4 +72,10 @@ extern int config_set_e_axis_mode( int relative);
 #define	power_on()	do { /* void */ } while (0)
 #define	power_off()	do { /* void */ } while (0)
 
+// return the kernel type running
+typedef enum {
+  e_kernel_3_2, e_kernel_3_8
+} kernel_type;
+extern kernel_type get_kernel_type( void);
+
 #endif

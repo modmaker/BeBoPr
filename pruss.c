@@ -18,6 +18,7 @@
 #include "algo2cmds.h"
 #include "beaglebone.h"
 #include "debug.h"
+#include "bebopr.h"
 
 #define MAX_UIO_MAPS	5	// TODO: should be taken from the right UIO .h file!
 
@@ -232,11 +233,13 @@ static int locate_pruss_device_l2( const char* device_name, char* uio_name, int 
   int  found = 0;
   const char uio_dev_name[] = "uio";
 
-#ifdef BBB
-  snprintf( buffer, sizeof( buffer), "/sys/devices/ocp.2/4a300000.pruss/%s", uio_dev_name);
-#else
-  snprintf( buffer, sizeof( buffer), "/sys/bus/platform/devices/%s/%s", device_name, uio_dev_name);
-#endif
+  if (get_kernel_type() == e_kernel_3_8) {
+    snprintf( buffer, sizeof( buffer), "/sys/devices/ocp.2/4a300000.pruss/%s", uio_dev_name);
+  }
+  if (get_kernel_type() == e_kernel_3_2) {
+    snprintf( buffer, sizeof( buffer), "/sys/bus/platform/devices/%s/%s", device_name, uio_dev_name);
+  }
+
   dir = opendir( buffer);
   if (dir <= 0) {
     perror( "Platform device not found");
@@ -269,9 +272,6 @@ int locate_pruss_device( const char* driver_name, char* drv_name, int drv_name_l
 {
   char buffer[ NAME_MAX];
   DIR* dir;
-#ifndef BBB
-  struct dirent* de;
-#endif
   int  found = 0;
 
   // for each driver instance of type 'driver_name', scan all subdirs of
@@ -289,37 +289,42 @@ int locate_pruss_device( const char* driver_name, char* drv_name, int drv_name_l
       exit( EXIT_FAILURE);
     }
   }
-#ifdef BBB
-  if (locate_pruss_device_l2( driver_name, uio_name, uio_name_len)) {
-     if (drv_name) {
+
+  if (get_kernel_type() == e_kernel_3_8) {
+    if (locate_pruss_device_l2( driver_name, uio_name, uio_name_len)) {
+      if (drv_name) {
 	strncpy( drv_name, driver_name, drv_name_len);
-     }
-     found = 1;
-  }
-#else
-  for (de = readdir( dir) ; de ; de = readdir( dir)) {
-    if (de < 0) {
-      perror( "Problem reading directory");
-      exit( EXIT_FAILURE);
-    }
-    if (debug && debug_level > 3) {
-      printf( "found driver device file '%s'\n", de->d_name);
-    }
-    // find entries that are instances of the driver
-    if (strncmp( driver_name, de->d_name, strlen( driver_name)) == 0) {
-      if (debug && debug_level > 1) {
-	printf( "found driver device instance '%s'\n", de->d_name);
       }
-      if (locate_pruss_device_l2( de->d_name, uio_name, uio_name_len)) {
-	if (drv_name) {
-	  strncpy( drv_name, de->d_name, drv_name_len);
+      found = 1;
+    }
+  }
+
+  if (get_kernel_type() == e_kernel_3_2) {
+    struct dirent* de;
+    for (de = readdir( dir) ; de ; de = readdir( dir)) {
+      if (de < 0) {
+	perror( "Problem reading directory");
+	exit( EXIT_FAILURE);
+      }
+      if (debug && debug_level > 3) {
+	printf( "found driver device file '%s'\n", de->d_name);
+      }
+      // find entries that are instances of the driver
+      if (strncmp( driver_name, de->d_name, strlen( driver_name)) == 0) {
+	if (debug && debug_level > 1) {
+	  printf( "found driver device instance '%s'\n", de->d_name);
 	}
-	found = 1;
-	break;
+	if (locate_pruss_device_l2( de->d_name, uio_name, uio_name_len)) {
+	  if (drv_name) {
+            strncpy( drv_name, de->d_name, drv_name_len);
+	  }
+	  found = 1;
+	  break;
+	}
       }
     }
   }
-#endif
+
   return found;
 }
 
@@ -503,8 +508,8 @@ int pruss_init( const char* ucodename, unsigned int offset, struct ucode_signatu
       }
       int status = pruss_rd32( MM_PRUSS_SYSCFG);
       if ((status & 0x10) != 0) {
-	pruss_wr32( MM_PRUSS_SYSCFG, status & ~(1 << 4));
-	printf( "PRUSS enabled OCP master ports.\n");
+        pruss_wr32( MM_PRUSS_SYSCFG, status & ~(1 << 4));
+        printf( "PRUSS enabled OCP master ports.\n");
       }
     } else {
       fprintf( stderr, "PRUSS ID is not found.\n");
@@ -532,7 +537,7 @@ int pruss_init( const char* ucodename, unsigned int offset, struct ucode_signatu
   // Reset PRUSS counters
   if (debug_flags & DEBUG_PRUSS) {
     printf( "Clearing PRUSS counters, old: cycle = %u, stall = %u\n",
-	    pruss_rd32( PRUSS_PRU_CTRL_CYCLE), pruss_rd32( PRUSS_PRU_CTRL_STALL));
+            pruss_rd32( PRUSS_PRU_CTRL_CYCLE), pruss_rd32( PRUSS_PRU_CTRL_STALL));
   }
   pruss_wr32( PRUSS_PRU_CTRL_CYCLE, 0);
   pruss_wr32( PRUSS_PRU_CTRL_STALL, 0);

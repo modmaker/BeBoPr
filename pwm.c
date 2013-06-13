@@ -9,6 +9,8 @@
 
 #include "pwm.h"
 #include "debug.h"
+#include "bebopr.h"
+
 
 struct pwm_channel_record {
   channel_tag		id;
@@ -125,9 +127,9 @@ void pwm_exit( void)
       struct pwm_channel_record* pd = &pwm_channels[ ch];
       pwm_set_output( pd->id, 0);
       pwm_write_int_to_file( pd->device_path, "run", 0);
-#ifndef BBB
-      pwm_write_int_to_file( pd->device_path, "request", 0);
-#endif
+      if (get_kernel_type() == e_kernel_3_2) {
+        pwm_write_int_to_file( pd->device_path, "request", 0);
+      }
       close (pd->duty_fd);
       pwm_channels[ ch].duty_fd = -1;
     }
@@ -152,54 +154,66 @@ int pwm_init( void)
 
       ++num_pwm_channels;
 
-#ifndef BBB
-      pwm_write_int_to_file( pd->device_path, "request", 1);
-#endif
+      if (get_kernel_type() == e_kernel_3_2) {
+        pwm_write_int_to_file( pd->device_path, "request", 1);
+      }
+
       pwm_write_int_to_file( pd->device_path, "polarity", 0);
 
-#ifdef BBB
-      // FIXME: quick hack to work around differences between ehrpwm implementations
-      pwm_write_int_to_file( pd->device_path, "run", 0);
-      unsigned int duty;
-      if (pwm_read_int_from_file( pd->device_path, "duty", (int*)&duty) >= 0) {
-        fprintf( stderr, "pwm_init: '%s' has duty set to %d\n", pd->id, duty);
-      } else {
-        fprintf( stderr, "pwm_init: '%s' could not read duty file\n", pd->id);
+      if (get_kernel_type() == e_kernel_3_8) {
+        // FIXME: quick hack to work around differences between ehrpwm implementations
+        pwm_write_int_to_file( pd->device_path, "run", 0);
+        unsigned int duty;
+        if (pwm_read_int_from_file( pd->device_path, "duty", (int*)&duty) >= 0) {
+	  if (debug_flags & DEBUG_PWM) {
+            fprintf( stderr, "pwm_init: '%s' has duty set to %d\n", pd->id, duty);
+	  }
+        } else {
+          fprintf( stderr, "pwm_init: '%s' could not read duty file\n", pd->id);
+        }
+	if (debug_flags & DEBUG_PWM) {
+          fprintf( stderr, "pwm_init: '%s' disabled pwm, setting duty to 0\n", pd->id);
+	}
+        pwm_write_int_to_file( pd->device_path, "duty", 0);
+        pd->duty = 0;
+        // if a frequency is specified in the configuration, use it
+        if (pd->frequency > 0) {
+          pd->period = 1000000000 / pd->frequency;
+	  if (debug_flags & DEBUG_PWM) {
+            fprintf( stderr, "pwm_init: '%s' set frequency to %d Hz, period of %u [ns]\n",
+		    pd->id, pd->frequency, pd->period);
+	  }
+          pwm_write_int_to_file( pd->device_path, "period", pd->period);
+        }
+        if (pwm_read_int_from_file( pd->device_path, "period", (int*)&pd->period) >= 0 /*&& period > 0*/) {
+	  pd->frequency = 1000000000 / pd->period;
+	  if (debug_flags & DEBUG_PWM) {
+            fprintf( stderr, "pwm_init: '%s' has period set to %u\n", pd->id, pd->period);
+	    fprintf( stderr, "pwm_init: '%s' set frequency for to %d Hz\n", pd->id, pd->frequency);
+	  }
+        } else {
+          fprintf( stderr, "pwm_init: '%s' could not read period file\n", pd->id);
+        }
+        // now open duty file for further reference
+        snprintf( s, sizeof( s), "%s/duty", pd->device_path);
+        pd->duty_fd = open( s, O_WRONLY);
+        if (pd->duty_fd < 0) {
+          perror( "pwm_init: failed to open 'duty' file");
+        }
       }
-      fprintf( stderr, "pwm_init: '%s' disabled pwm, setting duty to 0\n", pd->id);
-      pwm_write_int_to_file( pd->device_path, "duty", 0);
-      pd->duty = 0;
-      // if a frequency is specified in the configuration, use it
-      if (pd->frequency > 0) {
-        pd->period = 1000000000 / pd->frequency;
-	fprintf( stderr, "pwm_init: '%s' set frequency to %d Hz, period of %u [ns]\n",
-		pd->id, pd->frequency, pd->period);
-        pwm_write_int_to_file( pd->device_path, "period", pd->period);
+
+      if (get_kernel_type() == e_kernel_3_2) {
+        pwm_write_int_to_file( pd->device_path, "duty_percent", 0);
+        if (pd->frequency) {
+          pwm_write_int_to_file( pd->device_path, "period_freq", pd->frequency);
+        }
+        snprintf( s, sizeof( s), "%s/duty_percent", pd->device_path);
+        pd->duty_fd = open( s, O_WRONLY);
+        if (pd->duty_fd < 0) {
+          perror( "pwm_init: failed to open 'duty_percent' file");
+        }
       }
-      if (pwm_read_int_from_file( pd->device_path, "period", (int*)&pd->period) >= 0 /*&& period > 0*/) {
-        fprintf( stderr, "pwm_init: '%s' has period set to %u\n", pd->id, pd->period);
-	pd->frequency = 1000000000 / pd->period;
-	fprintf( stderr, "pwm_init: '%s' set frequency for to %d Hz\n", pd->id, pd->frequency);
-      } else {
-        fprintf( stderr, "pwm_init: '%s' could not read period file\n", pd->id);
-      }
-      // now open duty file for further reference
-      snprintf( s, sizeof( s), "%s/duty", pd->device_path);
-      pd->duty_fd = open( s, O_WRONLY);
-      if (pd->duty_fd < 0) {
-        perror( "pwm_init: failed to open 'duty' file");
-      }
-#else
-      pwm_write_int_to_file( pd->device_path, "duty_percent", 0);
-      if (pd->frequency) {
-        pwm_write_int_to_file( pd->device_path, "period_freq", pd->frequency);
-      }
-      snprintf( s, sizeof( s), "%s/duty_percent", pd->device_path);
-      pd->duty_fd = open( s, O_WRONLY);
-      if (pd->duty_fd < 0) {
-        perror( "pwm_init: failed to open 'duty_percent' file");
-      }
-#endif
+
       pwm_set_output( pd->id, 0);
       pwm_write_int_to_file( pd->device_path, "run", 1);
     }
@@ -221,27 +235,31 @@ int pwm_set_output( channel_tag pwm_channel, unsigned int percentage)
     char s[ 30];
     int result = 0;
     int count = 0;
-#ifdef BBB
-    // Black uses cycletime [ns] instread of percentage
-    struct pwm_channel_record* pd = &pwm_channels[ ix];
-    unsigned int duty = (percentage * (1000000000UL / 100)) / pd->frequency;
-    if (pd->duty != duty) {
-      pd->duty = duty;
-      if (debug_flags & DEBUG_PWM) {
-        fprintf( stderr, "pwm_set_output: '%s' changing duty into %u (%u%% of %u)\n",
-		pd->id, pd->duty, percentage, pd->period);
+
+    if (get_kernel_type() == e_kernel_3_8) {
+      // Black uses cycletime [ns] instread of percentage
+      struct pwm_channel_record* pd = &pwm_channels[ ix];
+      unsigned int duty = (percentage * (1000000000UL / 100)) / pd->frequency;
+      if (pd->duty != duty) {
+        pd->duty = duty;
+	if (debug_flags & DEBUG_PWM) {
+	  fprintf( stderr, "pwm_set_output: '%s' changing duty into %u (%u%% of %u)\n",
+		  pd->id, pd->duty, percentage, pd->period);
+	}
+	snprintf( s, sizeof( s), "%u", pd->duty);
+	count = strlen( s);
+	lseek( fd, 0, SEEK_SET);
+	result = write( fd, s, count);
       }
-      snprintf( s, sizeof( s), "%u", pd->duty);
+    }
+
+    if (get_kernel_type() == e_kernel_3_2) {
+      // White uses percentage
+      snprintf( s, sizeof( s), "%u", percentage);
       count = strlen( s);
-      lseek( fd, 0, SEEK_SET);
       result = write( fd, s, count);
     }
-#else
-    // White uses percentage
-    snprintf( s, sizeof( s), "%u", percentage);
-    count = strlen( s);
-    result = write( fd, s, count);
-#endif
+
     if (result < 0) {
       perror( "pwm_set_output: error writing to duty_fd file");
     } else if (result == count) {
