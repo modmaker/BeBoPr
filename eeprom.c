@@ -304,8 +304,23 @@ static void eeprom_dump( const char* eeprom_path, unsigned int offset, unsigned 
 
 static void eeprom_flag_dump( const char* eeprom_path, unsigned int flag_nr)
 {
+  int ee_fd = open( eeprom_path, O_RDONLY);
+  if (ee_fd < 0) {
+    perror( "Failed to open EEPROM for reading");
+    return;
+  }
   unsigned int offset = eeprom_get_flag_offset( flag_nr);
-  eeprom_dump( eeprom_path, offset, 1, 1);
+
+  int result = lseek( ee_fd, offset, SEEK_SET);
+  uint8_t ee_code;
+  int count = read( ee_fd, &ee_code, 1);
+  if (count != 1) {
+    perror( "Failed to read from EEPROM");
+    fprintf( stderr, "Failed to read flag %d at offset %u from EEPROM\n", flag_nr, offset);
+    result = -1;
+    return;
+  }
+  printf( "flag-%2d = $%02x (%u)\n", flag_nr, ee_code, ee_code);
 }
 
 static void eeprom_code_dump( const char* eeprom_path, unsigned int pru_nr)
@@ -390,8 +405,12 @@ int main( int argc, char* argv[])
   } else if (mode == e_dump) {
     if (pru_nr >= 0 && flag_nr < 0 && optind == argc) {
       eeprom_code_dump( EEPROM_PATH, pru_nr);
-   } else if (flag_nr >= 0 && pru_nr < 0 && optind == argc) {
+    } else if (flag_nr >= 0 && pru_nr < 0 && optind == argc) {
       eeprom_flag_dump( EEPROM_PATH, flag_nr);
+    } else if (optind == argc) {
+      for (flag_nr = 0 ; flag_nr < 12 ; ++flag_nr) {
+        eeprom_flag_dump( EEPROM_PATH, flag_nr);
+      }
     } else {
       goto not_ok;
     }

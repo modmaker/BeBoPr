@@ -147,8 +147,8 @@ install:	all
 		echo "INSTALL: no destination specified" ; \
 	fi
 
-eeprom-tool:	eeprom.c eeprom.h
-	$(CC) eeprom.c -DSTANDALONE -o eeprom-tool
+eeprom-tool:	eeprom.c eeprom.h beaglebone.h Makefile setenv
+	$(CC) $(DEFS) -DSTANDALONE eeprom.c -o eeprom-tool
 
 eeprom-tool-install:	eeprom-tool
 	if [ -n "$(TARGET_DIR)" ] ; then \
