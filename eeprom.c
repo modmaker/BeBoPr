@@ -267,6 +267,8 @@ int eeprom_get_flag( const char* eeprom_path, int flagno)
 #ifdef STANDALONE
 //----------------------------------------------------------------
 
+#include "beaglebone.h"
+
 static void eeprom_dump( const char* eeprom_path, unsigned int offset, unsigned int bytecount, unsigned int wordsize)
 {
   int i;

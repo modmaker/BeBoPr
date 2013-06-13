@@ -4,6 +4,13 @@
 #include <stdint.h>
 #include <sched.h>
 
+/* Where to find the BeBoPr's EEPROM: */
+#ifdef BBB
+#define EEPROM_PATH "/sys/class/i2c-adapter/i2c-1/1-0054/eeprom"
+#else
+#define EEPROM_PATH "/sys/class/i2c-adapter/i2c-3/3-0054/eeprom"
+#endif
+
 /*
  * Posix defines priorities from 0 upto 99.
  *  0 (lowest) is for SCHED_OTHER, the default scheduling algorithm
