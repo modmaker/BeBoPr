@@ -280,7 +280,7 @@ static void eeprom_dump( const char* eeprom_path, unsigned int offset, unsigned 
   int result = lseek( ee_fd, offset, SEEK_SET);
   int rowsize = (wordsize == 4) ? 32 : 16;
   for (i = 0 ; i < bytecount ; i += wordsize) {
-    uint32_t ee_code;
+    uint32_t ee_code = 0;
     int count = read( ee_fd, &ee_code, wordsize);
     if (count != wordsize) {
       perror( "Failed to read from EEPROM");
