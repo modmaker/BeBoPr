@@ -215,10 +215,10 @@ int pruss_stepper_init( void)
   const unsigned int fs_offset = 0;
   int fs_sig_state = get_code_signature( fs_fname, fs_offset, &fs_signature);
   if (fs_sig_state == 0) {
-    if (debug_flags & DEBUG_PRUSS) {
+//    if (debug_flags & DEBUG_PRUSS) {
       printf( "Valid STEPPER code update found in file '%s' (version %d.%d).\n",
 	      fs_fname, fs_signature.fw_version, fs_signature.fw_revision);
-    }
+//    }
   }
   // Check for valid pruss code in EEPROM
   struct ucode_signature ee_signature;
@@ -226,10 +226,10 @@ int pruss_stepper_init( void)
   const unsigned int ee_offset = eeprom_get_pru_code_offset( PRU_NR);
   int ee_sig_state = get_code_signature( ee_fname, ee_offset, &ee_signature);
   if (ee_sig_state == 0) {
-    if (debug_flags & DEBUG_PRUSS) {
+//    if (debug_flags & DEBUG_PRUSS) {
       printf( "Valid STEPPER code found in EEPROM '%s' (version %d.%d).\n",
 	      ee_fname, ee_signature.fw_version, ee_signature.fw_revision);
-    }
+//    }
   }
   // Fail if neither was found
   if (fs_sig_state != 0 && ee_sig_state != 0) {
@@ -247,14 +247,14 @@ int pruss_stepper_init( void)
 	 (ee_signature.fw_version != fs_signature.fw_version) ||
 	 (ee_signature.fw_revision != fs_signature.fw_revision) ) )
     {
-      if (debug_flags & DEBUG_PRUSS) {
+//      if (debug_flags & DEBUG_PRUSS) {
 	printf( "*** Start EEPROM update, this may take a while! ****\n");
-      }
+//      }
       int result = eeprom_write_pru_code( ee_fname, PRU_NR, fs_fname);
       if (result == 0) {
-        if (debug_flags & DEBUG_PRUSS) {
+//        if (debug_flags & DEBUG_PRUSS) {
           printf( "*** EEPROM updated successfully, restart the application! ****\n");
-	}
+//	}
       } else {
 	fprintf( stderr, "*** ERROR: EEPROM code update failed! ****\n");
       }
