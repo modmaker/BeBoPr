@@ -67,8 +67,7 @@ static int pwm_write_int_to_file( const char* path, const char* fname, int value
   snprintf( s, sizeof( s), "%s/%s", path, fname);
   int fd = open( s, O_WRONLY);
   if (fd < 0) {
-    perror( "pwm_write_int_to_file: open failed");
-    fprintf( stderr, "pwm_write_int_to_file: open failed for file '%s'\n", fname);
+    fprintf( stderr, "pwm_write_int_to_file: open for file '%s' failed: %s\n", s, strerror( errno));
     return -1;
   }
   char s2[ 32];
