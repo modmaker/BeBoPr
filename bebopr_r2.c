@@ -478,14 +478,17 @@ int bebopr_post_init( void)
 {
   int result = -1;
 
-#if BBB
   /*
+   *  For modified BeBoPrs (i.e. compatible with Beaglebone Black)
+   *  this is the only signal of importance. Keep the old signals
+   *  for backwards compatibility (on a BBB these are ignored because
+   *  the pinmux gets set to mode 1 instead of 7)!
+   *
    *  IO_PWR_ON  = R7 / TIMER4 / GPIO2[2] / gpio66
    */
   gpio_write_int_value_to_file( "export", 66);
   gpio_write_value_to_pin_file( 66, "direction", "out");
   gpio_write_value_to_pin_file( 66, "value", "0");
-#endif
   /*
    *  IO_PWR_ON  = R9 / GPIO1[6] / gpio38 /  gpmc_ad6
    *  !IO_PWR_ON = R8 / GPIO1[2] / gpio34 /  gpmc_ad2
@@ -506,9 +509,7 @@ int bebopr_post_init( void)
 
 void bebopr_exit( void)
 {
-#if BBB
   gpio_write_value_to_pin_file( 66, "value", "1");
-#endif
   gpio_write_value_to_pin_file( 38, "value", "0");
   gpio_write_value_to_pin_file( 34, "value", "1");
   fprintf( stderr, "Turned BEBOPR I/O power off\n");
