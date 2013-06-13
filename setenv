@@ -10,7 +10,7 @@
 # DEFS passes settings, e.g. '-g' to the compiler.
 #
 # comment out the following line for non-development systems
-export DEFS="-pg -DDEBUG -DBBB -DNO_COMM_LAYER -DFORCE_STEPPER_CODE_FROM_FILE"
+export DEFS="-pg -DDEBUG -DBBB -DNO_COMM_LAYER"
 
 #
 # TARGET_DIR is where you want 'make install' to store the binary.
@@ -21,7 +21,7 @@ export TARGET_DIR=/home/bas/nfs/wheezy/root
 # If you want debug output, -DDEBUG must be set in DEFS above. If you
 # want debug output at startup, set INIT_DEBUG_FLAGS (see debug.h).
 #
-INIT_DEBUG_FLAGS="DEBUG_TRAJECT + DEBUG_GCODE_PROCESS + DEBUG_HOME + DEBUG_PWM"
+INIT_DEBUG_FLAGS="DEBUG_TRAJECT + DEBUG_GCODE_PROCESS + DEBUG_PRUSS"
 #INIT_DEBUG_FLAGS="DEBUG_TRAJECT + DEBUG_GCODE_PROCESS + DEBUG_COMM + DEBUG_HOME + DEBUG_LIMSW"
 
 #
