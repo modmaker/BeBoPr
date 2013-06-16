@@ -54,6 +54,7 @@ static int arm_init( void)
     printf( "Clock resolution = %ld.%09ld s.\n", clock_resolution.tv_sec, clock_resolution.tv_nsec);
   }
   timestamp_init();
+  
   return 0;
 }
 
@@ -109,6 +110,20 @@ int init( void)
   if (result != 0) {
     return result;
   }
+
+  /*
+   *  Prevent problems on 3.8 kernels causing lockup due to I2C timeouts
+   *  Rationale: The kernel tries to prevent starvation of low priority
+   *  tasks. If RT runtime exceeds the sched_rt_runtime_us value (which
+   *  defaults to 950 ms), RT scheduling is disabled for a while.
+   *  "[sched_delayed] sched: RT throttling activated" will be logged.
+   *  This causes the i2c controller that accesses the tps65217 to time-out
+   *  and the system locks up. Even the heartbeat stops flashing.
+   *
+   *  FIXME: restore old value at exit!
+   */
+  system( "/sbin/sysctl -w kernel.sched_rt_runtime_us=-1");
+  
   return 0;
 }
 
