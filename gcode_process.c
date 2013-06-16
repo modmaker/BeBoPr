@@ -1362,7 +1362,11 @@ static void preprocess_move_command( GCODE_COMMAND* command, TARGET* start_pos, 
   if (command->G != 0) {
     move->current_feed = move->target.F;
   }
+}
 
+static int gcode_process_ordering_required( GCODE_COMMAND* command)
+{
+  return 1;	// until implemented, assume worst
 }
 
 /*
@@ -1390,8 +1394,12 @@ void process_gcode_command( GCODE_COMMAND* command)
           .X = pending_move.target.X,
           .Y = pending_move.target.Y,
           .Z = pending_move.target.Z,
-          .E = (config_e_axis_is_always_relative()) ? 0 : pending_move.target.E,
+          .E = pending_move.target.E,
         };
+
+        if (config_e_axis_is_always_relative()) {
+          start_pos.E = 0;
+        }
        /*
         *  Make 'command' the next move, starting from full stop
         *  at gcode_current_pos and with gcode_current_feed.
@@ -1399,6 +1407,9 @@ void process_gcode_command( GCODE_COMMAND* command)
         next_move.current_pos = pending_move.current_pos;
         next_move.current_feed = pending_move.current_feed;
         preprocess_move_command( command, &start_pos, &next_move);
+        if (next_move.data.null_move) {
+          return;
+        }
        /*
         * Execute the current pending move
         */
@@ -1411,6 +1422,9 @@ void process_gcode_command( GCODE_COMMAND* command)
         next_move.current_pos = gcode_current_pos;
         next_move.current_feed = gcode_current_feed;
         preprocess_move_command( command, &gcode_current_pos, &next_move);
+        if (next_move.data.null_move) {
+          return;
+        }
       }
      /*
       * 'next_move' becomes the new pending move
@@ -1418,7 +1432,12 @@ void process_gcode_command( GCODE_COMMAND* command)
       pending_move = next_move;
       move_pending = 1;
     } else {  /* not G0123 */
-      if (move_pending) {
+      /*
+       *  The new command is not a move command (G0123).
+       *  In case strict command ordering is required, 
+       *  execute any pending moves before this new command.
+       */
+      if (move_pending && gcode_process_ordering_required( command)) {
        /*
         * Execute the current pending move
         */
