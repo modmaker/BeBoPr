@@ -83,11 +83,12 @@ LIBDEPS :=
 SUBDIRS :=
 
 OBJ     := $(patsubst %.c,%.o,${SOURCES})
+TS_ENV	= .ts_env
 
 .PHONY: all program clean subdirs doc
 .PRECIOUS: %.o %.elf
 
-all: $(PROGRAM).elf
+all: $(TS_ENV) $(PROGRAM).elf
 
 $(PROGRAM).elf: $(LIBDEPS)
 
@@ -114,7 +115,7 @@ clean-subdirs:
 doc: Doxyfile *.c *.h
 	doxygen $<
 
-%.o: %.c Makefile setenv
+%.o: %.c Makefile $(TS_ENV)
 	@echo "  CC        $@"
 	@$(CC) -c $(CFLAGS) -Wa,-adhlns=$(<:.c=.al) -o $@ $(subst .o,.c,$@)
 
@@ -154,6 +155,10 @@ eeprom-tool-install:	eeprom-tool
 	if [ -n "$(TARGET_DIR)" ] ; then \
 		sudo cp eeprom-tool $(TARGET_DIR)/ ; \
 	fi
+
+$(TS_ENV):	setenv
+	@echo "  ERROR: source 'setenv' before running make!"
+	@exit 3
 
 .PHONY:	all build elf hex eep lss sym program coff extcoff clean depend applet_files install
 

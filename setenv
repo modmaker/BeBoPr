@@ -55,3 +55,5 @@ if test -n $CROSS_PATH ; then
 else
 	echo "*** Setup for native compilation done ***"
 fi
+
+touch .ts_env
