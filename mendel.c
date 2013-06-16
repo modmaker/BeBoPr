@@ -110,7 +110,7 @@ int init( void)
   if (result != 0) {
     return result;
   }
-
+#if 0
   /*
    *  Prevent problems on 3.8 kernels causing lockup due to I2C timeouts
    *  Rationale: The kernel tries to prevent starvation of low priority
@@ -123,7 +123,7 @@ int init( void)
    *  FIXME: restore old value at exit!
    */
   system( "/sbin/sysctl -w kernel.sched_rt_runtime_us=-1");
-  
+#endif  
   return 0;
 }
 
