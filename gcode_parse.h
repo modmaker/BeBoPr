@@ -67,6 +67,8 @@ typedef struct {
 
   uint8_t		checksum_read;		///< checksum in gcode command
   uint8_t		checksum_calculated;	///< checksum we calculated
+
+  char*	command_text;
 } GCODE_COMMAND;
 
 /// accept the next character and process it

@@ -93,6 +93,9 @@ static int32_t decfloat_to_int( decfloat *df, double multiplicand)
 }
 
 
+static char gcode_text[ 200];
+static int gcode_text_index = 0;
+
 /// Character Received - add it to our command
 /// \param c the next character to process
 void gcode_parse_char(uint8_t c) {
@@ -102,6 +105,14 @@ void gcode_parse_char(uint8_t c) {
 	/// current or previous gcode word
 	/// for working out what to do with data just received
 	static uint8_t last_field = 0;
+
+	if (gcode_text_index < sizeof( gcode_text) - 1) {
+		if (c == '\t') {
+			gcode_text[ gcode_text_index++] = ' ';
+		} else if (c >= ' ') {
+			gcode_text[ gcode_text_index++] = c;
+		}
+	}
 
 	// uppercase
 	if (c >= 'a' && c <= 'z')
@@ -340,7 +351,10 @@ void gcode_parse_char(uint8_t c) {
 				) {
 				// process
 				serial_writestr_P( "ok ");
+				gcode_text[ gcode_text_index] = '\0';
+				next_target.command_text = gcode_text;
 				process_gcode_command( &next_target);
+				gcode_text_index = 0;
 				serial_writechar('\n');
 
 				// expect next line number
