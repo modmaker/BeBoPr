@@ -13,4 +13,6 @@
 *.s
 *~
 config.h
-
+.ts_env
+*.patch
+eeprom-tool
