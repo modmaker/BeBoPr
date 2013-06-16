@@ -92,9 +92,9 @@ static inline long unsigned int get_serno( void)
  *  Calling this routine should have no side effects!!!
  *  (exception: global serial number increment in traject.c)
  */
-static void move_calc( const TARGET* target, TARGET* current_pos, move5D* move)
+static void move_calc( unsigned long seqno, const TARGET* target, TARGET* current_pos, move5D* move)
 {
-  move->serno = get_serno();
+  move->serno = seqno;
   if (DEBUG_GCODE_PROCESS && (debug_flags & DEBUG_GCODE_PROCESS)) {
     printf( "\nMOVE[ %lu] move_calc() for TARGET=( %d, %d, %d, %d, %u)\n",
             move->serno, target->X, target->Y, target->Z, target->E, target->F);
@@ -155,7 +155,7 @@ static void enqueue_pos( const TARGET* target)
 {
   if (target) {
     move5D move;
-    move_calc( target, &gcode_current_pos, &move);
+    move_calc( get_serno(), target, &gcode_current_pos, &move);
     move_execute( &move);
   }
 }
@@ -1344,7 +1344,12 @@ static void preprocess_move_command( GCODE_COMMAND* command, TARGET* start_pos, 
  /*
   *  Calculate trajectory speed etc.
   */
-  move_calc( &move->target, start_pos, &move->data);
+  unsigned long seqno = get_serno();
+  
+  if (DEBUG_GCODE_PROCESS && (debug_flags & DEBUG_GCODE_PROCESS)) {
+    printf( "\nMOVE[ #%lu] \"%s\"\n", seqno, &command->command_text[0]);
+  }
+  move_calc( seqno, &move->target, start_pos, &move->data);
 
  /*
   *  Update our sense of (end) position
