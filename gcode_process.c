@@ -837,7 +837,7 @@ static void process_non_move_command( GCODE_COMMAND* target)
 			// M111- set debug level
 			#ifdef	DEBUG
 			case 111:
-				//? ==== M111: Set Debug Level ====
+				//? ==== M111: Get/Set Debug Level ====
 				//?
 				//? Example: M111 S6
 				//?
@@ -851,8 +851,12 @@ static void process_non_move_command( GCODE_COMMAND* target)
 				//?
 				//? This command is only available in DEBUG builds of Teacup.
 
-				debug_flags = target->S;
-				printf( "New debug_flags setting: 0x%04x\n", debug_flags);
+				if (target->seen_S) {
+					debug_flags = target->S;
+					printf( "New debug_flags setting: 0x%04x\n", debug_flags);
+				} else {
+					printf( "Active debug_flags setting: 0x%04x\n", debug_flags);
+				}
 				break;
 			#endif
 			// M113- extruder PWM
