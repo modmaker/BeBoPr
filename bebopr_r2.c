@@ -108,7 +108,7 @@ static const pwm_config_record pwm_config_data[] = {
   {
     .tag		= pwm_extruder,
 #ifdef BBB
-    .device_path	= PWM_PATH_PREFIX "bebopr_pwm_J3.14",	// BEBOPR_R2_J3 - PWM1
+    .device_path	= PWM_PATH_PREFIX "bebopr_pwm_J3.15",	// BEBOPR_R2_J3 - PWM1
     .frequency		= 0,
 #else
     .device_path	= PWM_PATH_PREFIX "ehrpwm.2:0",	// BEBOPR_R2_J3 - PWM1
@@ -118,7 +118,7 @@ static const pwm_config_record pwm_config_data[] = {
   {
     .tag		= pwm_fan,
 #ifdef BBB
-    .device_path	= PWM_PATH_PREFIX "bebopr_pwm_J2.13",	// BEBOPR_R2_J2 - PWM0
+    .device_path	= PWM_PATH_PREFIX "bebopr_pwm_J2.14",	// BEBOPR_R2_J2 - PWM0
     .frequency		= 0,         // frequency is determined by ehrpwm.2:0 !
 #else
     .device_path	= PWM_PATH_PREFIX "ehrpwm.2:1",	// BEBOPR_R2_J2 - PWM0
@@ -128,7 +128,7 @@ static const pwm_config_record pwm_config_data[] = {
   {
     .tag		= pwm_bed,
 #ifdef BBB
-    .device_path	= PWM_PATH_PREFIX "bebopr_pwm_J4.15",	// BEBOPR_R2_J4 - PWM2
+    .device_path	= PWM_PATH_PREFIX "bebopr_pwm_J4.16",	// BEBOPR_R2_J4 - PWM2
     .frequency		= 1,
 #else
     .device_path	= PWM_PATH_PREFIX "ehrpwm.1:0",	// BEBOPR_R2_J4 - PWM2
