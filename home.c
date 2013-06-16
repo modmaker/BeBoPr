@@ -66,7 +66,7 @@ static int step_until_switch_change( axis_e axis, int reverse, int new_state, in
     incMoveNr( pruss_axis);
     pruss_queue_dwell( pruss_axis, cmin, *position + direction * (ramp + delta));
     pruss_queue_exec_limited( mask, (new_state) ? invert : ~invert);
-    traject_wait_for_completion();
+    pruss_wait_for_completion();
 
     pruss_get_positions( pruss_axis, &virtPosI_new, NULL);
     if (DEBUG_HOME && (debug_flags & DEBUG_HOME)) {
@@ -159,7 +159,7 @@ static int run_home_one_axis( axis_e axis, int reverse, int32_t* position, uint3
 /// home the selected axis to the selected limit switch.
 static void home_one_axis( axis_e axis, int reverse, int32_t* position, uint32_t feed)
 {
-  traject_wait_for_completion();
+  pruss_wait_for_completion();
   // move to a limit switch or sensor
   run_home_one_axis( axis, reverse, position, feed);
 }

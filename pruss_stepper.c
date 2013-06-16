@@ -730,6 +730,17 @@ int pruss_queue_config_limsw( int axis, uint8_t min_gpio, uint8_t min_invert, ui
   return 0;
 }
 
+int pruss_wait_for_completion( void)
+{
+  while (!pruss_queue_empty() || pruss_stepper_busy()) {
+    if (pruss_stepper_halted()) {
+      return -1;
+    }
+    usleep( 500);
+  }
+  return 0;
+}
+
 /*
  * If the idle timeout is not set to 0, the motors will be enabled
  * and disabled automatically. The first step pulse asserts the
