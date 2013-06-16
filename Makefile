@@ -141,8 +141,10 @@ depend:
 	fi
 
 install:	all
-	@echo "  INSTALLING '$(PROGRAM)' TO '$(TARGET_DIR)'"
-	@if [ -n "$(TARGET_DIR)" ] ; then \
+	@echo "  INSTALL   '$(PROGRAM)' TO '$(TARGET_DIR)'"
+	@if echo $(TARGET_DIR) | grep "root@" >/dev/null ; then \
+		scp $(PROGRAM).elf $(TARGET_DIR)/ ; \
+	elif [ -n "$(TARGET_DIR)" ] ; then \
 		sudo cp $(PROGRAM).elf $(TARGET_DIR)/ ; \
 	else \
 		echo "INSTALL: no destination specified" ; \
