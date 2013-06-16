@@ -355,6 +355,8 @@ void gcode_parse_char(uint8_t c) {
 				next_target.command_text = gcode_text;
 				process_gcode_command( &next_target);
 				gcode_text_index = 0;
+				next_target.seen_G = 0;
+				next_target.seen_M = 0;
 				serial_writechar('\n');
 
 				// expect next line number
