@@ -561,8 +561,7 @@ static void process_non_move_command( GCODE_COMMAND* target)
 					pruss_stepper_resume();
 					if (i > 1) {
 						while (!pruss_stepper_halted()) {
-//							sched_yield();
-							usleep( 10);
+							usleep( 100);
 						}
 					}
 				} while (--i > 0);
@@ -622,7 +621,7 @@ static void process_non_move_command( GCODE_COMMAND* target)
 				e_disable();
 				power_off();
 				for (;;) {
-					sched_yield();
+					usleep( 1000);
 				}
 				break;
 

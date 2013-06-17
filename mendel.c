@@ -134,7 +134,7 @@ int mendel_thread_create( const char* name, pthread_t* restrict thread, const pt
   int result = pthread_create( thread, attr, worker_thread, arg);
   if (result == 0) {
     fprintf( stderr, "done ===\n");
-    usleep( 1000); //    sched_yield();
+    usleep( 1000);
   } else {
     fprintf( stderr, "failed with error=%d ===\n", result);
   }
@@ -159,7 +159,7 @@ void mendel_exit( void)
 {
   if (normal_exit) {
     while (!pruss_queue_empty() || pruss_stepper_busy()) {
-      sched_yield();
+      usleep( 1000);
     }
   }
   pruss_queue_exit();
