@@ -557,7 +557,7 @@ static int pruss_command( PruCommandUnion* cmd)
   double t0 = 0;
   int ix_in = pruss_rd8( IX_IN);
   int ix_out = pruss_rd8( IX_OUT);
-  if (DEBUG_PRUSS && (debug_flags & DEBUG_PRUSS)) {
+  if (DBG( DEBUG_PRUSS + DEBUG_VERBOSE)) {
     t0 = timestamp_get();
   }
   if (pruss_wait_for_queue_space() < 0) {
@@ -567,7 +567,7 @@ static int pruss_command( PruCommandUnion* cmd)
     exit( EXIT_FAILURE);
   }
   (void) pruss_write_command_struct( ix_in, cmd);
-  if (DEBUG_PRUSS && (debug_flags & DEBUG_PRUSS)) {
+  if (DBG( DEBUG_PRUSS + DEBUG_VERBOSE)) {
     double t1 = timestamp_get();
     printf( "pruss_command started at %1.3lfs - wrote to SRAM buffer at index %d, out index was %d. Operation took %1.3fms.\n",
 	    t0, ix_in, ix_out, 1000 * (t1 - t0));

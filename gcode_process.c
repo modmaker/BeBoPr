@@ -1472,7 +1472,7 @@ int gcode_process_init( void)
   pwm_extruder    = pwm_lookup_by_name( "pwm_extruder");
   pwm_fan         = pwm_lookup_by_name( "pwm_fan");
   pwm_bed         = pwm_lookup_by_name( "pwm_bed");
-  if (debug_flags & DEBUG_GCODE_PROCESS) {
+  if (DBG( DEBUG_GCODE_PROCESS + DEBUG_VERBOSE)) {
     printf( "tag_name( heater_extruder) = '%s',  tag_name( heater_bed) = '%s',\n",
             tag_name( heater_extruder), tag_name( heater_bed));
     printf( "tag_name( temp_extruder) = '%s',  tag_name( temp_bed) = '%s'\n",
