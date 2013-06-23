@@ -10,6 +10,7 @@
 #include "mendel.h"
 #include "debug.h"
 #include "bebopr.h"
+#include "xperror.h"
 
 
 struct analog_channel_record {
@@ -81,7 +82,8 @@ void* analog_worker( void* arg)
   for (i = 0 ; i < num_analog_channels ; ++i) {
     ret = fd[ i] = open( analog_channels[ i].device_path, O_RDONLY);
     if (ret < 0) {
-      perror( "analog_thread: opening of ADC file failed");
+      xperror( "analog_thread: opening of ADC file '%s' failed",
+	      analog_channels[ i].device_path);
       goto failure;
     }
   }
@@ -100,7 +102,7 @@ void* analog_worker( void* arg)
     if (ret > 0) {
       int val = atoi( buf);
       struct analog_channel_record* p = &analog_channels[ i];
-      if (p->filter_length > 0) {
+      if (p->filter_length > 1) {
         int avg = p->average.value;
         int rem = p->average.remainder;
         int cnt = p->average.count;
@@ -123,13 +125,13 @@ void* analog_worker( void* arg)
         * This seems to be a glich / recoverable error.
         * FIXME: for now we just ignore these errors (and the read).
         */
-        if (debug_flags & DEBUG_ANALOG) {
-          fprintf( stderr, "analog thread: ADC read failed: fd=%d, buf=%p, size=%u, ret=%d\n",
-                  fd[ i], buf, sizeof( buf), ret);
+        if (DBG( DEBUG_ANALOG + DEBUG_VERBOSE)) {
+          xperror( "analog thread: '%s' read failed: fd=%d, buf=%p, size=%u, ret=%d",
+                  analog_channels[ i].device_path, fd[ i], buf, sizeof( buf), ret);
         }
         continue;
       }
-      perror( "analog thread: ADC read failed -");
+      xperror( "analog thread: '%s' read failed", analog_channels[ i].device_path);
       goto failure;
     }
     ++i;

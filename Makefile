@@ -166,7 +166,8 @@ $(TS_ENV):	setenv
 .PHONY:	all build elf hex eep lss sym program coff extcoff clean depend applet_files install
 
 # DO NOT DELETE THIS LINE -- make depend depends on it.
-analog.o: analog.c analog.h beaglebone.h mendel.h debug.h bebopr.h
+analog.o: analog.c analog.h beaglebone.h mendel.h debug.h bebopr.h \
+ xperror.h
 bebopr_r2.o: bebopr_r2.c analog.h beaglebone.h temp.h thermistor.h \
  bebopr.h heater.h pwm.h traject.h eeprom.h gpio.h
 debug.o: debug.c debug.h
