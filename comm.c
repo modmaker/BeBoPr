@@ -208,8 +208,14 @@ int comm_init( void)
   int fds[ 2];
 
   // keep a copy of the program's original fds for stdin and stdout
-  fd_stdin  = fcntl( 0, F_DUPFD);
-  fd_stdout = fcntl( 1, F_DUPFD);
+  fd_stdin  = fcntl( 0, F_DUPFD, 0);
+  if (fd_stdin == -1) {
+    perror( "fcntl( 0, F_DUPFD, 0) failed");
+  }
+  fd_stdout = fcntl( 1, F_DUPFD, 0);
+  if (fd_stdout == -1) {
+    perror( "fcntl( 1, F_DUPFD, 0) failed");
+  }
   // Note on debug output: Because we're messing with stdout,
   // all debug output for 'comm_init' is sent to stderr instead of stdout !
   if (DEBUG_COMM && (debug_flags & DEBUG_COMM)) {
@@ -224,7 +230,10 @@ int comm_init( void)
     return -1;
   }
   close( 1);
-  result = fcntl( fds[ 1], F_DUPFD);
+  result = fcntl( fds[ 1], F_DUPFD, 0);
+  if (result == -1) {
+    perror( "fcntl( fds[ 1], F_DUPFD, 0) failed");
+  }
   close( fds[ 1]);
   fds[ 1] = result;
   if (DEBUG_COMM && (debug_flags & DEBUG_COMM)) {
