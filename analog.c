@@ -103,21 +103,43 @@ void* analog_worker( void* arg)
       int val = atoi( buf);
       struct analog_channel_record* p = &analog_channels[ i];
       if (p->filter_length > 1) {
-        int avg = p->average.value;
-        int rem = p->average.remainder;
-        int cnt = p->average.count;
-        if (cnt < p->filter_length) {
-          ++cnt;
-          p->average.count = cnt;
+       /*
+        *  FIXME: this is a workaround for the borken ADC driver:
+        *
+        *  Currently the ADC values contain noise, probably because the driver
+        *  is still operating in touch screen controller mode. (Putting a scope
+        *  on the AM335x analog input pins shows transients and square waves)
+        *
+        *  Another problem seems to be that every once in a while a result
+        *  from a wrong channel is returned.
+        *
+        *  For now, ignore values that are obviously wrong. This works for
+        *  a large part of the range, but not if the values are almost equal
+        */
+        if (p->average.count > 0 && abs( val - p->average.value) > 10) {
+          if (DBG( DEBUG_ANALOG + DEBUG_VERBOSE)) {
+            fprintf( stderr, "analog thread: ignoring '%s' value= %u, average= %u\n",
+                    analog_channels[ i].id, val, p->average.value);
+          }
+        } else {
+          int avg = p->average.value;
+          int rem = p->average.remainder;
+          int cnt = p->average.count;
+          if (cnt < p->filter_length) {
+            p->average.count = ++cnt;
+          }
+          val = (cnt - 1) * avg + val + rem;
+          p->average.value = val / cnt;
+          p->average.remainder = val % cnt;
+          p->value = (val + rem + cnt / 2) / cnt;
         }
-        val = (cnt - 1) * avg + val + rem;
-        p->average.value = val / cnt;
-        p->average.remainder = val % cnt;
-        p->value = (val + rem + cnt / 2) / cnt;
       } else {
         p->value = val;
       }
-      lseek( fd[ i], 0, SEEK_SET);
+      ret = lseek( fd[ i], 0, SEEK_SET);
+      if (ret != 0) {
+        xperror( "analog thread: '%s' lseek failed", analog_channels[ i].device_path);
+      }
     } else if (ret < 0) {
       if (get_kernel_type() == e_kernel_3_8) {
        /*
