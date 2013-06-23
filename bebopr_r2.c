@@ -21,7 +21,7 @@
  */
 #ifdef BBB
 // FIXME: get rid of these stupid suffixes in the names !
-# define AIN_PATH_PREFIX "/sys/devices/ocp.2/bebopr_adc.18/"	/* kernel 3.8.13 */
+# define AIN_PATH_PREFIX "/sys/bus/iio/devices/iio:device0/"	/* kernel 3.8.13 */
 # define PWM_PATH_PREFIX "/sys/devices/ocp.2/"			/* kernel 3.8.13 */
 #else
 //# define AIN_PATH_PREFIX "/sys/devices/platform/tsc/"		/* kernel 3.2.0 */
@@ -54,7 +54,7 @@ static const analog_config_record analog_config_data[] = {
   {
     .tag                = bed_thermistor,
 #ifdef BBB
-    .device_path	= AIN_PATH_PREFIX "AIN1",	// BEBOPR_R2_J6 - THRM0 (hardware ain1)
+    .device_path	= AIN_PATH_PREFIX "in_voltage1_raw",	// BEBOPR_R2_J6 - THRM0 (hardware ain1)
 #else
     .device_path	= AIN_PATH_PREFIX "ain2",	// BEBOPR_R2_J6 - THRM0 (hardware ain1)
 #endif
@@ -63,7 +63,7 @@ static const analog_config_record analog_config_data[] = {
   {
     .tag                = spare_ain,
 #ifdef BBB
-    .device_path	= AIN_PATH_PREFIX "AIN3",	// BEBOPR_R2_J7 - THRM1 (hardware ain3)
+    .device_path	= AIN_PATH_PREFIX "in_voltage3_raw",	// BEBOPR_R2_J7 - THRM1 (hardware ain3)
 #else
     .device_path	= AIN_PATH_PREFIX "ain4",	// BEBOPR_R2_J7 - THRM1 (hardware ain3)
 #endif
@@ -72,7 +72,7 @@ static const analog_config_record analog_config_data[] = {
   {
     .tag                = extruder_thermistor,
 #ifdef BBB
-    .device_path	= AIN_PATH_PREFIX "AIN5",	// BEBOPR_R2_J8 - THRM2 (hardware ain5)
+    .device_path	= AIN_PATH_PREFIX "in_voltage5_raw",	// BEBOPR_R2_J8 - THRM2 (hardware ain5)
 #else
     .device_path	= AIN_PATH_PREFIX "ain6",	// BEBOPR_R2_J8 - THRM2 (hardware ain5)
 #endif
