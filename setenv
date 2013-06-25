@@ -10,7 +10,7 @@
 # DEFS passes settings, e.g. '-g' to the compiler.
 #
 # comment out the following line for non-development systems
-export DEFS="-pg -DDEBUG -DBBB -DNO_COMM_LAYER"
+export DEFS="-pg -DDEBUG -DBBB"
 
 #
 # TARGET_DIR is where you want 'make install' to store the binary.
