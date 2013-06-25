@@ -160,12 +160,12 @@ static const heater_config_record heater_config_data[] = {
     .analog_output	= pwm_bed,
     .pid =
     {
-	    .FF_factor = 0.4,
-	    .FF_offset = 5.0,
-	    .P = 10.0,
-	    .I = 0.0,
+	    .FF_factor = 1.03,
+	    .FF_offset = 29.0,
+	    .P = 25.0,
+	    .I = 0.05,
 	    .D = 0.0,
-	    .I_limit = 0.0,
+	    .I_limit = 80.0,
     },
   },
 #endif
