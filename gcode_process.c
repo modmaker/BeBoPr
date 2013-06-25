@@ -852,9 +852,9 @@ static void process_non_move_command( GCODE_COMMAND* target)
 
 				if (target->seen_S) {
 					debug_flags = target->S;
-					printf( "New debug_flags setting: 0x%04x\n", debug_flags);
+					printf( "New debug_flags setting: 0x%04x (%u)\n", debug_flags, debug_flags);
 				} else {
-					printf( "Active debug_flags setting: 0x%04x\n", debug_flags);
+					printf( "Active debug_flags setting: 0x%04x (%u)\n", debug_flags, debug_flags);
 				}
 				break;
 			#endif
