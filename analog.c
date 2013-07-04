@@ -14,9 +14,9 @@
 
 
 struct analog_channel_record {
-  channel_tag              id;
+  channel_tag           id;
   const char*           device_path;
-  channel_tag              update_channel;
+  channel_tag           update_channel;
   update_callback*      callback;
   unsigned int          value;          // last value
   int                   filter_length;  // set to value > 0 for running average
@@ -102,37 +102,39 @@ void* analog_worker( void* arg)
     if (ret > 0) {
       int val = atoi( buf);
       struct analog_channel_record* p = &analog_channels[ i];
-      if (p->filter_length > 1) {
-       /*
-        *  FIXME: this is a workaround for the borken ADC driver:
-        *
-        *  Currently the ADC values contain noise, probably because the driver
-        *  is still operating in touch screen controller mode. (Putting a scope
-        *  on the AM335x analog input pins shows transients and square waves)
-        *
-        *  Another problem seems to be that every once in a while a result
-        *  from a wrong channel is returned.
-        *
-        *  For now, ignore values that are obviously wrong. This works for
-        *  a large part of the range, but not if the values are almost equal
-        */
-        if (p->average.count > 0 && abs( val - p->average.value) > 10) {
-          if (DBG( DEBUG_ANALOG + DEBUG_VERBOSE)) {
-            fprintf( stderr, "analog thread: ignoring '%s' value= %u, average= %u\n",
-                    analog_channels[ i].id, val, p->average.value);
-          }
-        } else {
-          int avg = p->average.value;
-          int rem = p->average.remainder;
-          int cnt = p->average.count;
-          if (cnt < p->filter_length) {
-            p->average.count = ++cnt;
-          }
-          val = (cnt - 1) * avg + val + rem;
-          p->average.value = val / cnt;
-          p->average.remainder = val % cnt;
-          p->value = (val + rem + cnt / 2) / cnt;
+#if 0
+     /*
+      *  FIXME: this is a workaround for the borken ADC driver:
+      *
+      *  Currently the ADC values contain noise, probably because the driver
+      *  is still operating in touch screen controller mode. (Putting a scope
+      *  on the AM335x analog input pins shows transients and square waves)
+      *
+      *  Another problem seems to be that every once in a while a result
+      *  from a wrong channel is returned.
+      *
+      *  For now, ignore values that are obviously wrong. This works for
+      *  a large part of the range, but not if the values are almost equal
+      */
+      if (p->value > 0 && abs( val - p->value) > 50) {
+        if (DBG( DEBUG_ANALOG + DEBUG_VERBOSE)) {
+          fprintf( stderr, "analog thread: ignoring '%s' new value= %u, old value= %u\n",
+                  p->id, val, p->value);
         }
+        val = p->value;	// duplicate previous value and resume calculation
+      }
+#endif
+      if (p->filter_length > 1) {
+	unsigned int avg = p->average.value;
+        unsigned int cnt = p->average.count;
+	unsigned int rem = p->average.remainder;
+	if (cnt < p->filter_length) {
+	  p->average.count = ++cnt;
+	}
+	val += (cnt - 1) * avg + rem;
+	p->average.value = val / cnt;
+	p->average.remainder = val % cnt;
+	p->value = (val + cnt / 2) / cnt;
       } else {
         p->value = val;
       }

@@ -58,7 +58,7 @@ static const analog_config_record analog_config_data[] = {
 #else
     .device_path	= AIN_PATH_PREFIX "ain2",	// BEBOPR_R2_J6 - THRM0 (hardware ain1)
 #endif
-    .filter_length	= 50,
+    .filter_length	= 0,
   },
   {
     .tag                = spare_ain,
@@ -76,7 +76,7 @@ static const analog_config_record analog_config_data[] = {
 #else
     .device_path	= AIN_PATH_PREFIX "ain6",	// BEBOPR_R2_J8 - THRM2 (hardware ain5)
 #endif
-    .filter_length	= 50,
+    .filter_length	= 0,
   },
 };
 
@@ -316,7 +316,7 @@ double config_get_max_accel( axis_e axis)
 {
   switch (axis) {
   case x_axis:	return 3.0;
-  case y_axis:	return 3.0;
+  case y_axis:	return 2.0;
   case z_axis:	return 1.0;
   case e_axis:	return 1.0;
   default:	return 0.0;
