@@ -18,7 +18,6 @@
 /*
  * Limit switch handling
  */
-#define SYSFS_GPIO_DIR "/sys/class/gpio"
 #define POLL_TIMEOUT -1 /* no timeout */
 #define MAX_BUF 64
 
@@ -63,16 +62,29 @@ typedef struct {
 /****************************************************************
  * limit_switch_init
  ****************************************************************/
-static struct pollfd(* fdset)[] = NULL;
-
 static int limit_gpios[] = { XMIN_GPIO, XMAX_GPIO, YMIN_GPIO, YMAX_GPIO, ZMIN_GPIO, ZMAX_GPIO };
 const int nr_limits = NR_ITEMS( limit_gpios);
+static int gpio_fd[ NR_ITEMS( limit_gpios)];
+
+static void limsw_exit( void)
+{
+  // Gracefully handle exit
+  for (int i = 0 ; i < nr_limits ; ++i) {
+    if (gpio_fd[ i]) {
+      close( gpio_fd[ i]);
+      gpio_fd[ i] = -1;
+    }
+    gpio_write_value_to_pin_file( limit_gpios[ i], "edge", "none");
+    gpio_write_int_value_to_file( "unexport", limit_gpios[ i]);
+  }
+}
+
+static struct pollfd(* fdset)[] = NULL;
 
 static void* limsw_watcher( void* arg)
 {
   int i;
   unsigned int gpio[ nr_limits];
-  int gpio_fd[ nr_limits];
   char buf[ 3];
   int len;
 
@@ -81,7 +93,7 @@ static void* limsw_watcher( void* arg)
   }
 
   for (i = 0 ; i < nr_limits ; ++i) {
-    gpio[ i]  = limit_gpios[ i];
+    gpio[ i] = limit_gpios[ i];
     gpio_write_int_value_to_file( "export", gpio[ i]);
     gpio_write_value_to_pin_file( gpio[ i], "direction", "in");
     gpio_write_value_to_pin_file( gpio[ i], "edge", "both");
@@ -91,7 +103,7 @@ static void* limsw_watcher( void* arg)
       pthread_exit( NULL);
     }
   }
-
+  atexit( limsw_exit);
   for (i = 0 ; i < nr_limits ; ++i) {
     (*fdset)[ i].fd = gpio_fd[ i];
     (*fdset)[ i].events = POLLPRI;
@@ -144,10 +156,6 @@ static void* limsw_watcher( void* arg)
         lseek( (*fdset)[ i].fd, 0, SEEK_SET);
       }
     }
-  }
-  // Gracefully handle exit
-  for (i = 0 ; i < nr_limits ; ++i) {
-    close( gpio_fd[ i]);
   }
   pthread_exit( NULL);
 }
