@@ -81,4 +81,9 @@ else
 	echo "*** Setup for native compilation done ***"
 fi
 
+# Fixup for lost executable attribute caused by github
+if ! test -x version.sh ; then
+	chmod +x version.sh
+fi
+
 touch .ts_env
