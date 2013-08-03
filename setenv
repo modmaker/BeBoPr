@@ -9,26 +9,50 @@
 #
 # DEFS passes settings, e.g. '-g' to the compiler.
 #
-# comment out the following line for non-development systems
-export DEFS="-pg -DDEBUG -DBBB"
+#   DEBUG should be defined to enable verbose log output selection via M111
+#      the initial value is determined by INIT_DEBUG_FLAGS below.
+#
+#   FORCE_STEPPER_CODE_FROM_FILE can be set if the stepper code changes
+#      often (during development), or because it is faster than loading
+#      the code from EEPROM.
+#
+#   NO_COMM_LAYER if defined, this prevents activating a communication layer
+#      that generates keep-alive tokens for connection via a (socat) socket.
+#
+#   BBB should be defined when using a BeagleBone Black and a 3.8 kernel.
+#      A White with a 3.8 kernel should also have this set, but is not
+#      supported yet.
+#
+#   BONE_BRIDGE should be defined when a Bridge module is installed between
+#      BeBoPr and BeagleBone.
+#
+#   BONE_ENA_PATCH should be set when a BeagleBone (White) is used with
+#      a BeBoPr that has the enable patch installed.
+#
+#  For a BeagleBone (white) with original BeBoPr (no bridge or patch) use:
+export DEFS="-pg -DDEBUG -DFORCE_STEPPER_CODE_FROM_FILE -DNO_COMM_LAYER"
+#
+#  For a BeagleBone Black with BeBoPr on a Bridge use:
+#export DEFS="-pg -DDEBUG -DBONE_BRIDGE -DBBB -DFORCE_STEPPER_CODE_FROM_FILE -DNO_COMM_LAYER"
 
 #
 # TARGET_DIR is where you want 'make install' to store the binary.
 #
-export TARGET_DIR=root@bbb1:/root
+#export TARGET_DIR=root@bbb3:/home/root
+export TARGET_DIR=root@beaglebone:/home/root
 
 #
 # If you want debug output, -DDEBUG must be set in DEFS above. If you
 # want debug output at startup, set INIT_DEBUG_FLAGS (see debug.h).
 #
-INIT_DEBUG_FLAGS="DEBUG_TRAJECT + DEBUG_GCODE_PROCESS + DEBUG_PRUSS"
-#INIT_DEBUG_FLAGS="DEBUG_TRAJECT + DEBUG_GCODE_PROCESS + DEBUG_COMM + DEBUG_HOME + DEBUG_LIMSW"
+INIT_DEBUG_FLAGS="DEBUG_TRAJECT + DEBUG_GCODE_PROCESS + DEBUG_COMM + DEBUG_HOME + DEBUG_LIMSW"
 
 #
 # Define 'CROSS_PATH' to point to the cross-compiler toolchain or set
 # it to the empty string for native compilation.
 #
-CROSS_PATH=/home/bas/arm-cross/gcc-linaro-arm-linux-gnueabihf-4.7-2013.03-20130313_linux/bin
+#CROSS_PATH=/home/bas/arm-cross/gcc-linaro-arm-linux-gnueabihf-4.7-2013.03-20130313_linux/bin
+CROSS_PATH=/home/bas/BeagleBone/oe/build/tmp-angstrom_2010_x-eglibc/sysroots/i686-linux/usr/bin/armv7a-angstrom-linux-gnueabi/
 
 #
 # Define 'CROSS_COMPILE' with the cross compiler prefix for gcc.
@@ -36,7 +60,8 @@ CROSS_PATH=/home/bas/arm-cross/gcc-linaro-arm-linux-gnueabihf-4.7-2013.03-201303
 # set this to 'arm-arago-linux-gnueabi-'
 # For native compilation set this to an empty string
 #
-export CROSS_COMPILE=arm-linux-gnueabihf-
+#export CROSS_COMPILE=arm-linux-gnueabihf-
+export CROSS_COMPILE=arm-angstrom-linux-gnueabi-
 
 #
 # Leave the ARCH setting as is, unless you know what you're doing.
