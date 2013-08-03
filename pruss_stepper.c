@@ -296,7 +296,7 @@ int pruss_stepper_init( void)
   } else {
     if (signature.ucode_magic == UCODE_MAGIC) {
       // This is stepper code, must be an incompatible version
-      fprintf( stderr, "ERROR: the STEPPER code in file '%s' (version %d.%d) is not compatible with our version (%d.x)!\n",
+      fprintf( stderr, "ERROR: the STEPPER code in file '%s' (version %d.%d) has not the required version (%d.x)!\n",
 	      code_fname, signature.fw_version, signature.fw_revision, FW_VERSION);
     } else {
       // This is not stepper code.

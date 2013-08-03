@@ -10,7 +10,11 @@
 #define UCODE_MAGIC             0xba512191
 
 //  PRUSS code and C-code must have the same FW_VERSION to be compatible
+#ifdef BONE_BRIDGE
+#define FW_VERSION              7
+#else
 #define FW_VERSION              6
+#endif
 
 #define NR_CMD_FIFO_ENTRIES	64
 
