@@ -160,7 +160,7 @@ eeprom-tool-install:	eeprom-tool
 	fi
 
 $(TS_ENV):	setenv
-	@echo "  ERROR: source 'setenv' before running make!"
+	@echo "  ERROR: 'setenv' changed, source it (. ./setenv) before running make!"
 	@exit 3
 
 .PHONY:	all build elf hex eep lss sym program coff extcoff clean depend applet_files install
