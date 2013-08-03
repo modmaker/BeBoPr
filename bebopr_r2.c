@@ -58,7 +58,7 @@
 # define AIN_CHANNEL_EXTR  "/sys/devices/platform/omap/tsc/ain6"
 # define AIN_CHANNEL_SPARE "/sys/devices/platform/omap/tsc/ain4"
 # define AIN_SCALE         1800
-#elif defined( BRIDGE)
+#elif defined( BONE_BRIDGE)
 // no touch-screen, using bridge, ti-tscadc driver
 # define AIN_CHANNEL_BED   "/sys/bus/iio/devices/iio:device0/in_voltage4_raw"
 # define AIN_CHANNEL_EXTR  "/sys/bus/iio/devices/iio:device0/in_voltage5_raw"
