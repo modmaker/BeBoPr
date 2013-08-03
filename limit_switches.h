@@ -27,6 +27,5 @@ extern int limsw_max( axis_e axis);
 extern int limsw_min( axis_e axis);
 
 extern int limsw_init( void);
-//extern void limsw_exit( void);
 
 #endif
