@@ -44,11 +44,11 @@ export CROSS_COMPILE=arm-linux-gnueabihf-
 export ARCH=arm
 
 #
-if echo $DEFS | grep -- "-DDEBUG" >/dev/null ; then
+if echo "$DEFS" | grep -- "-DDEBUG" >/dev/null ; then
 	export DEBUG_FLAGS=$INIT_DEBUG_FLAGS
 fi
-if test -n $CROSS_PATH ; then
-	if ! echo $PATH | grep $CROSS_PATH >/dev/null ; then
+if test -n "$CROSS_PATH" ; then
+	if ! echo "$PATH" | grep $CROSS_PATH >/dev/null ; then
 		export PATH=$CROSS_PATH:$PATH
 	fi
 	echo "*** Setup for cross compilation done ***"
