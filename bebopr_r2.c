@@ -471,6 +471,25 @@ char config_keep_alive_char( void)
 }
 
 
+#ifdef BONE_BRIDGE
+
+typedef enum {
+  eXdir = 45, eXstp = 44, eXena =  4,
+  eYdir = 47, eYstp = 46, eYena =  5,
+  eZdir = 49, eZstp = 48, eZena = 14,
+  eEdir =  3, eEstp =  2, eEena = 15
+} stepper_signals;
+
+const stepper_signals step_io[] = {
+  eXdir, eXstp, eXena, eYdir, eYstp, eYena, eZdir, eZstp, eZena, eEdir, eEstp, eEena
+};
+
+const int step_ena[] = {
+  eXena, eYena, eZena, eEena
+};
+
+#endif
+
 /*
  *  Late initialization enables I/O power.
  */
@@ -478,17 +497,35 @@ int bebopr_post_init( void)
 {
   int result = -1;
 
+#ifdef BONE_BRIDGE
+ /*
+  *  The gpio signals controlled by the PRU must be initialized properly to function
+  */
+  /* initialize all stepper signals as outputs */
+  for (int i = 0 ; i < NR_ITEMS( step_io) ; ++i) {
+    gpio_write_int_value_to_file( "export", step_io[ i]);
+    gpio_write_value_to_pin_file( step_io[ i], "direction", "out");
+  }
+  /* keep stepper enables negated */
+  for (int i = 0 ; i < NR_ITEMS( step_ena) ; ++i) {
+    gpio_write_value_to_pin_file( step_ena[ i], "value", "1");
+  }
+  fprintf( stderr, "Acquired stepper GPIO pins\n");
+#endif
+
+#if defined( BONE_BRIDGE) || defined( BONE_ENA_PATCH)
   /*
-   *  For modified BeBoPrs (i.e. compatible with Beaglebone Black)
-   *  this is the only signal of importance. Keep the old signals
-   *  for backwards compatibility (on a BBB these are ignored because
-   *  the pinmux gets set to mode 1 instead of 7)!
+   *  For modified BeBoPrs (i.e. with the enable patch applied to
+   *  make it compatible with Beaglebone Black), this is the only
+   *  signal of importance.
    *
    *  IO_PWR_ON  = R7 / TIMER4 / GPIO2[2] / gpio66
    */
-  gpio_write_int_value_to_file( "export", 66);
-  gpio_write_value_to_pin_file( 66, "direction", "out");
-  gpio_write_value_to_pin_file( 66, "value", "0");
+  const int io_enan = 66;
+  gpio_write_int_value_to_file( "export", io_enan);
+  gpio_write_value_to_pin_file( io_enan, "direction", "out");
+  gpio_write_value_to_pin_file( io_enan, "value", "0");
+#else
   /*
    *  IO_PWR_ON  = R9 / GPIO1[6] / gpio38 /  gpmc_ad6
    *  !IO_PWR_ON = R8 / GPIO1[2] / gpio34 /  gpmc_ad2
@@ -500,6 +537,7 @@ int bebopr_post_init( void)
   gpio_write_int_value_to_file( "export", 34);
   gpio_write_value_to_pin_file( 34, "direction", "out");
   gpio_write_value_to_pin_file( 34, "value", "0");
+#endif
 
   fprintf( stderr, "Turned BEBOPR I/O power on\n");
   result = 0;
@@ -509,10 +547,40 @@ int bebopr_post_init( void)
 
 void bebopr_exit( void)
 {
-  gpio_write_value_to_pin_file( 66, "value", "1");
-  gpio_write_value_to_pin_file( 38, "value", "0");
-  gpio_write_value_to_pin_file( 34, "value", "1");
+#if defined( BONE_BRIDGE) || defined( BONE_ENA_PATCH)
+  /*
+   *  For modified BeBoPrs (i.e. with the enable patch applied to
+   *  make it compatible with Beaglebone Black), this is the only
+   *  signal of importance.
+   *
+   *  IO_PWR_ON  = R7 / TIMER4 / GPIO2[2] / gpio66
+   */
+  const int io_enan = 66;
+  gpio_write_value_to_pin_file( io_enan, "direction", "in");
+  gpio_write_int_value_to_file( "unexport", io_enan);
+#else
+  /*
+   *  IO_PWR_ON  = R9 / GPIO1[6] / gpio38 /  gpmc_ad6
+   *  !IO_PWR_ON = R8 / GPIO1[2] / gpio34 /  gpmc_ad2
+   */
+  gpio_write_value_to_pin_file( 38, "direction", "in");
+  gpio_write_int_value_to_file( "unexport", 38);
+  gpio_write_value_to_pin_file( 34, "direction", "in");
+  gpio_write_int_value_to_file( "unexport", 34);
+#endif
+
   fprintf( stderr, "Turned BEBOPR I/O power off\n");
+
+#ifdef BONE_BRIDGE
+ /*
+  *  Release all output signals after setting to input first
+  */
+  for (int i = 0 ; i < NR_ITEMS( step_io) ; ++i) {
+    gpio_write_value_to_pin_file( step_io[ i], "direction", "in");
+    gpio_write_int_value_to_file( "unexport", step_io[ i]);
+  }
+  fprintf( stderr, "Released stepper GPIO pins\n");
+#endif
 }
 
 kernel_type get_kernel_type( void)
