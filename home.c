@@ -40,7 +40,11 @@ static int step_until_switch_change( axis_e axis, int reverse, int new_state, in
     case z_axis: gpiobit = (reverse) ? ZMIN_GPIO : ZMAX_GPIO; break;
     default: return 0;
     }
+#ifdef BONE_BRIDGE
+    mask = (gpiobit < 32) ? (1 << ((gpiobit % 8) + 4)) : (1 << ((gpiobit % 8)));
+#else
     mask = 1 << ((gpiobit % 16) - 8);	// bit magic, map gpio bit to PRUSS positions
+#endif
     if ( ( reverse && config_min_limit_switch_is_active_low( axis)) ||
          (!reverse && config_max_limit_switch_is_active_low( axis)) ) {
       invert = mask;
