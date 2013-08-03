@@ -177,6 +177,20 @@ int bebopr_pre_init( void)
 {
   int result = -1;
 
+  fprintf( stderr, "Using configuration for kernel version %s, BBB is %s, BONE_BRIDGE is %s\n",
+	  (get_kernel_type() == e_kernel_3_8) ? "3.8" : "3.2",
+#ifdef BBB
+	  "defined",
+#else
+	  "not defined",
+#endif	  
+#ifdef BONE_BRIDGE
+	  "defined"
+#else
+	  "not defined"
+#endif	  
+	  );
+
   result = analog_config( analog_config_data, NR_ITEMS( analog_config_data));
   if (result < 0) {
     fprintf( stderr, "analog_config failed!\n");
