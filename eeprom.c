@@ -139,10 +139,10 @@ int eeprom_write_block( const char* eeprom_path, uint8_t* data, unsigned int dat
     goto done;
   }
   //  Write data to EEPROM
-  unsigned int chunksize = 16;
+  int chunksize = 16;
   for (i = 0 ; i < datacount ; i += chunksize) {
-    if (i > datacount - chunksize) {
-      chunksize = datacount - i;
+    if (i + chunksize > datacount) {
+	    chunksize = (int)datacount - i;
     }
     int count = write( ee_fd, &data[ i], chunksize);
     if (count != chunksize) {
