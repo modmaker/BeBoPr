@@ -67,8 +67,8 @@
 #else
 // no touch-screen, no bridge, ti-tscadc driver
 # define AIN_CHANNEL_BED   "/sys/bus/iio/devices/iio:device0/in_voltage1_raw"
-# define AIN_CHANNEL_EXTR  "/sys/bus/iio/devices/iio:device0/in_voltage3_raw"
-# define AIN_CHANNEL_SPARE "/sys/bus/iio/devices/iio:device0/in_voltage5_raw"
+# define AIN_CHANNEL_EXTR  "/sys/bus/iio/devices/iio:device0/in_voltage5_raw"
+# define AIN_CHANNEL_SPARE "/sys/bus/iio/devices/iio:device0/in_voltage3_raw"
 # define AIN_SCALE         1800
 #endif
 
