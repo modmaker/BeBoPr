@@ -93,7 +93,7 @@ unsigned int eeprom_get_flag_offset( unsigned int flag_nr)
   return offset;
 }
 
-int eeprom_read_byte( const char* eeprom_path, uint8_t* data, unsigned int offset)
+int eeprom_read_block( const char* eeprom_path, uint8_t* data, unsigned int datacount, unsigned int offset)
 {
   int ee_fd = open( eeprom_path, O_RDONLY);
   if (ee_fd < 0) {
@@ -104,13 +104,18 @@ int eeprom_read_byte( const char* eeprom_path, uint8_t* data, unsigned int offse
     perror( "Failed to seek EEPROM");
     return -1;
   }
-  int count = read( ee_fd, data, 1);
-  if (count != 1) {
+  int count = read( ee_fd, data, datacount);
+  if (count != datacount) {
     perror( "Failed to read from EEPROM");
     fprintf( stderr, "Failed to read single byte at offset %d from EEPROM\n", offset);
     return -1;
   }
   return 0;
+}
+
+int eeprom_read_byte( const char* eeprom_path, uint8_t* data, unsigned int offset)
+{
+  return eeprom_read_block( eeprom_path, data, 1, offset);
 }
 
 /*
