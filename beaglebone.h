@@ -5,11 +5,9 @@
 #include <sched.h>
 
 /* Where to find the BeBoPr's EEPROM: */
-#ifdef BBB
-#define EEPROM_PATH "/sys/class/i2c-adapter/i2c-1/1-0054/eeprom"
-#else
-#define EEPROM_PATH "/sys/class/i2c-adapter/i2c-3/3-0054/eeprom"
-#endif
+#define EEPROM_PATH ( (get_kernel_type() == e_kernel_3_8) ? \
+			"/sys/class/i2c-adapter/i2c-1/1-0054/eeprom" : \
+			"/sys/class/i2c-adapter/i2c-3/3-0054/eeprom" )
 
 /*
  * Posix defines priorities from 0 upto 99.
