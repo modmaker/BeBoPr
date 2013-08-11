@@ -93,7 +93,7 @@
 
 			bebopr_io_enable_pins: pinmux_bebopr_io_enable_pins {
 				pinctrl-single,pins = <
-				0x090 0x07  /*  P8-7 TIMER4     gpmc_advn_ale.gpio2[2] */
+					0x090 0x07  /*  P8-7 TIMER4     gpmc_advn_ale.gpio2[2] */
 				>;
 			};
 		};
