@@ -74,7 +74,7 @@ extern int config_set_e_axis_mode( int relative);
 
 // return the kernel type running
 typedef enum {
-  e_kernel_3_2, e_kernel_3_8
+  e_kernel_unknown, e_kernel_other, e_kernel_3_2, e_kernel_3_8
 } kernel_type;
 extern kernel_type get_kernel_type( void);
 

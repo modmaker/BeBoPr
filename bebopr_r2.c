@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/utsname.h>
 
 #include "analog.h"
 #include "temp.h"
@@ -14,6 +15,21 @@
 #include "traject.h"
 #include "eeprom.h"
 #include "gpio.h"
+
+/*
+ * Supported hardware configurations:
+ *
+ *          +-----+-----------+----------+-----+-----------+----------+
+ *          |      BeagleBone (white)    |      BeagleBone Black      |
+ * +--------+     +-----------+----------+     +-----------+----------+
+ * | kernel |     | ENA_PATCH |  BRIDGE  |     | ENA_PATCH |  BRIDGE  |
+ * +--------+-----+-----------+----------+-----+-----------+----------+
+ * |  3.2   |  X        X          -        -        -          -     |
+ * +--------+---------------------------------------------------------+
+ * |  3.8   |  X        X          X        -        X          X     |
+ * +--------+---------------------------------------------------------+
+ *
+ */
 
 /*
  * Here one defines where to find the analog input signals.
@@ -214,24 +230,55 @@ static const heater_config_record heater_config_data[] = {
 
 static int use_pololu_drivers = 1;
 
+static kernel_type current_kernel = e_kernel_unknown;
+static char kernel_release[ 50] = { 0 };
+
+kernel_type get_kernel_type( void)
+{
+  if (current_kernel == e_kernel_unknown) {
+    struct utsname u;
+    if (uname( &u) == 0) {
+      if (strncmp( u.release, "3.2", 3) == 0) {
+        current_kernel = e_kernel_3_2;
+      } else if (strncmp( u.release, "3.8", 3) == 0) {
+        current_kernel = e_kernel_3_8;
+      } else {
+        current_kernel = e_kernel_other;
+      }
+      strncpy( kernel_release, u.release, sizeof( kernel_release));
+      kernel_release[ sizeof( kernel_release) - 1] = '\0';
+    }
+  }
+  return current_kernel;
+}
+
 int bebopr_pre_init( void)
 {
   int result = -1;
 
-  fprintf( stderr, "Using configuration for kernel version %s, BBB is %s, BONE_BRIDGE is %s\n",
-	  (get_kernel_type() == e_kernel_3_8) ? "3.8" : "3.2",
-#ifdef BBB
-	  "defined",
-#else
-	  "not defined",
-#endif	  
+  char options[ 100];
+  options[ 0] = '\0';
+#ifdef BONE_ENA_PATCH
+  strcat( options, "+EnablePatch");
+#endif
 #ifdef BONE_BRIDGE
-	  "defined"
-#else
-	  "not defined"
-#endif	  
-	  );
-
+  strcat( options, "+Bridge");
+#endif
+  if (get_kernel_type() == e_kernel_unknown) {
+    fprintf( stderr, "BeBoPr%s is not compatible with running on kernel version %s.\n",
+	    options, kernel_release);
+    result = -1;
+    goto done;
+  }
+  fprintf( stderr, "BeBoPr%s configured for '%s' running on kernel version %s.\n",
+	  options, (get_kernel_type() == e_kernel_3_8) ? "3.8" : "3.2", kernel_release);
+#ifdef BONE_BRIDGE
+  if (get_kernel_type() == e_kernel_3_2) {
+    fprintf( stderr, "The Bridge is only supported with a device-tree kernel (3.8+)!\n");
+    result = -1;
+    goto done;
+  }
+#endif
   result = analog_config( analog_config_data, NR_ITEMS( analog_config_data));
   if (result < 0) {
     fprintf( stderr, "analog_config failed!\n");
@@ -526,127 +573,60 @@ char config_keep_alive_char( void)
 }
 
 
-#ifdef BONE_BRIDGE
-
-typedef enum {
-  eXdir = 45, eXstp = 44, eXena =  4,
-  eYdir = 47, eYstp = 46, eYena =  5,
-  eZdir = 49, eZstp = 48, eZena = 14,
-  eEdir =  3, eEstp =  2, eEena = 15
-} stepper_signals;
-
-const stepper_signals step_io[] = {
-  eXdir, eXstp, eXena, eYdir, eYstp, eYena, eZdir, eZstp, eZena, eEdir, eEstp, eEena
-};
-
-const int step_ena[] = {
-  eXena, eYena, eZena, eEena
-};
-
-#endif
-
 /*
  *  Late initialization enables I/O power.
  */
 int bebopr_post_init( void)
 {
-  int result = -1;
-
-#ifdef BONE_BRIDGE
- /*
-  *  The gpio signals controlled by the PRU must be initialized properly to function
-  */
-  /* initialize all stepper signals as outputs */
-  for (int i = 0 ; i < NR_ITEMS( step_io) ; ++i) {
-    gpio_write_int_value_to_file( "export", step_io[ i]);
-    gpio_write_value_to_pin_file( step_io[ i], "direction", "out");
-  }
-  /* keep stepper enables negated */
-  for (int i = 0 ; i < NR_ITEMS( step_ena) ; ++i) {
-    gpio_write_value_to_pin_file( step_ena[ i], "value", "1");
-  }
-  fprintf( stderr, "Acquired stepper GPIO pins\n");
-#endif
-
 #if defined( BONE_BRIDGE) || defined( BONE_ENA_PATCH)
   /*
    *  For modified BeBoPrs (i.e. with the enable patch applied to
-   *  make it compatible with Beaglebone Black), this is the only
-   *  signal of importance.
+   *  make it compatible with Beaglebone Black), or with use of
+   *  a Bridge, only one enable signal is used:
    *
-   *  IO_PWR_ON  = R7 / TIMER4 / GPIO2[2] / gpio66
+   *  !IO_PWR_ON = R7 / GPIO2[2] / gpio66 / TIMER4
    */
-  const int io_enan = 66;
-  gpio_write_int_value_to_file( "export", io_enan);
-  gpio_write_value_to_pin_file( io_enan, "direction", "out");
-  gpio_write_value_to_pin_file( io_enan, "value", "0");
+  if (get_kernel_type() == e_kernel_3_2) {
+    gpio_write_int_value_to_file( "export", 66);
+    gpio_write_value_to_pin_file( 66, "direction", "out");
+  }
+  gpio_write_value_to_pin_file( 66, "value", "0");
 #else
   /*
    *  IO_PWR_ON  = R9 / GPIO1[6] / gpio38 /  gpmc_ad6
    *  !IO_PWR_ON = R8 / GPIO1[2] / gpio34 /  gpmc_ad2
    */
-  gpio_write_int_value_to_file( "export", 38);
-  gpio_write_value_to_pin_file( 38, "direction", "out");
+  if (get_kernel_type() == e_kernel_3_2) {
+    gpio_write_int_value_to_file( "export", 38);
+    gpio_write_value_to_pin_file( 38, "direction", "out");
+    gpio_write_int_value_to_file( "export", 34);
+    gpio_write_value_to_pin_file( 34, "direction", "out");
+  }
   gpio_write_value_to_pin_file( 38, "value", "1");
-
-  gpio_write_int_value_to_file( "export", 34);
-  gpio_write_value_to_pin_file( 34, "direction", "out");
   gpio_write_value_to_pin_file( 34, "value", "0");
 #endif
-
   fprintf( stderr, "Turned BEBOPR I/O power on\n");
-  result = 0;
-
-  return result;
+  return 0;
 }
 
 void bebopr_exit( void)
 {
 #if defined( BONE_BRIDGE) || defined( BONE_ENA_PATCH)
-  /*
-   *  For modified BeBoPrs (i.e. with the enable patch applied to
-   *  make it compatible with Beaglebone Black), this is the only
-   *  signal of importance.
-   *
-   *  IO_PWR_ON  = R7 / TIMER4 / GPIO2[2] / gpio66
-   */
-  const int io_enan = 66;
-  gpio_write_value_to_pin_file( io_enan, "direction", "in");
-  gpio_write_int_value_to_file( "unexport", io_enan);
-#else
-  /*
-   *  IO_PWR_ON  = R9 / GPIO1[6] / gpio38 /  gpmc_ad6
-   *  !IO_PWR_ON = R8 / GPIO1[2] / gpio34 /  gpmc_ad2
-   */
-  gpio_write_value_to_pin_file( 38, "direction", "in");
-  gpio_write_int_value_to_file( "unexport", 38);
-  gpio_write_value_to_pin_file( 34, "direction", "in");
-  gpio_write_int_value_to_file( "unexport", 34);
-#endif
-
-  fprintf( stderr, "Turned BEBOPR I/O power off\n");
-
-#ifdef BONE_BRIDGE
- /*
-  *  Release all output signals after setting to input first
-  */
-  for (int i = 0 ; i < NR_ITEMS( step_io) ; ++i) {
-    gpio_write_value_to_pin_file( step_io[ i], "direction", "in");
-    gpio_write_int_value_to_file( "unexport", step_io[ i]);
+  gpio_write_value_to_pin_file( 66, "value", "1");
+  if (get_kernel_type() == e_kernel_3_2) {
+    gpio_write_value_to_pin_file( 66, "direction", "in");
+    gpio_write_int_value_to_file( "unexport", 66);
   }
-  fprintf( stderr, "Released stepper GPIO pins\n");
+#else
+  gpio_write_value_to_pin_file( 38, "value", "1");
+  gpio_write_value_to_pin_file( 34, "value", "0");
+  if (get_kernel_type() == e_kernel_3_2) {
+    gpio_write_value_to_pin_file( 38, "direction", "in");
+    gpio_write_int_value_to_file( "unexport", 38);
+    gpio_write_value_to_pin_file( 34, "direction", "in");
+    gpio_write_int_value_to_file( "unexport", 34);
+  }
 #endif
+  fprintf( stderr, "Turned BEBOPR I/O power off\n");
 }
 
-kernel_type get_kernel_type( void)
-{
-/*
- * FIXME: determine at runtime !
- * also remove the BBB #ifdefs in this file!
- */
-#ifdef BBB
-  return e_kernel_3_8;
-#else
-  return e_kernel_3_2;
-#endif
-}
