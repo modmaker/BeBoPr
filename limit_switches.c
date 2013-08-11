@@ -75,7 +75,9 @@ static void limsw_exit( void)
       gpio_fd[ i] = -1;
     }
     gpio_write_value_to_pin_file( limit_gpios[ i], "edge", "none");
-    gpio_write_int_value_to_file( "unexport", limit_gpios[ i]);
+    if (get_kernel_type() == e_kernel_3_2) {
+      gpio_write_int_value_to_file( "unexport", limit_gpios[ i]);
+    }
   }
 }
 
@@ -94,8 +96,10 @@ static void* limsw_watcher( void* arg)
 
   for (i = 0 ; i < nr_limits ; ++i) {
     gpio[ i] = limit_gpios[ i];
-    gpio_write_int_value_to_file( "export", gpio[ i]);
-    gpio_write_value_to_pin_file( gpio[ i], "direction", "in");
+    if (get_kernel_type() == e_kernel_3_2) {
+      gpio_write_int_value_to_file( "export", gpio[ i]);
+      gpio_write_value_to_pin_file( gpio[ i], "direction", "in");
+    }
     gpio_write_value_to_pin_file( gpio[ i], "edge", "both");
     gpio_fd[ i] = gpio_open_file( gpio[ i], "value");
     if (gpio_fd[ i] < 0) {

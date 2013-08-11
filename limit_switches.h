@@ -4,7 +4,7 @@
 #include "traject.h"
 
 #ifdef BONE_BRIDGE
-// This are the (fixed) assignments for the BeBoPr
+// This are the (fixed) assignments for the BeBoPr with Bridge
 #define XMIN_GPIO 67
 #define XMAX_GPIO 69
 #define YMIN_GPIO 68
