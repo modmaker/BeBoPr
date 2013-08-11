@@ -98,9 +98,9 @@
  *  setting that differs from the first (A) channel frequency!
  */
 #if defined( BBB)
-# define PWM0_OUTPUT_PATH "/sys/devices/ocp.2/bebopr_pwm_J2.14"
-# define PWM1_OUTPUT_PATH "/sys/devices/ocp.2/bebopr_pwm_J3.15"
-# define PWM2_OUTPUT_PATH "/sys/devices/ocp.2/bebopr_pwm_J4.16"
+# define PWM0_OUTPUT_PATH "/sys/devices/ocp.2/bebopr_pwm_J2.fixme"
+# define PWM1_OUTPUT_PATH "/sys/devices/ocp.2/bebopr_pwm_J3.fixme"
+# define PWM2_OUTPUT_PATH "/sys/devices/ocp.2/bebopr_pwm_J4.fixme"
 # define PWM0_OUTPUT_FREQ 0
 # define PWM1_OUTPUT_FREQ 0
 # define PWM2_OUTPUT_FREQ 0
