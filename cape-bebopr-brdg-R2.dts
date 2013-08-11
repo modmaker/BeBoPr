@@ -5,8 +5,9 @@
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
  *
- * version 1.1 - 2013-06-17 cleanup for release, version R2
- * version 1.2 - 2013-08-08 version for BeBoPr on bridge using alternate signals
+ * version 1.1 - 2013-08-08 initial version from 2191-R2.dts
+ * version 1.2 - 2013-08-11 version for BeBoPr with Bridge using alternate
+ *               signals freeing signals used for HDMI and eMMC on BBB.
  */
 /dts-v1/;
 /plugin/;
