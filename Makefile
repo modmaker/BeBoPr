@@ -106,7 +106,7 @@ subdirs:
 	done
 
 clean: clean-subdirs
-	-rm -rf *.o *.elf *.lst *.map *.sym *.lss *.eep *.srec *.bin *.hex *.al *.i *.s *~ *fuse
+	-rm -rf *.o *.elf *.lst *.map *.sym *.lss *.eep *.srec *.bin *.hex *.al *.i *.s *~ *fuse eeprom-tool
 
 clean-subdirs:
 	@for dir in $(SUBDIRS); do \
