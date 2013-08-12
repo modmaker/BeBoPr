@@ -86,6 +86,12 @@ SUBDIRS :=
 OBJ     := $(patsubst %.c,%.o,${SOURCES})
 TS_ENV	= .ts_env
 
+DTSS	:= \
+	cape-bebopr-R2.dts \
+	cape-bebopr-ena-R2.dts \
+	cape-bebopr-brdg-R2.dts
+DTBOS	:= $(patsubst %.dts,%.dtbo,${DTSS})
+
 .PHONY: all program clean subdirs doc
 .PRECIOUS: %.o %.elf
 
@@ -127,6 +133,17 @@ doc: Doxyfile *.c *.h
 %.lst: %.elf
 	@echo "  OBJDUMP   $@"
 	@$(OBJDUMP) -h -S $< > $@
+
+dtbos:	$(DTBOS)
+
+DTC=/usr/bin/dtc
+%.dtbo:	%.dts
+	@echo "  DTC       $@"
+	@if test -x $(DTC) ; then \
+		$(DTC) -O dtb -o $@ -b 0 -@ $< ; \
+	else \
+		echo "Device Tree Compiler not found!" ; \
+	fi
 
 depend:
 	@echo "  Appending dependency information to '$(MAKEFILE)'"
