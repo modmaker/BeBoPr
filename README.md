@@ -1,7 +1,7 @@
 BeBoPr
 ======
 
-> 2013-08-12 - New [Bridge PCBs](https://github.com/modmaker/BeBoPr/wiki/BeBoPr-Bridge) available for shipping. Transfer EUR 8.50 with address details via PayPal to receive a set in your mailbox (price includes shipping worldwide).
+> 2013-08-12 - The new [Bridge PCBs](https://github.com/modmaker/BeBoPr/wiki/BeBoPr-Bridge) are available for shipping. See [here](https://github.com/modmaker/BeBoPr/wiki/BeBoPr-Bridge) for details.
 
 This repository contains the **(Open Source)** software to create 3D printer with a [BeagleBone](http://beagleboard.org/) and a [BeBoPr Cape](http://circuitco.com/support/index.php?title=BeBoPr_Cape). It also hosts the [**wiki**](https://github.com/modmaker/BeBoPr/wiki/Home-of-the-BeBoPr) pages with information about the BeBoPr Cape and software.
 
