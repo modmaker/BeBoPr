@@ -1,7 +1,14 @@
 BeBoPr
 ======
 
+> 2013-08-30 - **Announcement of a new board in the BeBoPr series**. The new [**BeBoPr+**](http://circuitco.com/support/index.php?title=BeBoPr-Plus) *(BeBoPr-plus)* integrates the BeBoPr and Bridge. Initially the board is available as BeBoPr with the Bridge soldered on as shown on the picture below. Once this stock depletes, the combination will be replaced by the redesigned (functional equivalent) **BeBoPr++** *(BeBoPr plus-plus)* board as entry-level solution.
+> 
+> ![](http://img541.imageshack.us/img541/9715/4l1w.jpg)
+> 
+> The BeBoPr+ (and later the BeBoPr++) will be compatible with the current BeBoPr and Bridge combination. It requires no soldering or assembly otherwise. The cape is 100% BeagleBone and BeagleBone Black compatible and requires no fixes / hacks / patches. The BeBoPr++ will also mount the BeagleBone elevated above the board to provide easy access to all the connectors (serial, HDMI, USB and SD-card) once stacked on the BeBoPr. 
+>   
 > 2013-08-12 - The new [Bridge PCBs](https://github.com/modmaker/BeBoPr/wiki/BeBoPr-Bridge) are available for shipping. See [here](https://github.com/modmaker/BeBoPr/wiki/BeBoPr-Bridge) for details.
+
 
 This repository contains the **(Open Source)** software to create 3D printer with a [BeagleBone](http://beagleboard.org/) and a [BeBoPr Cape](http://circuitco.com/support/index.php?title=BeBoPr_Cape). It also hosts the [**wiki**](https://github.com/modmaker/BeBoPr/wiki/Home-of-the-BeBoPr) pages with information about the BeBoPr Cape and software.
 
