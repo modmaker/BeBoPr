@@ -1,6 +1,8 @@
 BeBoPr
 ======
 
+> 2013-09-30 - **Announcement of a [forum](http://forum.bebopr.info) at http://forum.bebopr.info** for BeBoPr related topics and q&a.
+
 > 2013-08-30 - **Announcement of a new board in the BeBoPr series**. The new [**BeBoPr+**](http://circuitco.com/support/index.php?title=BeBoPr-Plus) *(BeBoPr-plus)* integrates the BeBoPr and Bridge. Initially the board is available as BeBoPr with the Bridge soldered on as shown on the picture below. Once this stock depletes, the combination will be replaced by the redesigned (functional equivalent) **BeBoPr++** *(BeBoPr plus-plus)* board as entry-level solution.
 > 
 > ![](http://img541.imageshack.us/img541/9715/4l1w.jpg)
