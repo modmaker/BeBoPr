@@ -10,6 +10,7 @@
 #include "pwm.h"
 #include "debug.h"
 #include "bebopr.h"
+#include "sys_paths.h"
 
 
 struct pwm_channel_record {
@@ -130,6 +131,7 @@ void pwm_exit( void)
         pwm_write_int_to_file( pd->device_path, "request", 0);
       }
       close (pd->duty_fd);
+      free( (void*)pd->device_path);
       pwm_channels[ ch].duty_fd = -1;
     }
   }
@@ -145,9 +147,10 @@ int pwm_init( void)
     for (int ch = 0 ; ch < pwm_config_items ; ++ch) {
       pwm_config_record*         ps = &pwm_config_data[ ch];
       struct pwm_channel_record* pd = &pwm_channels[ ch];
+      char*                    path = malloc( NAME_MAX);
 
       pd->id                = ps->tag;
-      pd->device_path       = ps->device_path;
+      pd->device_path       = sys_path_finder( path, NAME_MAX, ps->device_path);
       pd->frequency         = ps->frequency;
       pd->duty_fd           = -1;
 

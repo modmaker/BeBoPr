@@ -19,6 +19,7 @@
 #include "beaglebone.h"
 #include "debug.h"
 #include "bebopr.h"
+#include "sys_paths.h"
 
 #define MAX_UIO_MAPS	5	// TODO: should be taken from the right UIO .h file!
 
@@ -234,7 +235,9 @@ static int locate_pruss_device_l2( const char* device_name, char* uio_name, int 
   const char uio_dev_name[] = "uio";
 
   if (get_kernel_type() == e_kernel_3_8) {
-    snprintf( buffer, sizeof( buffer), "/sys/devices/ocp.2/4a300000.pruss/%s", uio_dev_name);
+    char path[ NAME_MAX];
+    sys_path_finder( path, sizeof( path), "/sys/devices/ocp.*");
+    snprintf( buffer, sizeof( buffer), "%s/4a300000.pruss/%s", path, uio_dev_name);
   }
   if (get_kernel_type() == e_kernel_3_2) {
     snprintf( buffer, sizeof( buffer), "/sys/bus/platform/devices/%s/%s", device_name, uio_dev_name);

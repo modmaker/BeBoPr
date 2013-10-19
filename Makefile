@@ -66,6 +66,7 @@ SOURCES := \
 	eeprom.c \
 	timestamp.c \
 	xperror.c \
+	sys_paths.c \
 	$(PROGRAM).c
 
 CC      = $(CROSS_COMPILE)gcc
@@ -199,10 +200,11 @@ home.o: home.c beaglebone.h home.h bebopr.h limit_switches.h traject.h \
  pruss_stepper.h algo2cmds.h gcode_process.h gcode_parse.h debug.h
 limit_switches.o: limit_switches.c limit_switches.h traject.h bebopr.h \
  mendel.h gpio.h debug.h beaglebone.h
-pruss.o: pruss.c pruss.h algo2cmds.h beaglebone.h debug.h bebopr.h
+pruss.o: pruss.c pruss.h algo2cmds.h beaglebone.h debug.h bebopr.h \
+ sys_paths.h
 pruss_stepper.o: pruss_stepper.c pruss_stepper.h algo2cmds.h pruss.h \
  beaglebone.h debug.h bebopr.h timestamp.h eeprom.h
-pwm.o: pwm.c pwm.h beaglebone.h debug.h bebopr.h
+pwm.o: pwm.c pwm.h beaglebone.h debug.h bebopr.h sys_paths.h
 temp.o: temp.c temp.h beaglebone.h analog.h debug.h mendel.h
 thermistor.o: thermistor.c beaglebone.h thermistor.h
 traject.o: traject.c bebopr.h traject.h pruss_stepper.h algo2cmds.h \
@@ -211,6 +213,7 @@ comm.o: comm.c comm.h mendel.h bebopr.h debug.h beaglebone.h
 eeprom.o: eeprom.c bebopr.h eeprom.h
 timestamp.o: timestamp.c timestamp.h
 xperror.o: xperror.c xperror.h
+sys_paths.o: sys_paths.c sys_paths.h
 mendel.o: mendel.c heater.h temp.h beaglebone.h pwm.h bebopr.h mendel.h \
  gcode_process.h gcode_parse.h limit_switches.h traject.h pruss_stepper.h \
  algo2cmds.h comm.h debug.h pruss.h timestamp.h
