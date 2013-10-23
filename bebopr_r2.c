@@ -361,6 +361,45 @@ int config_use_pololu_drivers( void)
 }
 
 /*
+ *  On systems with Pololu modules and DIP switches, the
+ *  values here should reflect the DIP switch settings.
+ *  If using a PEPPER board, the values below are used to
+ *  configure the stepper drivers.
+ */
+unsigned int config_get_micro_step_factor( axis_e axis)
+{
+  switch (axis) {
+  case x_axis:	return 8;
+  case y_axis:	return 8;
+  case z_axis:	return 32;
+  case e_axis:	return 8;
+  default:      return 8;
+  }
+}
+
+/*
+ *  return current in 100 mA multiples
+ */
+unsigned int config_get_active_current( axis_e axis)
+{
+  switch (axis) {
+  case x_axis:	return 12;	// 1200 mA peak
+  case y_axis:	return 15;	// 1500 mA peak
+  case z_axis:	return 18;	// (two motors parallel) 1800 mA peak
+  case e_axis:	return 5;	// 500 mA peak
+  default:      return 0;
+  }
+}
+
+unsigned int config_get_idle_current( axis_e axis)
+{
+  switch (axis) {
+  case z_axis:	return 5;	// 500 mA peak
+  default:      return 0;	// no hold current
+  }
+}
+
+/*
  *  Specify step size for each axis in [m]
  */
 double config_get_step_size( axis_e axis)
@@ -370,15 +409,15 @@ double config_get_step_size( axis_e axis)
  /*
   *  TEST RIG
   *
-  *  X: 1:8  stepping, 1.8' motor, 8t pulley @ 5mm pitch => (8x5)/(8*360/1.8) => 0.0125 mm
-  *  Y: 1:8  stepping, 1.8' motor, 8t pulley @ 5mm pitch => (8x5)/(8*360/1.8) => 0.0125 mm
+  *  X: 1:8  stepping, 1.8' motor, 8t pulley @ 5mm pitch => (8x5)/(8*360/1.8) => 0.025 mm
+  *  Y: 1:8  stepping, 1.8' motor, 8t pulley @ 5mm pitch => (8x5)/(8*360/1.8) => 0.025 mm
   *  Z: 1:8  stepping, 1.8' motor, 1:1 reduction @ 1.25mm /rev => (1.25)/(8*360/1.8) => 0.0007812 mm
   *  E: 1:8  stepping, 1.8' motor, 11:39 reduction @ ??mm /rev => (11/39*19)/(8*360/1.8) => 0.00335 mm
   */
-  case x_axis:	return 12.5E-6;
-  case y_axis:	return 12.5E-6;
-  case z_axis:	return 0.7812E-6;
-  case e_axis:	return 3.35E-6;
+  case x_axis:	return (8 * 5.0E-3) / (360 * config_get_micro_step_factor( axis) / 1.8);
+  case y_axis:	return (8 * 5.0E-3) / (360 * config_get_micro_step_factor( axis) / 1.8);
+  case z_axis:	return 1.25E-3 / (360 * config_get_micro_step_factor( axis) / 1.8);
+  case e_axis:	return 11E-3 / (39 * (360 * config_get_micro_step_factor( axis) / 1.8));
 #else
  /*
   *  PRUSA
@@ -386,12 +425,12 @@ double config_get_step_size( axis_e axis)
   *  X: 1:8  stepping, 0.9' motor, 16t pulley @ 3mm pitch => (16x3)/(8*360/0.9) => 0.015 mm
   *  Y: 1:8  stepping, 0.9' motor, 8t pulley @ 5mm pitch => (8x5)/(8*360/0.9) => 0.0125 mm
   *  Z: 1:32 stepping, 1.8' motor, 1:1 reduction @ 1.25mm /rev => (1.25)/(32*360/1.8) => 0.0001953125 mm
-  *  E: 1:8  stepping, 1.8' motor, 11:39 reduction @ ??mm /rev => (11/39*19)/(8*360/1.8) => 0.003345 mm
+  *  E: 1:8  stepping, 1.8' motor, 11:39 reduction @ 19mm /rev => (11/39*19)/(8*360/1.8) => 0.003345 mm
   */
-  case x_axis:	return 15.0E-6;
-  case y_axis:	return 12.5E-6;
-  case z_axis:	return 195.3125E-9;
-  case e_axis:	return 3.345E-6;
+  case x_axis:	return (16 * 3.0E-3) / (360 * config_get_micro_step_factor( axis) / 0.9);
+  case y_axis:	return (8 * 5.0E-3) / (360 * config_get_micro_step_factor( axis) / 0.9);
+  case z_axis:	return (1 * 1.25E-3) / (360 * config_get_micro_step_factor( axis) / 1.8);
+  case e_axis:	return (11 * 18.975E-3 / 39) / (360 * config_get_micro_step_factor( axis) / 1.8);
 #endif
   default:	return 0.0;
   }

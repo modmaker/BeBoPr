@@ -29,17 +29,21 @@
 #   BONE_ENA_PATCH should be set when a BeagleBone (White) is used with
 #      a BeBoPr that has the enable patch installed.
 #
-#  For a BeagleBone (white) with original BeBoPr (no bridge or patch) use:
-#export DEFS="-pg -DDEBUG -DFORCE_STEPPER_CODE_FROM_FILE -DNO_COMM_LAYER"
+#   PEPPER should be defined if a PEPPER 5-axis stepper board is installed.
 #
-#  For a BeagleBone Black with BeBoPr on a Bridge use:
-export DEFS="-pg -DDEBUG -DBONE_BRIDGE -DBBB -DNO_COMM_LAYER"
+#  For a BeagleBone (white) with original BeBoPr (no bridge or patch) uncomment:
+#export DEFS="-pg -DDEBUG -DNO_COMM_LAYER"
+#
+#  For a BeagleBone Black with BeBoPr on a Bridge uncomment:
+#export DEFS="-pg -DDEBUG -DBONE_BRIDGE -DBBB -DNO_COMM_LAYER"
+#
+#  For a BeagleBone Black with BeBoPr+ with PEPPER stepper board uncomment:
+export DEFS="-pg -DDEBUG -DPEPPER -DBONE_BRIDGE -DBBB -DNO_COMM_LAYER"
 
 #
 # TARGET_DIR is where you want 'make install' to store the binary.
 #
-#export TARGET_DIR=root@bbb3:/home/root
-export TARGET_DIR=root@beaglebone:/home/root
+export TARGET_DIR=root@bbb1:/home/root
 
 #
 # If you want debug output, -DDEBUG must be set in DEFS above. If you

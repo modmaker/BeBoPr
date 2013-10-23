@@ -67,6 +67,7 @@ SOURCES := \
 	timestamp.c \
 	xperror.c \
 	sys_paths.c \
+	pepper.c \
 	$(PROGRAM).c
 
 CC      = $(CROSS_COMPILE)gcc
@@ -153,11 +154,7 @@ depend:
 			mv -f $(MAKEFILE).$$$$ $(MAKEFILE); \
 	fi; \
 	echo '# DO NOT DELETE THIS LINE -- make depend depends on it.' >> $(MAKEFILE) ; \
-	if [ "$(MCU_TARGET)x"=="x" ] ; then \
-		$(CC) -MM $(CDEFS) $(CINCS) $(SOURCES) $(ASRC) >> $(MAKEFILE) ; \
-	else \
-		$(CC) -MM -mmcu=$(MCU_TARGET) $(CDEFS) $(CINCS) $(SOURCES) $(ASRC) >> $(MAKEFILE) ; \
-	fi
+	$(CC) -MM -DDEPEND $(CDEFS) $(CINCS) $(SOURCES) $(ASRC) >> $(MAKEFILE) ;
 
 install:	all
 	@echo "  INSTALL   '$(PROGRAM)' TO '$(TARGET_DIR)'"
@@ -193,7 +190,7 @@ gcode_parse.o: gcode_parse.c gcode_parse.h debug.h gcode_process.h \
  bebopr.h
 gcode_process.o: gcode_process.c bebopr.h gcode_process.h gcode_parse.h \
  debug.h temp.h beaglebone.h heater.h pwm.h home.h traject.h \
- pruss_stepper.h algo2cmds.h mendel.h limit_switches.h
+ pruss_stepper.h algo2cmds.h mendel.h limit_switches.h pepper.h
 gpio.o: gpio.c gpio.h
 heater.o: heater.c heater.h temp.h beaglebone.h pwm.h debug.h mendel.h
 home.o: home.c beaglebone.h home.h bebopr.h limit_switches.h traject.h \
@@ -214,6 +211,7 @@ eeprom.o: eeprom.c bebopr.h eeprom.h
 timestamp.o: timestamp.c timestamp.h
 xperror.o: xperror.c xperror.h
 sys_paths.o: sys_paths.c sys_paths.h
+pepper.o: pepper.c gpio.h pruss.h pepper.h bebopr.h
 mendel.o: mendel.c heater.h temp.h beaglebone.h pwm.h bebopr.h mendel.h \
  gcode_process.h gcode_parse.h limit_switches.h traject.h pruss_stepper.h \
  algo2cmds.h comm.h debug.h pruss.h timestamp.h

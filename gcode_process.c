@@ -20,6 +20,8 @@
 #include "heater.h"
 #include "mendel.h"
 #include "limit_switches.h"
+#include "pepper.h"
+
 
 /// the current tool
 static uint8_t tool;
@@ -1465,6 +1467,13 @@ int gcode_process_init( void)
   if (result != 0) {
     return result;
   }
+#ifdef PEPPER
+  // configure the pepper stepper driver add-on board
+  result = mendel_sub_init( "PEPPER", pepper_init);
+  if (result != 0) {
+    return result;
+  }
+#endif
   heater_extruder = heater_lookup_by_name( "heater_extruder");
   heater_bed      = heater_lookup_by_name( "heater_bed");
   temp_extruder   = temp_lookup_by_name( "temp_extruder");

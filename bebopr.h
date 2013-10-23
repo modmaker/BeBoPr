@@ -44,6 +44,9 @@ extern int config_min_soft_limit( axis_e axis, double* pos);
 extern int config_max_soft_limit( axis_e axis, double* pos);
 extern int config_min_switch_pos( axis_e axis, double* pos);
 extern int config_max_switch_pos( axis_e axis, double* pos);
+extern unsigned int config_get_micro_step_factor( axis_e axis);
+extern unsigned int config_get_active_current( axis_e axis);
+extern unsigned int config_get_idle_current( axis_e axis);
 extern double config_get_step_size( axis_e axis);
 
 // these all return physical limitations
