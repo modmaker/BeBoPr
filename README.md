@@ -1,6 +1,8 @@
 BeBoPr
 ======
 
+> 2014-02-24 - The [BeBoPr++](https://github.com/modmaker/BeBoPr/wiki/The-BeBoPr-plus-plus-Cape) is available for immediate shipping. See [here](https://github.com/modmaker/BeBoPr/wiki/The-BeBoPr-plus-plus-Cape) for details.
+
 > 2014-02-09 - **Announcement** of a **new BeBoPr**. The new [**BeBoPr++**](https://github.com/modmaker/BeBoPr/wiki/The-BeBoPr-plus-plus-Cape) integrates the BeBoPr and Bridge and replaces the BeBoPr+.
 > 
 > ![](http://imagizer.imageshack.us/v2/640x480q90/36/9jdd.jpg)
