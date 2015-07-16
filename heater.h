@@ -5,7 +5,7 @@
 #include "temp.h"
 #include "pwm.h"
 #include "beaglebone.h"
-
+//#define PID_TUNING
 
 typedef struct {
   double	P;
@@ -42,6 +42,8 @@ extern int heater_get_celsius( channel_tag heater_channel, double* pcelsius);
 extern int heater_temp_reached( channel_tag heater);
 
 extern channel_tag heater_lookup_by_name( const char* name);
+extern double heater_get_temperature(int extruder);
+extern void setPWM(int extruder, int percent);
 
 #if 0
 void heater_set(heater_t index, uint8_t value);

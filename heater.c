@@ -14,7 +14,7 @@
 #include "temp.h"
 #include "beaglebone.h"
 #include "mendel.h"
-
+#include "autotune.h"
 
 struct heater {
   channel_tag		id;
@@ -132,12 +132,20 @@ void* heater_thread( void* arg)
     // nothing to do !
     pthread_exit( NULL);
   }
-  timer_period = NS_PER_SEC / (PID_LOOP_FREQUENCY * num_heater_channels);
+  timer_period = NS_PER_SEC / (PID_LOOP_FREQUENCY); // * num_heater_channels);
   fprintf( stderr, "heater_thread: started\n");
-  clock_getres( TIMER_CLOCK, &ts); 
+  clock_getres( TIMER_CLOCK, &ts);
   printf( "  timer resolution is %ld [ns]\n", ts.tv_nsec);
   clock_gettime( TIMER_CLOCK, &ts);
   log_scaler = 0;
+
+  #ifdef PID_TUNING
+  // TODO: magic number
+   pwm_set_output(pwm_lookup_by_name( "pwm_fan"), 100);
+   usleep(10000);
+   PID_autotune(200.0, 0, 16);
+  #endif
+
   while (1) {
     for (int ix = 0 ; ix < num_heater_channels ; ++ix) {
       struct heater* p = &heaters[ ix];
@@ -459,5 +467,22 @@ int heater_temp_reached( channel_tag heater)
     return 0;
   }
   return 1;	// dummy heater has always the right temperature
+}
+
+void setPWM(int extruder, int percent) {
+  struct heater* p = &heaters[extruder];
+  channel_tag output_channel = p->output;
+
+  pwm_set_output(output_channel, percent);
+}
+
+double heater_get_temperature(int extruder) {
+  double cels;
+  struct heater* p = &heaters[extruder];
+  channel_tag input_channel  = p->input;
+
+  temp_get_celsius(input_channel, &cels);  
+
+  return cels;
 }
 
