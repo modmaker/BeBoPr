@@ -132,7 +132,7 @@ void* heater_thread( void* arg)
     // nothing to do !
     pthread_exit( NULL);
   }
-  timer_period = NS_PER_SEC / (PID_LOOP_FREQUENCY); // * num_heater_channels);
+  timer_period = NS_PER_SEC / (PID_LOOP_FREQUENCY * num_heater_channels);
   fprintf( stderr, "heater_thread: started\n");
   clock_getres( TIMER_CLOCK, &ts);
   printf( "  timer resolution is %ld [ns]\n", ts.tv_nsec);
