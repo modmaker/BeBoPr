@@ -1,4 +1,4 @@
-##
+#
 # This file creates the environment for compilation
 #
 # Source this file before running make! ('. setenv' or 'source setenv')
@@ -38,8 +38,8 @@
 #export DEFS="-pg -DDEBUG -DBONE_BRIDGE -DBBB -DNO_COMM_LAYER"
 #
 #  For a BeagleBone Black with BeBoPr+ with PEPPER stepper board uncomment:
-export DEFS="-pg -DDEBUG -DBONE_BRIDGE -DBBB"
-#export DEFS="-pg -DDEBUG -DBBB"
+export DEFS="-pg -DDEBUG -DPEPPER -DBONE_BRIDGE -DBBB -DNO_COMM_LAYER"
+
 #
 # TARGET_DIR is where you want 'make install' to store the binary.
 #
@@ -49,14 +49,14 @@ export TARGET_DIR=root@bbb1:/home/root
 # If you want debug output, -DDEBUG must be set in DEFS above. If you
 # want debug output at startup, set INIT_DEBUG_FLAGS (see debug.h).
 #
-INIT_DEBUG_FLAGS="DEBUG_TRAJECT + DEBUG_GCODE_PROCESS + DEBUG_COMM + DEBUG_HOME + DEBUG_LIMSW + DEBUG_PWM"
+INIT_DEBUG_FLAGS="DEBUG_TRAJECT + DEBUG_GCODE_PROCESS + DEBUG_COMM + DEBUG_HOME + DEBUG_LIMSW"
 
 #
 # Define 'CROSS_PATH' to point to the cross-compiler toolchain or set
 # it to the empty string for native compilation.
 #
 #CROSS_PATH=/home/bas/arm-cross/gcc-linaro-arm-linux-gnueabihf-4.7-2013.03-20130313_linux/bin
-CROSS_PATH=
+CROSS_PATH=/home/bas/BeagleBone/oe/build/tmp-angstrom_2010_x-eglibc/sysroots/i686-linux/usr/bin/armv7a-angstrom-linux-gnueabi/
 
 #
 # Define 'CROSS_COMPILE' with the cross compiler prefix for gcc.
@@ -65,7 +65,7 @@ CROSS_PATH=
 # For native compilation set this to an empty string
 #
 #export CROSS_COMPILE=arm-linux-gnueabihf-
-export CROSS_COMPILE=
+export CROSS_COMPILE=arm-angstrom-linux-gnueabi-
 
 #
 # Leave the ARCH setting as is, unless you know what you're doing.

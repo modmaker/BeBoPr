@@ -68,18 +68,18 @@ SOURCES := \
 	xperror.c \
 	sys_paths.c \
 	pepper.c \
-    autotune.c \
+	autotune.c \
 	$(PROGRAM).c
 
 CC      = $(CROSS_COMPILE)gcc
 OBJDUMP = $(CROSS_COMPILE)objdump
 OBJCOPY = $(CROSS_COMPILE)objcopy
 
-OPTIMIZE := -O0 -finline-functions-called-once
+OPTIMIZE := -O2 -finline-functions-called-once
 DEBUG_FLAGS ?= 0
 DEFS	+= -DDEBUG_INIT="$(DEBUG_FLAGS)"
 # Use CFLAGS and LDFLAGS from environment and add our settings
-CFLAGS  += -Wall -Wstrict-prototypes $(OPTIMIZE) $(DEFS) -std=${CSTD} -funsigned-char -funsigned-bitfields -fpack-struct -save-temps -pthread -g
+CFLAGS  += -Wall -Wstrict-prototypes $(OPTIMIZE) $(DEFS) -std=${CSTD} -funsigned-char -funsigned-bitfields -fpack-struct -save-temps -pthread
 LDFLAGS += -Wl,--as-needed -Wl,--gc-sections
 LIBS    := -lm -pthread -lrt
 LIBDEPS :=
@@ -217,3 +217,4 @@ mendel.o: mendel.c heater.h temp.h beaglebone.h pwm.h bebopr.h mendel.h \
  gcode_process.h gcode_parse.h limit_switches.h traject.h pruss_stepper.h \
  algo2cmds.h comm.h debug.h pruss.h timestamp.h
 autotune.o: autotune.c autotune.h
+
