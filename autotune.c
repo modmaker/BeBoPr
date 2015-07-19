@@ -96,7 +96,7 @@ void PID_autotune(float temp, int extruder, int ncycles)
             Tu = ((float)(t_low + t_high) / 1000.0);
             /* SERIAL_PROTOCOLPGM(MSG_KU); SERIAL_PROTOCOL(Ku);
             SERIAL_PROTOCOLPGM(MSG_TU); SERIAL_PROTOCOLLN(Tu); */
-            Kp = 0.6 * Ku; //Zlieger-nicholas tuning constants
+            Kp = 0.6 * Ku; //Zlieger-Nichols tuning constants
             Ki = 2 * Kp / Tu;
             Kd = -Kp * Tu / 8;  //For some reason the autotune values in bebopr only work with the negative Kd
             fprintf(stderr,"...... .. Ku: %f, Tu: %f, Kp: %f, Ki: %f, Kd: %f\n",
