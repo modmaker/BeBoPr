@@ -132,7 +132,7 @@ void* heater_thread( void* arg)
     // nothing to do !
     pthread_exit( NULL);
   }
-  timer_period = NS_PER_SEC / (PID_LOOP_FREQUENCY); // * num_heater_channels);
+  timer_period = NS_PER_SEC / (PID_LOOP_FREQUENCY * num_heater_channels);
   fprintf( stderr, "heater_thread: started\n");
   clock_getres( TIMER_CLOCK, &ts);
   printf( "  timer resolution is %ld [ns]\n", ts.tv_nsec);
@@ -193,7 +193,7 @@ void* heater_thread( void* arg)
           double out_d = heater_d * p->pid_settings.D;
           double out_ff= (p->setpoint - p->pid_settings.FF_offset) * p->pid_settings.FF_factor;
           double out   = out_p + out_i + out_d + out_ff;
-          int duty_cycle = (int) clip( 0.0, out, 100.0);
+          int duty_cycle = (int) clip( 0.0, out, 100);
           // Do not log every cycle, but only once in a while
           if (log_scaler == 0) {
             log_entry( tag_name( input_channel), p->log_fd, ts.tv_sec,

@@ -1,4 +1,3 @@
-
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -98,18 +97,18 @@
  *  setting that differs from the first (A) channel frequency!
  */
 #if defined( BBB)
-# define PWM0_OUTPUT_PATH "/sys/devices/ocp.2/bebopr_pwm_J2.*"
-# define PWM1_OUTPUT_PATH "/sys/devices/ocp.2/bebopr_pwm_J3.*"
-# define PWM2_OUTPUT_PATH "/sys/devices/ocp.2/bebopr_pwm_J4.*"
+# define PWM0_OUTPUT_PATH "/sys/devices/ocp.3/bebopr_pwm_J2.*"
+# define PWM1_OUTPUT_PATH "/sys/devices/ocp.3/bebopr_pwm_J3.*"
+# define PWM2_OUTPUT_PATH "/sys/devices/ocp.3/bebopr_pwm_J4.*"
 # define PWM0_OUTPUT_FREQ 0
-# define PWM1_OUTPUT_FREQ 0
+# define PWM1_OUTPUT_FREQ 15
 # define PWM2_OUTPUT_FREQ 0
 #else
 # define PWM0_OUTPUT_PATH "/sys/class/pwm/ehrpwm.2:1"
 # define PWM1_OUTPUT_PATH "/sys/class/pwm/ehrpwm.2:0"
 # define PWM2_OUTPUT_PATH "/sys/class/pwm/ehrpwm.1:0"
 # define PWM0_OUTPUT_FREQ 0	/* determined by A-channel ! */
-# define PWM1_OUTPUT_FREQ 400
+# define PWM1_OUTPUT_FREQ 0
 # define PWM2_OUTPUT_FREQ 1
 #endif
 
@@ -203,12 +202,12 @@ static const heater_config_record heater_config_data[] = {
     .analog_output	= pwm_extruder,
     .pid =
     {
-	    .FF_factor = 0.33,
-	    .FF_offset = 40.0,
-	    .P = 15.0,
-	    .I = 0.0,
-	    .D = 0.0,
-	    .I_limit = 10.0,
+	    .FF_factor = 0,
+	    .FF_offset = 0,
+	    .P = 15.553326,
+            .I = 0.773201,
+            .D = 48.215729,
+	    .I_limit = 10,
     },
   },
   {
@@ -217,11 +216,11 @@ static const heater_config_record heater_config_data[] = {
     .analog_output	= pwm_bed,
     .pid =
     {
-	    .FF_factor = 1.03,
-	    .FF_offset = 29.0,
-	    .P = 25.0,
-	    .I = 0.05,
-	    .D = 0.0,
+	    .FF_factor = 0,
+	    .FF_offset = 0,
+	    .P = 0,
+	    .I = 0,
+	    .D = 0,
 	    .I_limit = 80.0,
     },
   },
@@ -318,7 +317,7 @@ int config_axis_has_min_limit_switch( axis_e axis)
   case x_axis:	return 1;
   case y_axis:	return 1;
   case z_axis:	return 1;
-  default:      return 0;
+  default:      return 1;
   }
 }
 
@@ -327,7 +326,7 @@ int config_axis_has_max_limit_switch( axis_e axis)
   switch (axis) {
   case x_axis:	return 0;
   case y_axis:	return 0;
-  case z_axis:	return 1;
+  case z_axis:	return 0;
   default:      return 0;
   }
 }
@@ -340,7 +339,7 @@ int config_min_limit_switch_is_active_low( axis_e axis)
   switch (axis) {
   case x_axis:	return 1;
   case y_axis:	return 1;
-  case z_axis:	return 0;
+  case z_axis:	return 1;
   default:      return 0;
   }
 }
@@ -350,7 +349,7 @@ int config_max_limit_switch_is_active_low( axis_e axis)
   switch (axis) {
   case x_axis:	return 0;
   case y_axis:	return 0;
-  case z_axis:	return 1;
+  case z_axis:	return 0;
   default:      return 0;
   }
 }
@@ -369,11 +368,11 @@ int config_use_pololu_drivers( void)
 unsigned int config_get_micro_step_factor( axis_e axis)
 {
   switch (axis) {
-  case x_axis:	return 8;
-  case y_axis:	return 8;
-  case z_axis:	return 32;
-  case e_axis:	return 8;
-  default:      return 8;
+  case x_axis:	return 16;
+  case y_axis:	return 16;
+  case z_axis:	return 16;
+  case e_axis:	return 16;
+  default:      return 16;
   }
 }
 
@@ -400,7 +399,7 @@ unsigned int config_get_idle_current( axis_e axis)
 }
 
 /*
- *  Specify step size for each axis in [m]
+ *  Specify  for each axis in [m]
  */
 double config_get_step_size( axis_e axis)
 {
@@ -427,13 +426,13 @@ double config_get_step_size( axis_e axis)
   *  Z: 1:32 stepping, 1.8' motor, 1:1 reduction @ 1.25mm /rev => (1.25)/(32*360/1.8) => 0.0001953125 mm
   *  E: 1:8  stepping, 1.8' motor, 11:39 reduction @ 19mm /rev => (11/39*19)/(8*360/1.8) => 0.003345 mm
   */
-  case x_axis:	return (16 * 3.0E-3) / (360 * config_get_micro_step_factor( axis) / 0.9);
-  case y_axis:	return (8 * 5.0E-3) / (360 * config_get_micro_step_factor( axis) / 0.9);
-  case z_axis:	return (1 * 1.25E-3) / (360 * config_get_micro_step_factor( axis) / 1.8);
-  case e_axis:	return (11 * 18.975E-3 / 39) / (360 * config_get_micro_step_factor( axis) / 1.8);
+ //step size steps step/mm steps/mm steps per mm
+  case x_axis:	return 1 / 68712.1263763E0;
+  case y_axis:	return 1 / 138266.052387E0;
+  case z_axis:	return 1 / 134919.010859E0;
+  case e_axis:	return 1 / 197.90080808E3;
 #endif
-  default:	return 0.0;
-  }
+  default:     	return 0.0;  }
 }
 
 /*
@@ -442,10 +441,10 @@ double config_get_step_size( axis_e axis)
 double config_get_max_feed( axis_e axis)
 {
   switch (axis) {
-  case x_axis:	return 22500.0;	// 0.00625 mm/step @ 60 kHz
-  case y_axis:	return 16000.0;	// 0.00625 mm/step @ 53 kHz
-  case z_axis:	return   300.0; // 0.00039 mm/step @ 13 kHz
-  case e_axis:	return  3000.0; // 0.00198 mm/step @ 25 kHz
+  case x_axis:	return 10800.0;	// 0.00625 mm/step @ 60 kHz
+  case y_axis:	return 10800.0;	// 0.00625 mm/step @ 53 kHz
+  case z_axis:	return 10800.0; // 0.00039 mm/step @ 13 kHz
+  case e_axis:	return 10800.0; // 0.00198 mm/step @ 25 kHz
   default:	return 0.0;
   }
 }
@@ -456,7 +455,7 @@ double config_get_max_feed( axis_e axis)
 double config_get_max_accel( axis_e axis)
 {
   switch (axis) {
-  case x_axis:	return 3.0;
+  case x_axis:	return 1.0;
   case y_axis:	return 1.0;
   case z_axis:	return 1.0;
   case e_axis:	return 1.0;
@@ -470,10 +469,10 @@ double config_get_max_accel( axis_e axis)
 int config_reverse_axis( axis_e axis)
 {
   switch (axis) {
-  case x_axis:  return 1;
-  case y_axis:	return 0;
+  case x_axis:  return 0;
+  case y_axis:	return 1;
   case z_axis:	return 0;
-  case e_axis:	return 1;
+  case e_axis:	return 0;
   default:	return 0;
   }
 }
@@ -499,9 +498,9 @@ int config_min_soft_limit( axis_e axis, double* pos)
 int config_max_soft_limit( axis_e axis, double* pos)
 {
   switch (axis) {
-  case x_axis:	*pos = 215.0; return 1;
-  case y_axis:	*pos = 200.0; return 1;
-  case z_axis:	*pos =  60.0; return 1;
+  case x_axis:	*pos = 400.0; return 1;
+  case y_axis:	*pos = 400.0; return 1;
+  case z_axis:	*pos =  400.0; return 1;
   default:	return 0;
   }
 }
@@ -574,9 +573,9 @@ double config_get_home_release_feed( axis_e axis)
 double config_get_home_max_feed( axis_e axis)
 {
   switch (axis) {
-  case x_axis:	return 3000.0;
-  case y_axis:	return 3000.0;
-  case z_axis:	return  450.0;
+  case x_axis:	return 180.0;
+  case y_axis:	return 180.0;
+  case z_axis:	return 180.0;
   default:	return    0.0;
   }
 }
@@ -668,4 +667,3 @@ void bebopr_exit( void)
 #endif
   fprintf( stderr, "Turned BEBOPR I/O power off\n");
 }
-

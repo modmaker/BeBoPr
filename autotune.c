@@ -13,7 +13,7 @@ typedef int bool;
 #define true 1
 #define false 0
 
-#define PID_MAX 100
+#define PID_MAX 100 // The max signal your hotend can recieve, in the case of BeBoPr, this is 100 (100%)
 
 uint64_t millis() {
   return timestamp_get() * 1000.0;
@@ -81,8 +81,8 @@ void PID_autotune(float temp, int extruder, int ncycles)
         t_low = t2 - t1;
         if (cycles > 0) {
           long max_pow = PID_MAX;
-          bias += (d*(t_high - t_low))/(t_low + t_high);
-          bias = constrain(bias, 20, max_pow - 20);
+          bias += (d*(t_high - t_low))/(t_low + t_high); //cemter the oscillation around your setpoint
+          bias = constrain(bias, 20, max_pow - 20); //make sure we don't go over max power
           d = (bias > max_pow / 2) ? max_pow - 1 - bias : bias;
 
           fprintf(stderr,"Values .. Bias: %ld, D: %ld, T Min: %f, T Max: %f\n",
@@ -92,13 +92,13 @@ void PID_autotune(float temp, int extruder, int ncycles)
           SERIAL_PROTOCOLPGM(MSG_T_MIN);  SERIAL_PROTOCOL(min);
           SERIAL_PROTOCOLPGM(MSG_T_MAX);  SERIAL_PROTOCOLLN(max); */
           if (cycles > 2) {
-            Ku = (4.0 * d) / (3.14159265 * (max - min) / 2.0);
+            Ku = (4.0 * d) / (3.14159265 * (max - min) / 2.0); //I don't know where these magic numbers come from...
             Tu = ((float)(t_low + t_high) / 1000.0);
             /* SERIAL_PROTOCOLPGM(MSG_KU); SERIAL_PROTOCOL(Ku);
             SERIAL_PROTOCOLPGM(MSG_TU); SERIAL_PROTOCOLLN(Tu); */
-            Kp = 0.6 * Ku;
+            Kp = 0.6 * Ku; //Zlieger-nicholas tuning constants
             Ki = 2 * Kp / Tu;
-            Kd = Kp * Tu / 8;
+            Kd = -Kp * Tu / 8;  //For some reason the autotune values in bebopr only work with the negative Kd
             fprintf(stderr,"...... .. Ku: %f, Tu: %f, Kp: %f, Ki: %f, Kd: %f\n",
               Ku, Tu, Kp, Ki, Kd);
             /* SERIAL_PROTOCOLLNPGM(MSG_CLASSIC_PID);
