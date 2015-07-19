@@ -68,6 +68,7 @@ SOURCES := \
 	xperror.c \
 	sys_paths.c \
 	pepper.c \
+	autotune.c \
 	$(PROGRAM).c
 
 CC      = $(CROSS_COMPILE)gcc
@@ -215,3 +216,5 @@ pepper.o: pepper.c gpio.h pruss.h pepper.h bebopr.h
 mendel.o: mendel.c heater.h temp.h beaglebone.h pwm.h bebopr.h mendel.h \
  gcode_process.h gcode_parse.h limit_switches.h traject.h pruss_stepper.h \
  algo2cmds.h comm.h debug.h pruss.h timestamp.h
+autotune.o: autotune.c autotune.h
+
